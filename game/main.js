@@ -97,7 +97,11 @@ function updateSelection() {
     return span;
   }));
   const upgrade = /** @type {HTMLButtonElement} */ (element('upgrade-button'));
-  upgrade.textContent = tower.level === MAX_LEVEL ? '已达最高等级' : `升级 · ${stats.upgradeCost} 金币`;
+  upgrade.textContent = tower.level === MAX_LEVEL ? '已达最高等级'
+    : game.state.gold < stats.upgradeCost ? `金币不足 · 需要 ${stats.upgradeCost} 金币`
+      : `升级 · ${stats.upgradeCost} 金币`;
+  upgrade.title = game.state.gold < stats.upgradeCost && tower.level < MAX_LEVEL
+    ? `还需 ${stats.upgradeCost - Math.floor(game.state.gold)} 金币` : '';
   upgrade.disabled = tower.level === MAX_LEVEL || game.state.gold < stats.upgradeCost;
   element('sell-button').textContent = `出售 · 回收 ${stats.sellValue} 金币`;
 }
