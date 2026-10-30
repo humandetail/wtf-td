@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17241f">
+  <title>环界 · 循环圈塔防</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section id="loading-screen" class="loading-screen" aria-label="加载游戏" aria-live="polite">
+      <div class="brand-mark" aria-hidden="true">环</div>
+      <h1>正在展开战场</h1>
+      <p id="loading-progress">读取防御单位与地图…</p>
+    </section>
+
+    <section id="menu-screen" class="menu-screen" aria-labelledby="menu-title" hidden>
+      <div class="menu-copy">
+        <p class="eyebrow">单人策略 · 循环圈塔防</p>
+        <h1 id="menu-title">环<span>界</span></h1>
+        <p class="menu-subtitle">守住一圈，迎战万象。</p>
+        <p class="menu-description">用科技构筑防线，阻击踏入环路的玄幻异兽。<br>漏过的敌人不会离开，下一波也不会等你。</p>
+        <div class="menu-actions">
+          <button id="start-button" class="button primary large" type="button">开始布防 <span aria-hidden="true">→</span></button>
+          <button id="help-button" class="button quiet" type="button">玩法说明</button>
+        </div>
+        <div class="campaign-facts"><span>20 波常规关卡</span><span>阶段首领</span><span>通关解锁无尽</span></div>
+      </div>
+      <div class="menu-art" aria-hidden="true">
+        <div class="art-orbit orbit-outer"></div><div class="art-orbit orbit-inner"></div>
+        <img class="hero-enemy" src="../outputs/units/fantasy-bronze-stone-lion/master.png" alt="">
+        <img class="hero-tower" src="../outputs/units/tech-heavy-howitzer/master.png" alt="">
+        <span class="art-caption">科技防线 / 东方异兽</span>
+      </div>
+      <p class="menu-footer">闭合环路 · 固定塔位 · 策略布防</p>
+    </section>
+
+    <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
+      <header class="status-bar">
+        <a class="wordmark" href="./" aria-label="环界首页">环界<span>循环圈塔防</span></a>
+        <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
+        <div class="resource"><span class="status-label">波次</span><strong id="wave-value">—</strong></div>
+        <div class="pressure-status">
+          <div class="pressure-label"><span class="status-label">环路积怪</span><strong><span id="enemy-value">—</span><span class="muted"> / <span id="enemy-limit">—</span></span></strong></div>
+          <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
+        </div>
+        <div class="resource kills"><span class="status-label">已击杀</span><strong id="kill-value">—</strong></div>
+        <nav class="game-controls" aria-label="对局控制">
+          <button id="pause-button" class="button compact" type="button">暂停</button>
+          <button id="speed-button" class="button compact" type="button">1× 速度</button>
+          <button id="mute-button" class="button compact" type="button" aria-pressed="false">声音开</button>
+          <button id="menu-button" class="button compact quiet" type="button">主菜单</button>
+        </nav>
+      </header>
+      <div class="battle-layout">
+        <div class="battle-main">
+          <div class="map-frame">
+            <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。点击塔位选择，再从右侧选择防御单位建造。">浏览器需要支持画布才能运行游戏。</canvas>
+            <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+          </div>
+          <section class="command-bar" aria-label="塔位详情">
+            <div class="selected-summary">
+              <p id="selected-slot-label" class="eyebrow">防线指挥</p>
+              <p id="selection-hint">点击地图上的塔位，开始布置防线。</p>
+              <div id="tower-panel" hidden>
+                <h2 id="tower-title">防御单位</h2>
+                <p id="tower-description"></p>
+                <div id="tower-stats" class="tower-stats"></div>
+                <div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="sell-button" class="button" type="button">出售</button></div>
+              </div>
+            </div>
+            <div class="wave-preview"><span class="status-label">下一波</span><strong id="next-wave-value">—</strong><p>怪物达到容怪上限时，防线失守。</p></div>
+          </section>
+        </div>
+        <aside class="build-sidebar" aria-labelledby="build-heading">
+          <div class="sidebar-heading"><p class="eyebrow">建造序列</p><h2 id="build-heading">防御工事</h2><p>先选塔位，再选单位建造。</p></div>
+          <div id="shop-list" class="shop-list" aria-label="可建造的防御单位"></div>
+          <p class="shop-tip">输出、控制与辅助搭配，让每一段环路都成为火力区。</p>
+        </aside>
+      </div>
+    </section>
+
+    <section id="end-screen" class="end-screen" aria-labelledby="end-title" hidden>
+      <div class="end-card">
+        <div class="end-emblem" aria-hidden="true">环</div>
+        <p class="eyebrow">本局战报</p>
+        <h1 id="end-title">战斗结束</h1>
+        <p id="end-description"></p>
+        <div id="end-stats" class="end-stats"></div>
+        <div class="end-actions"><button id="restart-button" class="button primary large" type="button">重新开始</button><button id="endless-button" class="button large" type="button" hidden>进入无尽模式</button></div>
+      </div>
+    </section>
+  </main>
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><p class="eyebrow">作战手册</p><button id="close-help" class="button compact" type="button" autofocus>关闭</button></div>
+    <h2 id="help-title">让环路成为你的防线</h2>
+    <ol class="help-steps">
+      <li><strong>选择塔位，建造工事</strong><p>点击地图上的固定塔位，再选择防御单位。金币来自击杀，用于建造和升级；出售可回收部分投入。</p></li>
+      <li><strong>没有终点，只有积压</strong><p>敌人沿闭合环路持续前进，绕过一圈也不会消失。新波次按时到来，场上怪物达到容怪上限即失败。</p></li>
+      <li><strong>搭配火力，迎战首领</strong><p>防御单位会自动攻击或提供辅助。观察射程，组合输出与控制，调整防线来迎战阶段首领。</p></li>
+      <li><strong>清空常规关卡，继续挑战</strong><p>完成 20 波并消灭剩余敌人即可通关，随后可以保留防线进入无尽模式。随时使用暂停、倍速和静音调整体验。</p></li>
+    </ol>
+    <p class="help-footer">鼠标点击布防 · 空格暂停 / 恢复 · Esc 取消选择</p>
+  </dialog>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

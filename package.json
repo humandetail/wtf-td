@@ -4,7 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "check": "node scripts/check.mjs",
-    "test": "node --test game/tests/*.test.mjs"
+    "check": "npm run typecheck && node scripts/check.mjs",
+    "test": "node --test game/tests/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

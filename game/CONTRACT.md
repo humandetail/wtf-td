@@ -10,6 +10,8 @@ World is 1280 × 800, road centre follows the clockwise rounded loop exported by
 
 `createGame(options = {})` from engine.js returns an object with `state`, `start()`, `restart()`, `tick(seconds)`, `build(slotId, code)`, `upgrade(slotId)`, `sell(slotId)`, `togglePause()`, `setSpeed(number)`, `continueEndless()`, `drainEvents()`.
 
+Optional public `launchWave()` starts the next wave early when no spawn queue remains; it returns `{ok,message}` without extra gold. The current UI uses automatic scheduling. Session options for repeatable checks are startingGold (400), limit (80), waveInterval (26), spawnInterval (.65), initialDelay (18), waveCount (20), waveSize (wave=>count), enemyHealthScale, enemySpeedScale and rewardScale (each 1).
+
 State has phase ('menu' | 'playing' | 'victory' | 'defeat'), paused, speed, gold, wave, nextWaveIn, elapsed, kills, endless, limit, towers, enemies. Build/upgrade/sell return `{ok, message}`. Ticks accept real elapsed seconds, apply chosen speed, and stop simulation when paused or not playing. Restart starts a clean playing session. continueEndless retains towers and currency.
 
 Tower fields: id, slotId, code (T01–T12), level, spent, x, y, angle. Enemy fields: id, code (X01–X12), hp, maxHp, x, y, angle, progress (travelled distance), boss, slowUntil (simulation seconds, optional). Shot effects go through events rather than renderer internals.
@@ -18,7 +20,9 @@ Events drained by the UI: `{type, x?, y?, tx?, ty?, code?, amount?, color?, mess
 
 ## Catalogue
 
-`catalog.js` exports TOWERS and ENEMIES arrays with code, name, assetId, description, color, and stats. Tower definitions contain price, damage, interval (seconds), range (world pixels), kind. `towerStats(tower)` returns effective damage/interval/range/upgradeCost/sellValue and any UI relevant stats. MAX_LEVEL is exported. All source imagery is looked up through the original manifest by code.
+`catalog.js` exports TOWERS and ENEMIES arrays with code, name, assetId, description, color, and stats. Tower definitions contain price, damage, interval (seconds), range (world pixels), kind. `towerStats(tower)` returns level-adjusted damage/interval/range/upgradeCost/sellValue and any UI relevant stats. MAX_LEVEL is exported. All source imagery is looked up through the original manifest by code.
+
+`towerStats` describes base level-adjusted stats; `effectiveTowerStats(tower,towers)` additionally applies live radar and overclock auras, and is shared by combat, range rendering and displayed attributes. Supply income emits an `income` event with amount, x, y and color.
 
 ## UI shell
 
