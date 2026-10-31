@@ -1,6 +1,12 @@
 # 地图制作与接入
 
-2026-10-31 最新更新：当前使用 `assets/maps/v4/` 科技与玄幻碰撞地图。工业金属／铜管／青色线路与古玉石／符纹／紫色灵脉交错，中央为机械锁环包围的八卦阵。完整说明见 [map-v4-art.md](map-v4-art.md)，来源与提示词见 [v4/source/prompts.md](assets/maps/v4/source/prompts.md)。
+2026-10-31 最新更新：当前使用 `assets/maps/v5/scene.png` 完整场景，道路、地块与中央玉铜封印阵整体绘制，统一光照、材质尺度和铺地衔接；运行时不再叠加另一套独立道路。完整说明见 [map-v5-art.md](map-v5-art.md)，提示词、原图和迭代记录见 [v5/source/prompts.md](assets/maps/v5/source/prompts.md)。
+
+实际路网与建造规则保持原样，原素材与 v1–v4 全部保留。下面是历史制作记录，不代表当前运行方式。
+
+## 保留 v4
+
+当时使用 `assets/maps/v4/` 科技与玄幻碰撞地图。工业金属／铜管／青色线路与古玉石／符纹／紫色灵脉交错，中央为机械锁环包围的八卦阵。完整说明见 [map-v4-art.md](map-v4-art.md)，来源与提示词见 [v4/source/prompts.md](assets/maps/v4/source/prompts.md)。
 
 v4 沿用已验证的道路、自由建造占地、中心出生与科技规则；新增背景原图和道路源文件独立存储。`v1/`、`v2/`、`v3/` 图片及源文件均保留，原地图根目录和 `outputs/`／`work/` 继续只读。
 

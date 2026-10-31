@@ -5,7 +5,7 @@ import {inflateSync} from 'node:zlib';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
-import {FOOTPRINT, BUILD_CENTER_BOUNDS, ROAD_SEGMENTS, ROAD_NODES, placementStatus} from '../game/geometry.js';
+import {FOOTPRINT, BUILD_CENTER_BOUNDS, PLAZA, ROAD_SEGMENTS, ROAD_NODES, placementStatus} from '../game/geometry.js';
 import {SLOTS as V2_SLOTS, LOOP_LENGTH as V2_LENGTH, pointOnLoop as v2Point} from '../game/assets/maps/v2/source/layout-geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFile(resolve(root, file));
@@ -42,7 +42,7 @@ for (const item of [...manifest.props, ...manifest.effects]) assert((await stat(
 console.log('✓ 原清单 24 个母版、192 个方向图、6 个道具、6 个特效存在');
 
 // Read PNG scanlines so transparent overlays are checked against actual pixels.
-async function checkPng(path, width, height, transparent) {
+async function checkPng(path, width, height, transparent, captureRGB=false) {
   const bytes = await read(path);
   assert.equal(bytes.subarray(0,8).toString('hex'), '89504e470d0a1a0a', `${path} 不是 PNG`);
   assert.equal(bytes.toString('ascii',12,16),'IHDR');
@@ -66,6 +66,7 @@ async function checkPng(path, width, height, transparent) {
   assert.equal(decoded.length,(stride+1)*height, `${path} 像素数据长度错误`);
   let previous = Buffer.alloc(stride), minAlpha=255, maxAlpha=0;
   const alpha = transparent ? new Uint8Array(width*height) : null;
+  const rgb = captureRGB ? new Uint8Array(width*height*3) : null;
   for (let y=0;y<height;y++) {
     const offset=y*(stride+1), filter=decoded[offset], row=Buffer.from(decoded.subarray(offset+1,offset+1+stride));
     assert(filter<=4, `${path} PNG 滤波类型错误`);
@@ -80,11 +81,12 @@ async function checkPng(path, width, height, transparent) {
       if(alpha)alpha[y*width+(x-channels+1)/channels]=row[x];
     }
     else maxAlpha=255;
+    if(rgb)for(let x=0;x<width;x++)for(let c=0;c<3;c++)rgb[(y*width+x)*3+c]=row[x*channels+(channels===2?0:c)];
     previous=row;
   }
   if (transparent) assert(minAlpha<255 && maxAlpha>0 && bytes[25]!==2, `${path} 应包含透明背景与可见像素`);
   console.log(`✓ ${path}：${width} × ${height}${transparent?'，透明叠图有效':''}`);
-  return {width,height,alpha};
+  return {width,height,alpha,rgb};
 }
 await checkPng('game/assets/maps/ground.png',1586,992,false);
 await checkPng('game/assets/maps/road.png',1280,800,true);
@@ -144,6 +146,42 @@ for(const version of ['v3','v4']){
  assert(freePoints>100,'自由建造区域不足或退化成固定放置点');
  console.log(`✓ ${version} 路网像素、禁止压路与 ${freePoints} 个非固定建造采样点有效`);
 }
+// v5 is painted as one scene. Inspect its actual colors, not a synthetic lane alpha mask.
+const sceneBytes=await read('game/assets/maps/v5/scene.png');
+assert(sceneBytes.equals(await read('game/assets/maps/v5/source/scene-imagegen-original.png')),'v5 场景与保留生成原图不一致');
+const sceneWidth=sceneBytes.readUInt32BE(16),sceneHeight=sceneBytes.readUInt32BE(20);
+assert(Math.abs(sceneWidth/sceneHeight-1.6)<.025&&sceneWidth>=1280&&sceneHeight>=800,'v5 场景比例或尺寸错误');
+const scene=await checkPng('game/assets/maps/v5/scene.png',sceneWidth,sceneHeight,false,true);
+const pavingAt=(x,y)=>{
+ const index=(Math.round(y*sceneHeight/800)*sceneWidth+Math.round(x*sceneWidth/1280))*3;
+ const [r,g,b]=scene.rgb.subarray(index,index+3);
+ return r>160&&g>150&&r-g>7&&b/g>.68;
+};
+let paintedSamples=0;
+for(const [index,node] of ROAD_NODES.entries())for(const neighbor of node.neighbors){
+ if(neighbor<index)continue;
+ const end=ROAD_NODES[neighbor],length=Math.hypot(end.x-node.x,end.y-node.y);
+ for(let d=0;d<=length;d+=8){
+  const x=node.x+(end.x-node.x)*d/length,y=node.y+(end.y-node.y)*d/length;
+  // Junction medallions and the jade core have their own colors; inspect them in the route overlay.
+  if((x>=PLAZA.x&&x<=PLAZA.x+PLAZA.width&&y>=PLAZA.y&&y<=PLAZA.y+PLAZA.height)||ROAD_NODES.some(n=>Math.hypot(n.x-x,n.y-y)<18))continue;
+  let found=false;
+  for(let dy=-12;dy<=12&&!found;dy+=3)for(let dx=-12;dx<=12;dx+=3)if(pavingAt(x+dx,y+dy)){found=true;break;}
+  assert(found,`v5 实际铺路偏离行走线：${x},${y}`);paintedSamples++;
+ }
+}
+assert(paintedSamples>700,'v5 实际铺路采样不足');
+let paintedFootprints=0;
+for(let y=BUILD_CENTER_BOUNDS.y;y<=BUILD_CENTER_BOUNDS.y+BUILD_CENTER_BOUNDS.height;y+=13)for(let x=BUILD_CENTER_BOUNDS.x;x<=BUILD_CENTER_BOUNDS.x+BUILD_CENTER_BOUNDS.width;x+=19){
+ if(!placementStatus(x,y).ok)continue;
+ paintedFootprints++;
+ for(const dx of [-FOOTPRINT.width/2,0,FOOTPRINT.width/2])for(const dy of [-FOOTPRINT.height/2,0,FOOTPRINT.height/2]){
+  let paved=0;
+  for(let py=-3;py<=3;py++)for(let px=-3;px<=3;px++)paved+=Number(pavingAt(x+dx+px,y+dy+py));
+  assert(paved/49<.45,`v5 可建占地落在实际铺路上：${x},${y}`);
+ }
+}
+console.log(`✓ v5 实际场景 ${paintedSamples} 个路面色彩采样与 ${paintedFootprints} 处建筑占地采样有效（节点装饰另行看图）`);
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());
 assert(required?.length, 'UI 契约缺少 ID 清单');

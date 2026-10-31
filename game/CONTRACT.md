@@ -14,7 +14,7 @@ New DOM IDs: research-panel, deployment-level, reinforcement-level, deployment-d
 
 ## Geometry
 
-World is 1280 × 800. The active v4 map follows the supplied reference: outer ring, inner ring, central cross and four connecting spokes. Roads are 48 pixels wide, with planted shoulders. ROAD_PATH and ROAD_SEGMENTS describe the same artwork and collision network. ROAD_NODES splits those roads at all intersections and endpoints. Each enemy starts at central ENTRY (640,400), independently chooses one of four cardinal directions, then chooses uniformly among onward exits on arrival at a junction, excluding the road just travelled. Corners turn automatically. There is no fixed patrol or terminal node; surviving enemies remain on the network. All angles are radians, screen y points down. v1/v2/v3 art and layout snapshots remain preserved.
+World is 1280 × 800. The active v5 map follows the supplied reference: outer ring, inner ring, central cross and four connecting spokes. Roads are 48 pixels wide, with planted shoulders. ROAD_PATH and ROAD_SEGMENTS describe the same artwork and collision network. ROAD_NODES splits those roads at all intersections and endpoints. Each enemy starts at central ENTRY (640,400), independently chooses one of four cardinal directions, then chooses uniformly among onward exits on arrival at a junction, excluding the road just travelled. Corners turn automatically. There is no fixed patrol or terminal node; surviving enemies remain on the network. All angles are radians, screen y points down. v1/v2/v3/v4 art and layout snapshots remain preserved.
 
 FOOTPRINT is 90×50 with 8 pixels between buildings. BUILD_BOUNDS contains full footprints; BUILD_CENTER_BOUNDS and BUILD_EXCLUSIONS describe allowed anchor positions after expanding roads and the hub by footprint plus clearance. placementStatus(x,y,towers) is the single geometric check. Positions are continuous and unsnapped; there are no SLOTS or preset construction points.
 
@@ -29,6 +29,12 @@ State has phase ('menu' | 'playing' | 'victory' | 'defeat'), paused, speed, gold
 Tower fields: id, code (T01–T12), level, spent, x, y, angle. IDs identify buildings independently from location; selling and rebuilding at the same coordinates creates a new ID. Enemy fields: id, code (X01–X12), hp, maxHp, x, y, angle, progress (total travelled distance, retained for target priority), roadFrom/roadTo (current graph edge), boss, slowUntil (simulation seconds, optional). Movement consumes the full distance across as many junctions as necessary, preserving position continuity and updating facing on turns. Shot effects go through events rather than renderer internals.
 
 Events drained by the UI: `{type, x?, y?, tx?, ty?, code?, amount?, color?, message?}`. Types include shot, hit, kill, build, upgrade, sell, wave, victory, defeat, research-start, research-complete and research-cancel. Damage is resolved by the session. UI and audio only display outcomes.
+
+## Scene artwork
+
+v5 loads a single painted scene.png containing the terrain, all lanes and the central seal; it never overlays an independently styled road image. Initial artwork loading totals 24 unit masters + 6 effects + 1 scene. The scene and retained ImageGen original are byte-identical. Rendering applies one subtle scene-wide stone tint and separate actor shadows; original images remain untouched.
+
+Road motion and placement remain authoritative in geometry.js. The painted scene is checked with actual paving-color samples away from ornaments, plus the full route inspection overlay and independent visual review. Color heuristics are approximate and do not substitute for inspecting junctions or real-browser acceptance.
 
 ## Catalogue
 

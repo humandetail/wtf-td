@@ -1,9 +1,9 @@
-import { WORLD, FOOTPRINT, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ZONES, ENTRY } from './geometry.js';
+import { WORLD, FOOTPRINT, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ENTRY } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
-const MAPS = new URL('./assets/maps/v4/', import.meta.url);
+const MAPS = new URL('./assets/maps/v5/', import.meta.url);
 
 function loadImage(url) {
   return new Promise((resolve, reject) => {
@@ -22,7 +22,7 @@ export async function loadArtwork(onProgress) {
   const units = new Map();
   const effects = new Map();
   const tasks = [];
-  const result = { units, effects, ground: null, road: null };
+  const result = { units, effects, ground: null };
   for (const entry of manifest.units) {
     const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
@@ -31,15 +31,13 @@ export async function loadArtwork(onProgress) {
   for (const entry of manifest.effects) {
     tasks.push(async () => { effects.set(entry.code, await loadImage(new URL(entry.path, ORIGINALS))); });
   }
-  for (const name of ['ground', 'road']) {
-    tasks.push(async () => { result[name] = await loadImage(new URL(`${name}.png`, MAPS)); });
-  }
+  tasks.push(async () => { result.ground = await loadImage(new URL('scene.png', MAPS)); });
   let complete = 0;
   // ponytail: six concurrent image decodes keep the initial menu responsive.
   const worker = async () => {
     while (tasks.length) {
       await tasks.shift()();
-      onProgress(++complete, manifest.units.length + manifest.effects.length + 2);
+      onProgress(++complete, manifest.units.length + manifest.effects.length + 1);
     }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
@@ -80,7 +78,9 @@ export function createRenderer(canvas, artwork) {
   background.height = WORLD.height;
   const backdrop = background.getContext('2d');
   backdrop.drawImage(artwork.ground, 0, 0, WORLD.width, WORLD.height);
-  backdrop.drawImage(artwork.road, 0, 0, WORLD.width, WORLD.height);
+  // One scene-wide stone tint calms texture without creating patch boundaries.
+  backdrop.fillStyle = '#7580671f';
+  backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
 
   const buildMask = document.createElement('canvas');
   buildMask.width = WORLD.width; buildMask.height = WORLD.height;
@@ -121,9 +121,9 @@ export function createRenderer(canvas, artwork) {
   function drawUnit(entity, tower, elapsed) {
     const unit = artwork.units.get(entity.code);
     const size = tower ? 128 : entity.boss ? 184 : 126;
-    ctx.fillStyle = '#18271b3d';
+    ctx.fillStyle = tower ? '#18271b3d' : '#18271b66';
     ctx.beginPath();
-    ctx.ellipse(entity.x, entity.y + 3, tower ? 31 : entity.boss ? 26 : 15, tower ? 11 : 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(entity.x, entity.y + 3, tower ? 31 : entity.boss ? 31 : 19, tower ? 11 : entity.boss ? 9 : 8, 0, 0, Math.PI * 2);
     ctx.fill();
     if (unit) {
       const sprite = spriteFor(unit, entity.angle || 0);
@@ -208,23 +208,12 @@ export function createRenderer(canvas, artwork) {
       }
       ctx.drawImage(freeMask, 0, 0);
     }
-    for (const zone of ZONES) {
-      if (zone.x === ENTRY.x && zone.y === ENTRY.y) continue;
-      text(zone.name, zone.x, zone.y, zone.color, 20);
-    }
-    ring(ENTRY.x, ENTRY.y, 44, '#edaa72', .9, 3);
-    ring(ENTRY.x, ENTRY.y, reduceMotion ? 54 : 54 + Math.sin(state.elapsed * 2) * 3, '#edaa72', .45);
     ctx.save();
-    ctx.translate(ENTRY.x, ENTRY.y);
-    ctx.strokeStyle = '#f7d397'; ctx.lineWidth = 3;
-    for (const angle of [-Math.PI / 2, 0, Math.PI / 2, Math.PI]) {
-      ctx.save(); ctx.rotate(angle);
-      ctx.beginPath(); ctx.moveTo(43, -6); ctx.lineTo(52, 0); ctx.lineTo(43, 6); ctx.stroke();
-      ctx.restore();
-    }
+    ctx.globalAlpha = reduceMotion ? .16 : .16 + Math.sin(state.elapsed * 2) * .05;
+    ctx.strokeStyle = '#d0c39c'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(ENTRY.x, ENTRY.y, 29, 20, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
-    text('出怪核心', ENTRY.x, ENTRY.y - 68, '#fff0c4', 18);
-    text('四向随机出怪', ENTRY.x, ENTRY.y + 68, '#f7d397', 13);
+    text('出怪核心', ENTRY.x, ENTRY.y + 73, '#ded8b8', 14);
     const selected = state.towers.find(tower => tower.id === selectedTowerId);
     if (selected) ring(selected.x, selected.y, 45, '#ffe39b', 1, 2.5);
     const position = placement || selected;
