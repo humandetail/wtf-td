@@ -48,7 +48,7 @@ hitTest is also exported as the public pointer-selection boundary. It prioritize
 
 ## Battlefield layout
 
-The default battlefield uses the viewport after a compact HUD. The bottom construction dock opens on demand and closes after picking a tower. Research and selected-unit details share a non-modal right drawer, closed by button or Escape with focus restoration. Opening research closes the construction dock. The focus/build control stays available in the HUD; restart restores the default map-first state.
+The default battlefield uses the viewport after a compact HUD. The bottom construction dock is an absolutely positioned overlay inside battle-stage, opens on demand and closes after picking a tower. Opening/closing it never changes stage or canvas bounds; the game grid always has HUD and stage rows, and the toggle has fixed width to prevent header reflow. Research and selected-unit details share a non-modal right drawer, closed by button or Escape with focus restoration. Opening research closes the construction dock. The focus/build control stays available in the HUD; restart restores the default map-first state.
 
 A ResizeObserver fits the canvas to the actual stage while preserving 1280:800. Its CSS box matches the painted map, so existing pointer mapping uses the true canvas bounding rectangle; there is no object-fit letterboxing inside the input target. Narrow/short viewports keep bounded scroll areas for controls. Drawn world geometry, research and session rules are unchanged.
 

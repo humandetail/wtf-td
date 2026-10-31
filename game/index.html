@@ -36,7 +36,7 @@
       <p class="menu-footer">外环内环 · 中心互通 · 自由布防</p>
     </section>
 
-    <section id="game-screen" class="game-screen focus-mode" aria-label="防御战场" hidden>
+    <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
       <header class="status-bar">
         <a class="wordmark" href="./" aria-label="环界首页">环界<span>循环圈塔防</span></a>
         <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
@@ -49,7 +49,7 @@
         <div class="resource kills"><span class="status-label">已击杀</span><strong id="kill-value">—</strong></div>
         <nav class="game-controls" aria-label="对局控制">
           <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
-          <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="展开建造带，选择防御工事">建造</button>
+          <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="展开建造浮层，选择防御工事">建造</button>
           <button id="pause-button" class="button compact" type="button">暂停</button>
           <button id="speed-button" class="button compact" type="button">1× 速度</button>
           <button id="mute-button" class="button compact" type="button" aria-pressed="false">声音开</button>
@@ -92,15 +92,15 @@
             <button id="cancel-research-button" class="button compact" type="button" hidden>取消研究</button>
           </section>
         </aside>
+        <section id="build-dock" class="build-dock" aria-labelledby="build-heading" hidden>
+          <div class="build-toolbar">
+            <h2 id="build-heading">防御工事</h2><span id="tower-capacity" class="capacity-label">容量 0 / 4</span>
+            <p id="build-status" class="build-status" role="status" aria-live="polite">先点顶部“建造”选择工事，再在绿色区域放置。</p>
+            <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
+          </div>
+          <div id="shop-list" class="shop-list" aria-label="可建造的十二种防御单位，横向滚动查看更多"></div>
+        </section>
       </div>
-      <section id="build-dock" class="build-dock" aria-labelledby="build-heading" hidden>
-        <div class="build-toolbar">
-          <h2 id="build-heading">防御工事</h2><span id="tower-capacity" class="capacity-label">容量 0 / 4</span>
-          <p id="build-status" class="build-status" role="status" aria-live="polite">先点顶部“建造”选择工事，再在绿色区域放置。</p>
-          <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
-        </div>
-        <div id="shop-list" class="shop-list" aria-label="可建造的十二种防御单位，横向滚动查看更多"></div>
-      </section>
     </section>
 
     <section id="end-screen" class="end-screen" aria-labelledby="end-title" hidden>

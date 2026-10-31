@@ -40,12 +40,11 @@ function setBuildDock(open) {
   const restoreFocus = !open && dock.contains(document.activeElement);
   if (open) setDrawer();
   dock.hidden = !open;
-  element('game-screen').classList.toggle('focus-mode', !open);
   const button = element('focus-button');
   button.setAttribute('aria-pressed', String(!open));
   button.setAttribute('aria-expanded', String(open));
   button.textContent = open ? '收起建造' : '建造';
-  button.title = open ? '收起建造带，展开完整战场' : '展开建造带，选择防御工事';
+  button.title = open ? '收起建造浮层' : '展开建造浮层，选择防御工事';
   if (restoreFocus) canvas.focus({ preventScroll: true });
 }
 
