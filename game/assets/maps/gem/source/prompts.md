@@ -1,0 +1,5 @@
+# 原始场景生成记录
+
+内置ImageGen，现有迷宫图仅作材质参考。新地面不烘焙路线，敌路与建造净空由对应geometry模块和渲染器共同决定。旧素材不动，scene.png与保留原图字节一致。
+
+Production top-down 2D game battlefield background, landscape8:5, coherent painterly matte jade/bronze Chinese fantasy fused with small industrial tech. Reference image is STYLE/MATERIAL ONLY, do not copy its layout. World1280x800. Entire playable x110..1170,y100..700 stays FLAT, OPEN, EMPTY and quiet for free placement and actors. No roads, no rings, no grid, no slots, no central core, no units, no UI,text,numbers,logos. Actual routes/objectives rendered by code. Restrained surface texture, warm upper-left light, matching chunky existing sprites. Decoration confined outside playable bounds. This is a violet-blue mineral sanctuary. Wide flat jade-gray stone floor with subtle amethyst dust in seams, cool mineral light. Small cropped crystal clusters and aged bronze fittings only in margins x0..70,x1210..1280,y0..70,y750..800. No raised crystals or rocks in the playable interior. Distinct from a forest and from an arena.

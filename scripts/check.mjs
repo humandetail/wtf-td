@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {OBJECTIVE_FRAMES,HERO_ROW_BOUNDS} from '../game/special-render.js';
 import {readFile, readdir, stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {inflateSync} from 'node:zlib';
@@ -86,6 +87,7 @@ async function checkPng(path, width, height, transparent, captureRGB=false) {
     previous=row;
   }
   if (transparent) assert(minAlpha<255 && maxAlpha>0 && bytes[25]!==2, `${path} 应包含透明背景与可见像素`);
+  else assert.equal(minAlpha,255,`${path} 完整场景必须不透明`);
   console.log(`✓ ${path}：${width} × ${height}${transparent?'，透明叠图有效':''}`);
   return {width,height,alpha,rgb};
 }
@@ -187,13 +189,43 @@ console.log(`✓ ${directory} 实际场景 ${paintedSamples} 个路面色彩采�
 const loopSegments=ROAD_NODES.flatMap((node,index)=>node.neighbors.filter(n=>n>index).map(n=>({x1:node.x,y1:node.y,x2:ROAD_NODES[n].x,y2:ROAD_NODES[n].y})));
 await checkPaintedScene('game/assets/maps/v5',loopSegments,ROAD_NODES,PLAZA,placementStatus,700);
 await checkPaintedScene('game/assets/maps/core-defense',DEFENSE_ROAD_SEGMENTS,DEFENSE_LANES.flatMap(lane=>lane.points.map(([x,y])=>({x,y}))),DEFENSE_PLAZA,defensePlacementStatus,300);
-for(const mode of ['escort','maze']){
+for(const mode of ['escort','maze','gem','hero','legion']){
  const directory=`game/assets/maps/${mode}`,bytes=await read(`${directory}/scene.png`);
  assert(bytes.equals(await read(`${directory}/source/scene-imagegen-original.png`)),`${mode} 场景原图未保留`);
  const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
  assert(width>=1280&&height>=800&&Math.abs(width/height-1.6)<.025,`${mode} 场地尺寸或比例错误`);
  await checkPng(`${directory}/scene.png`,width,height,false);
 }
+// New sprites are generated sheets with fractional cell boundaries permitted by
+// canvas clipping (the hero sheet is 1586px wide, not divisible by eight).
+for(const [path,columns,rows,original] of [
+ ['game/assets/modes/hero/atlas.png',8,5,'atlas-imagegen-original.png'],
+ ['game/assets/modes/gem/atlas.png',4,3,'atlas-imagegen-original.png'],
+ ['game/assets/modes/shared/objectives.png',2,2,'objectives-imagegen-original.png'],
+]){
+ const bytes=await read(path),directory=path.slice(0,path.lastIndexOf('/'));
+ assert(bytes.equals(await read(`${directory}/source/${original}`)),`${path} 与保留生成原图不一致`);
+ assert((await read(`${directory}/source/prompts.md`)).length>100,`${path} 缺少生成提示词`);
+ const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
+ assert(Math.abs(width/height-columns/rows)<.025,`${path} 图集行列比例错误`);
+ assert(width/columns>=128&&height/rows>=128,`${path} 单元格分辨率不足`);
+ const sheet=await checkPng(path,width,height,true);
+ const frames=path.includes('shared/objectives')?OBJECTIVE_FRAMES:Array.from({length:rows*columns},(_,i)=>{
+  const row=Math.floor(i/columns),top=path.includes('/hero/')?HERO_ROW_BOUNDS[row]:row*height/rows,bottom=path.includes('/hero/')?HERO_ROW_BOUNDS[row+1]:(row+1)*height/rows;
+  return [i%columns*width/columns,top,width/columns,bottom-top];
+ });
+ for(const [index,[x,y,w,h]]of frames.entries()){
+  const left=Math.floor(x),right=Math.floor(x+w),top=Math.floor(y),bottom=Math.floor(y+h);
+  assert(left>=0&&top>=0&&right<=width&&bottom<=height,`${path} 帧 ${index} 超出图集`);
+  let visible=0,clear=0;
+  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){const alpha=sheet.alpha[y*width+x];visible+=Number(alpha>16);clear+=Number(alpha<16);}
+  const pixels=(right-left)*(bottom-top);
+  assert(visible/pixels>.01&&visible/pixels<.9&&clear/pixels>.05,`${path} 帧 ${index} 缺少完整可见角色或透明留白`);
+ }
+ console.log(`✓ ${path}：${frames.length} 个生产取样帧均在边界内且有可见内容和透明留白`);
+}
+for(const mode of ['gem','hero','legion'])assert((await read(`game/assets/maps/${mode}/source/prompts.md`)).length>100,`${mode} 地图缺少生成提示词`);
+assert((await stat(resolve(root,'game/assets/maps/hero/source/scene-revision-2-imagegen-original.png'))).isFile(),'英雄地图修订原图未保留');
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());
 assert(required?.length, 'UI 契约缺少 ID 清单');
@@ -201,7 +233,9 @@ const html = (await read('game/index.html')).toString();
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size, ids.length, 'UI 存在重复 ID');
 for (const id of required) assert(ids.includes(id), `缺少 UI ID：${id}`);
-console.log(`✓ ${required.length} 个必需 UI ID 存在且无重复`);
+const newModeIds=['mode-gem-button','mode-hero-button','mode-legion-button','hero-hud','legion-hud','legion-kings','scout-button','gem-selection-actions','special-mission','hero-status','hero-skills','hero-q-button','hero-q-state','hero-e-button','hero-e-state','hero-r-button','hero-r-state'];
+for(const id of newModeIds){assert(required.includes(id),`七模式契约缺少新增 UI ID：${id}`);assert(ids.includes(id),`七模式界面缺少新增 UI ID：${id}`);}
+console.log(`✓ ${required.length} 个必需 UI ID（含${newModeIds.length}个新增模式控件）存在且无重复`);
 for (const directory of ['game','scripts']) {
   for (const file of await readdir(resolve(root,directory))) {
     if ((directory==='game' && file.endsWith('.js')) || (directory==='scripts' && file.endsWith('.mjs'))) execFileSync(process.execPath,['--check',resolve(root,directory,file)],{stdio:'pipe'});

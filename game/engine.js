@@ -4,10 +4,22 @@ import {placementStatus, createRoadPosition, advanceOnRoad} from './geometry.js'
 import {defensePlacementStatus, pointOnDefenseRoute} from './defense-geometry.js';
 import {ESCORT_LENGTH,ESCORT_CHECKPOINTS,pointOnEscortRoute,escortPlacementStatus} from './escort-geometry.js';
 import {MAZE_ENTRY,WALL_COST,WALL_REFUND,WALL_LIMIT,createMazeNavigation,mazeRoute,mazePlacementStatus,advanceInMaze} from './maze-geometry.js';
+import {createGemGame} from './gem-session.js';
+import {createHeroGame} from './hero-session.js';
+import {createLegionGame} from './legion-session.js';
+
+// Each mode has a different command surface; callers choose it through state.mode.
+/** @param {any} options @returns {any} */
+export function createGame(options={}){
+ if(options.mode==='gem')return createGemGame(options);
+ if(options.mode==='hero')return createHeroGame(options);
+ if(options.mode==='legion')return createLegionGame(options);
+ return createBaseGame(options);
+}
 /**
  * @param {{mode?:'loop'|'defense'|'escort'|'maze',convoySpeed?:number,coreHealth?:number,startingGold?:number,limit?:number,waveInterval?:number,spawnInterval?:number,initialDelay?:number,waveCount?:number,waveSize?:(wave:number)=>number,enemyHealthScale?:number,enemySpeedScale?:number,rewardScale?:number,random?:()=>number}} options
  */
-export function createGame(options={}) {
+function createBaseGame(options={}) {
  const defense=options.mode==='defense',escort=options.mode==='escort',maze=options.mode==='maze';
  const finite=defense||escort||maze,clearWaves=defense||maze;
  const coreHealth=options.coreHealth??(escort?100:20);

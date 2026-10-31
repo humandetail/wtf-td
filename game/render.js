@@ -3,6 +3,10 @@ import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 import { DEFENSE_CORE, DEFENSE_LANES, DEFENSE_BUILD_EXCLUSIONS } from './defense-geometry.js';
 import {ESCORT_POINTS,ESCORT_CHECKPOINTS,ESCORT_BUILD_EXCLUSIONS,pointOnEscortRoute} from './escort-geometry.js';
 import {MAZE_ENTRY,MAZE_EXIT,WALL_FOOTPRINT} from './maze-geometry.js';
+import {BUILD_EXCLUSIONS as GEM_BUILD_EXCLUSIONS} from './gem-geometry.js';
+import {heroPlacementStatus} from './hero-geometry.js';
+import {LEGION_DEPLOYMENT,LEGION_RADIUS} from './legion-geometry.js';
+import {createSpecialPainter,projectBattleState,specialStats} from './special-render.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
@@ -25,7 +29,7 @@ export async function loadArtwork(onProgress) {
   const units = new Map();
   const effects = new Map();
   const tasks = [];
-  const result = { units, effects, ground: null, defenseGround: null,escortGround:null,mazeGround:null,convoyImage:null,wallImage:null };
+  const result = { units, effects, ground: null, defenseGround: null,escortGround:null,mazeGround:null,gemGround:null,heroGround:null,legionGround:null,convoyImage:null,wallImage:null,ruinsImage:null,heroAtlas:null,gemAtlas:null,objectivesAtlas:null };
   for (const entry of manifest.units) {
     const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
@@ -36,15 +40,18 @@ export async function loadArtwork(onProgress) {
   }
   tasks.push(async () => { result.ground = await loadImage(new URL('scene.png', MAPS)); });
   tasks.push(async () => { result.defenseGround = await loadImage(new URL('./assets/maps/core-defense/scene.png', import.meta.url)); });
-  for(const mode of ['escort','maze'])tasks.push(async()=>{result[`${mode}Ground`]=await loadImage(new URL(`./assets/maps/${mode}/scene.png`,import.meta.url));});
+  for(const mode of ['escort','maze','gem','hero','legion'])tasks.push(async()=>{result[`${mode}Ground`]=await loadImage(new URL(`./assets/maps/${mode}/scene.png`,import.meta.url));});
   tasks.push(async()=>{result.convoyImage=await loadImage(new URL('props/P01-tech-supply-crate.png',ORIGINALS));});
   tasks.push(async()=>{result.wallImage=await loadImage(new URL('props/P02-portable-generator.png',ORIGINALS));});
+  tasks.push(async()=>{result.ruinsImage=await loadImage(new URL('props/P04-broken-stone-stele.png',ORIGINALS));});
+  for(const [key,path]of [['heroAtlas','hero/atlas.png'],['gemAtlas','gem/atlas.png'],['objectivesAtlas','shared/objectives.png']])tasks.push(async()=>{result[key]=await loadImage(new URL(`./assets/modes/${path}`,import.meta.url));});
+  const total=tasks.length;
   let complete = 0;
   // ponytail: six concurrent image decodes keep the initial menu responsive.
   const worker = async () => {
     while (tasks.length) {
       await tasks.shift()();
-      onProgress(++complete, manifest.units.length + manifest.effects.length + 6);
+      onProgress(++complete,total);
     }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
@@ -66,7 +73,7 @@ function spriteFor(unit, angle) {
 // The canvas and non-browser interaction checks use the same picking boundary.
 export function hitTest(x, y, towers) {
   const ordered = [...towers].sort((a,b)=>b.y-a.y);
-  const base = ordered.find(tower => Math.abs(tower.x-x) <= (tower.code==='WALL'?30:FOOTPRINT.width/2) && Math.abs(tower.y-y) <= (tower.code==='WALL'?30:FOOTPRINT.height/2));
+  const base = ordered.find(tower => tower.homeX!==undefined ? Math.hypot(tower.x-x,tower.y-y)<=LEGION_RADIUS : Math.abs(tower.x-x) <= (tower.code==='WALL'?30:FOOTPRINT.width/2) && Math.abs(tower.y-y) <= (tower.code==='WALL'?30:FOOTPRINT.height/2));
   const sprite = base || ordered.find(tower => tower.code!=='WALL' && Math.abs(tower.x-x) <= FOOTPRINT.width/2 && y >= tower.y-65 && y <= tower.y+FOOTPRINT.height/2);
   return sprite?.id ?? null;
 }
@@ -86,11 +93,14 @@ export function createRenderer(canvas, artwork) {
     {mode:'defense', ground:artwork.defenseGround, exclusions:DEFENSE_BUILD_EXCLUSIONS},
     {mode:'escort', ground:artwork.escortGround, exclusions:ESCORT_BUILD_EXCLUSIONS},
     {mode:'maze', ground:artwork.mazeGround, exclusions:[]},
+    {mode:'gem', ground:artwork.gemGround, exclusions:GEM_BUILD_EXCLUSIONS},
+    {mode:'hero', ground:artwork.heroGround, exclusions:[]},
+    {mode:'legion', ground:artwork.legionGround, exclusions:[]},
   ]) {
     const background = document.createElement('canvas');
     background.width = WORLD.width; background.height = WORLD.height;
     const backdrop = background.getContext('2d');
-    backdrop.drawImage(ground, 0, 0, WORLD.width, WORLD.height);
+    if(ground)backdrop.drawImage(ground, 0, 0, WORLD.width, WORLD.height);
     backdrop.fillStyle = '#7580671f';
     backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
     backgrounds[mode] = background;
@@ -98,7 +108,12 @@ export function createRenderer(canvas, artwork) {
     buildMask.width = WORLD.width; buildMask.height = WORLD.height;
     const mask = buildMask.getContext('2d');
     mask.fillStyle = '#9ae6ad45';
-    mask.fillRect(BUILD_CENTER_BOUNDS.x, BUILD_CENTER_BOUNDS.y, BUILD_CENTER_BOUNDS.width, BUILD_CENTER_BOUNDS.height);
+    if(mode==='hero'){
+      // The preview samples continuous authoritative geometry; these are not build slots.
+      for(let y=0;y<WORLD.height;y+=4)for(let x=0;x<WORLD.width;x+=4)if(heroPlacementStatus(x+2,y+2).ok)mask.fillRect(x,y,4,4);
+    }else if(mode==='legion'){
+      const b=LEGION_DEPLOYMENT;mask.fillRect(b.left,b.top,b.right-b.left,b.bottom-b.top);
+    }else mask.fillRect(BUILD_CENTER_BOUNDS.x, BUILD_CENTER_BOUNDS.y, BUILD_CENTER_BOUNDS.width, BUILD_CENTER_BOUNDS.height);
     for (const area of exclusions) mask.clearRect(area.x, area.y, area.width, area.height);
     buildMasks[mode] = buildMask;
   }
@@ -109,6 +124,8 @@ export function createRenderer(canvas, artwork) {
   /** @type {any[]} */
   let particles = [];
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let frameState;
+  const special=createSpecialPainter(ctx,artwork,{text,ring,traceRoute,reduceMotion});
 
   function ring(x, y, radius, color, alpha = 1, width = 2) {
     ctx.save();
@@ -159,6 +176,7 @@ export function createRenderer(canvas, artwork) {
   }
 
   function drawTacticalGround(state,placement){
+    special.ground(state,placement);
     if(state.mode==='escort'){
       const points=ESCORT_POINTS.map(([x,y])=>({x,y}));
       traceRoute(points,'#4ac8ae24',48);
@@ -196,25 +214,28 @@ export function createRenderer(canvas, artwork) {
   }
 
   function drawUnit(entity, tower, elapsed) {
+    if(special.actor(entity,frameState))return;
     if(entity.code==='WALL'){drawWall(entity.x,entity.y);return;}
     if(entity.convoy){drawConvoy(entity);return;}
-    const unit = artwork.units.get(entity.code);
-    const size = tower ? 128 : entity.boss ? 184 : 126;
+    const unit = artwork.units.get(entity.assetCode||entity.code);
+    const size = frameState.mode==='legion'?96:tower ? 128 : entity.boss ? 184 : 126;
     ctx.fillStyle = tower ? '#18271b3d' : '#18271b66';
     ctx.beginPath();
     ctx.ellipse(entity.x, entity.y + 3, tower ? 31 : entity.boss ? 31 : 19, tower ? 11 : entity.boss ? 9 : 8, 0, 0, Math.PI * 2);
     ctx.fill();
     if (unit) {
       const sprite = spriteFor(unit, entity.angle || 0);
-      const bob = !tower && !reduceMotion ? Math.sin(entity.progress * .13) * 1.6 : 0;
+      const bob = (!tower||frameState.mode==='legion') && !reduceMotion ? Math.sin((entity.progress??elapsed*40) * .13) * 1.6 : 0;
       ctx.drawImage(sprite, entity.x - size * .5, entity.y - size * .625 + bob, size, size);
     }
     if (tower) {
       text((entity.readyAt??0)>elapsed?`搬迁 ${(entity.readyAt-elapsed).toFixed(1)}s`:`Lv.${entity.level}`, entity.x, entity.y + 27, '#f3d88e', 12);
-      if (['radar', 'overclock', 'barrier', 'supply'].includes(towerStats(entity).kind)) {
-        ring(entity.x, entity.y + 2, 34, towerStats(entity).color, .45, 1.5);
+      const stats=specialStats(entity,frameState)||towerStats(entity);
+      if (['radar', 'overclock', 'barrier', 'supply','support','healer'].includes(stats.kind)) {
+        ring(entity.x, entity.y + 2, 34, stats.color, .45, 1.5);
       }
-    } else {
+    }
+    if(!tower||frameState.mode==='legion'){
       const width = entity.boss ? 66 : 39;
       const top = entity.y - (entity.boss ? 78 : 53);
       ctx.fillStyle = '#15241ee0';
@@ -226,7 +247,9 @@ export function createRenderer(canvas, artwork) {
   }
 
   function event(event) {
-    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65,relocate:.65 };
+    if(['attack','king-attack','hero-attack'].includes(event.type))event={...event,type:'shot',tx:event.tx??event.targetX,ty:event.ty??event.targetY,color:event.side==='ai'?'#e8b08d':'#a4ead5'};
+    if(['damage','hero-hit'].includes(event.type))event={...event,type:'hit',amount:event.damage??event.amount,color:'#e89d8c'};
+    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65,relocate:.65,fusion:.9,echo:.3,'hero-skill':.5,'unit-death':.7,heal:.7 };
     if (!(event.type in lifetimes)) return;
     particles.push({ ...event, age: 0, life: lifetimes[event.type] });
     if (particles.length > 240) particles = particles.slice(-240);
@@ -235,9 +258,11 @@ export function createRenderer(canvas, artwork) {
   function drawParticles(dt) {
     for (const item of particles) {
       item.age += dt;
+      if(frameState.mode==='legion'&&item.side&&item.side!==(frameState.viewSide||'player'))continue;
       const progress = item.age / item.life;
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - progress);
+      if(special.particle(item,progress)){ctx.restore();continue;}
       const color = item.color || '#e6c779';
       if (item.type === 'shot') {
         ctx.lineWidth = item.code === 'T03' ? 5 : 2.5;
@@ -280,22 +305,28 @@ export function createRenderer(canvas, artwork) {
   }
 
   function draw(state, selectedTowerId, placement, dt = 0, cursor = null) {
+    state=projectBattleState(state);frameState=state;
     const mode = state.mode;
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.drawImage(backgrounds[mode], 0, 0);
     drawTacticalGround(state,placement);
-    if (placement) {
+    if (placement&&!placement.skill) {
       free.clearRect(0, 0, WORLD.width, WORLD.height);
-      const footprint=placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+      const footprint=mode==='legion'?{width:LEGION_RADIUS*2,height:LEGION_RADIUS*2}:placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
       if(mode==='maze'){
         free.fillStyle='#9ae6ad45';
         free.fillRect(BUILD_BOUNDS.x+footprint.width/2,BUILD_BOUNDS.y+footprint.height/2,BUILD_BOUNDS.width-footprint.width,BUILD_BOUNDS.height-footprint.height);
       }else free.drawImage(buildMasks[mode], 0, 0);
       for (const tower of [...state.towers,...state.walls||[]]) {
         if(placement.relocating&&tower.id===placement.towerId)continue;
+        if(mode==='legion'){free.save();free.globalCompositeOperation='destination-out';free.beginPath();free.arc(tower.x,tower.y,LEGION_RADIUS*2+8,0,Math.PI*2);free.fill();free.restore();continue;}
         const other=tower.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
         const halfX=(footprint.width+other.width)/2+8,halfY=(footprint.height+other.height)/2+8;
         free.clearRect(tower.x-halfX,tower.y-halfY,halfX*2,halfY*2);
+      }
+      if(mode==='hero')for(const entity of [state.hero,...state.enemies]){
+        if(entity.hp<=0)continue;
+        free.clearRect(entity.x-60,entity.y-40,120,80);
       }
       ctx.drawImage(freeMask, 0, 0);
     }
@@ -319,7 +350,8 @@ export function createRenderer(canvas, artwork) {
     const position = placement || selected;
     const movingTower=placement?.relocating?state.towers.find(t=>t.id===placement.towerId):null;
     const active=state.towers.filter(t=>(t.readyAt??0)<=state.elapsed);
-    const range = movingTower ? effectiveTowerStats({...movingTower,x:placement.x,y:placement.y},active).range : placement ? TOWERS.find(tower => tower.code === placement.code)?.range : selected ? selected.code==='WALL'?0:effectiveTowerStats(selected, active).range : 0;
+    const focus=movingTower?{...movingTower,x:placement.x,y:placement.y}:placement?.code?{...placement,level:placement.level||1}:selected;
+    const range=focus&&focus.code!=='WALL'?(specialStats(focus,state)?.range??(placement&&!movingTower?TOWERS.find(t=>t.code===focus.code)?.range:effectiveTowerStats(focus,active).range)):0;
     if (position && range) {
       ctx.save();
       ctx.fillStyle = '#f7df8612';
@@ -336,26 +368,29 @@ export function createRenderer(canvas, artwork) {
       ...(state.walls||[]).map(entity=>({entity,tower:true})),
       ...state.enemies.map(entity => ({ entity, tower: false })),
       ...(state.convoy?[{entity:{...state.convoy,convoy:true},tower:false}]:[]),
+      ...special.actors(state).map(entity=>({entity,tower:false})),
     ].sort((a, b) => a.entity.y - b.entity.y);
     for (const actor of actors) drawUnit(actor.entity, actor.tower, state.elapsed);
     if(state.convoy){const convoy=state.convoy;text(convoy.moving?'护送载具 · 行进':'护送载具 · 停车',Math.max(100,Math.min(1180,convoy.x)),convoy.y+40,'#c4ffdf',14);}
-    if (placement) {
+    if (placement&&!placement.skill) {
       const color = placement.ok ? '#a4e6ae' : '#f29a84';
       const unit = artwork.units.get(placement.code);
       ctx.save();
       ctx.globalAlpha = .52;
       if(placement.code==='WALL')drawWall(placement.x,placement.y);
+      if(mode==='gem')special.actor({...placement,level:placement.level||1},state);
       if (unit?.masterImage) ctx.drawImage(unit.masterImage, placement.x - 64, placement.y - 80, 128, 128);
       ctx.globalAlpha = 1;
       ctx.fillStyle = placement.ok ? '#71cf8b35' : '#e7786635';
       ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-      const size=placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+      const size=mode==='legion'?{width:LEGION_RADIUS*2,height:LEGION_RADIUS*2}:placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
       ctx.fillRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
       ctx.strokeRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
       const labelX = Math.max(130, Math.min(WORLD.width - 130, placement.x));
       const labelY = placement.y > 100 ? placement.y - 91 : placement.y + 49;
       text(placement.ok ? placement.relocating?'点击搬迁':'点击建造' : placement.message, labelX, labelY, color, 15);
       ctx.restore();
+    } else if(placement?.skill){text(`点击施放 ${placement.skill}`,Math.max(130,Math.min(1150,placement.x)),Math.max(30,placement.y-40),'#b5efda',14);
     } else if (cursor) {
       ctx.save();ctx.strokeStyle = '#f4d789';ctx.lineWidth = 2;
       ctx.beginPath();ctx.moveTo(cursor.x - 10, cursor.y);ctx.lineTo(cursor.x + 10, cursor.y);ctx.moveTo(cursor.x, cursor.y - 10);ctx.lineTo(cursor.x, cursor.y + 10);ctx.stroke();ctx.restore();

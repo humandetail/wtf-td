@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17241f">
-  <title>环界 · 四模式塔防</title>
+  <title>环界 · 七模式塔防</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -17,7 +17,7 @@
 
     <section id="menu-screen" class="menu-screen" aria-labelledby="menu-title" hidden>
       <div class="menu-copy">
-        <p class="eyebrow">单人策略 · 四模式塔防</p>
+        <p class="eyebrow">单人策略 · 七模式塔防</p>
         <h1 id="menu-title">环<span>界</span></h1>
         <p class="menu-subtitle">守住一圈，迎战万象。</p>
         <p class="menu-description">用科技构筑防线，阻击玄幻异兽。选择你的战场。</p>
@@ -26,13 +26,16 @@
           <button id="mode-defense-button" class="mode-card" type="button" aria-pressed="false"><strong>核心保卫战</strong><span>四路轮攻 · 守住耐久</span></button>
           <button id="mode-escort-button" class="mode-card" type="button" aria-pressed="false"><strong>灵枢护送</strong><span>启停载具 · 搬迁防线</span></button>
           <button id="mode-maze-button" class="mode-card" type="button" aria-pressed="false"><strong>自由迷宫</strong><span>任意布障 · 改写路线</span></button>
+          <button id="mode-gem-button" class="mode-card" type="button" aria-pressed="false"><strong>万象宝石</strong><span>鉴定选留 · 五种融合配方</span></button>
+          <button id="mode-hero-button" class="mode-card" type="button" aria-pressed="false"><strong>守卫灵姬</strong><span>英雄走位 · Q / E / R</span></button>
+          <button id="mode-legion-button" class="mode-card" type="button" aria-pressed="false"><strong>机关军团 · 对战AI</strong><span>双边攻防 · 派兵与经济</span></button>
         </div>
         <p id="mode-description" class="mode-description" aria-live="polite">敌人在环路中持续游走，积怪达到上限即失败。下一波按时到来。</p>
         <div class="menu-actions">
           <button id="start-button" class="button primary large" type="button">开始布防 <span aria-hidden="true">→</span></button>
           <button id="help-button" class="button quiet" type="button">玩法说明</button>
         </div>
-        <div class="campaign-facts"><span>四种作战目标</span><span>阶段首领</span><span>科技构筑防线</span></div>
+        <div class="campaign-facts"><span>七种作战目标</span><span>阶段首领</span><span>科技构筑防线</span></div>
       </div>
       <div class="menu-art" aria-hidden="true">
         <div class="art-orbit orbit-outer"></div><div class="art-orbit orbit-inner"></div>
@@ -40,7 +43,7 @@
         <img class="hero-tower" src="../outputs/units/tech-heavy-howitzer/master.png" alt="">
         <span class="art-caption">科技防线 / 东方异兽</span>
       </div>
-      <p class="menu-footer">四种玩法独立保留本页对局 · 刷新后重置</p>
+      <p class="menu-footer">七种玩法独立保留本页对局 · 刷新后重置</p>
     </section>
 
     <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
@@ -68,6 +71,15 @@
       <div id="battle-stage" class="battle-stage">
         <div class="map-frame">
           <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。先点顶部“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
+          <div id="hero-hud" class="mode-hud" hidden aria-label="英雄状态与技能">
+            <div id="hero-status" aria-live="off"></div>
+            <div id="hero-skills" class="hero-skills" role="group" aria-label="英雄技能，点击后在地图选择目标">
+              <button id="hero-q-button" class="hero-skill" type="button" aria-keyshortcuts="Q"><kbd aria-hidden="true">Q</kbd><span>破阵斩</span><small id="hero-q-state">就绪</small></button>
+              <button id="hero-e-button" class="hero-skill" type="button" aria-keyshortcuts="E"><kbd aria-hidden="true">E</kbd><span>瞬步</span><small id="hero-e-state">2级解锁</small></button>
+              <button id="hero-r-button" class="hero-skill" type="button" aria-keyshortcuts="R"><kbd aria-hidden="true">R</kbd><span>共鸣护罩</span><small id="hero-r-state">6级解锁</small></button>
+            </div>
+          </div>
+          <div id="legion-hud" class="mode-hud" hidden><span id="legion-kings"></span><button id="scout-button" class="button compact" type="button">侦察对手</button></div>
           <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
         </div>
         <aside id="command-drawer" class="command-drawer" aria-labelledby="drawer-title" hidden>
@@ -80,12 +92,13 @@
                 <h2 id="tower-title">防御单位</h2>
                 <p id="tower-description"></p>
                 <div id="tower-stats" class="tower-stats"></div>
-                <div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="relocate-button" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" class="button" type="button">出售</button></div>
+                <div id="gem-selection-actions" hidden></div><div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="relocate-button" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" class="button" type="button">出售</button></div>
               </div>
             </div>
           </section>
           <section id="mission-panel" class="mission-panel" aria-label="当前任务" hidden>
             <p id="mission-objective"></p>
+            <div id="special-mission" hidden></div>
             <div id="escort-mission" hidden>
               <h3 id="convoy-status">已停车 · 0 / 2480</h3>
               <progress id="convoy-progress" aria-label="护送路线进度" max="2480" value="0"></progress>
@@ -149,9 +162,12 @@
       <li><strong>核心保卫战：守住终点</strong><p>每波按北、东、南、西轮换入口，敌人沿单向道路抵达中央后消失。核心共 20 点耐久，普通怪漏过扣 1，Boss 扣 5，漏怪不获得击杀奖励。核心归零即失败。首波准备 18 秒；每波清场获得 40 + 波次 × 5 金币，随后准备 12 秒。清场前不会开启下一波。</p></li>
       <li><strong>灵枢护送：移动的防线</strong><p>载具初始停车，耐久 100；打开“任务”主动启程或停车，沿 S 路线到达终点即胜利。敌人每 18 秒从路线前后伏击，接近后持续攻击，停车也不会停止敌人或波次。到 800 / 1600 距离自动停车，各补给 100 金币，需主动继续。仅停车时可花 60 金币恢复 6 耐久。选择已有塔可用 25 金币搬迁至任意合法位置，保留 ID、等级与投资，但停机 3 游戏秒；期间不攻击、不提供辅助与收入，不能重复搬迁。右键或 Esc 取消。载具归零即失败，无无尽。</p></li>
       <li><strong>自由迷宫：建造改变路线</strong><p>没有预设道路。敌人从左侧入口寻找右侧出口，塔与能量路障都能改变实际可达路径。位置连续自由，不吸附塔位；绿色预览显示待建造后的路线，红色显示失败原因。不能封死入口或任一在途敌人的通路，不能盖住敌人及其下一行走目标。路障 20 金币，最多 24 块，不占科技塔容量；选中可拆返 15，不能升级。建造和拆除立即重算路线，在途敌人也会连续转向。出口 20 耐久，普通漏怪扣 1、Boss 扣 5。首波 18 秒准备，清场后准备 10 秒并补给 40 + 波次 × 5 金币；共 12 波，第 4 / 8 / 12 波有首领。清场且出口存活即胜利，可保留迷宫进入无尽。</p></li>
+      <li><strong>万象宝石：准备后主动开战</strong><p>“任务”中花60金币鉴定五选一，点击候选后在地图部署，或收入两格备选；每次鉴定可按20／40／80金币刷新。普通宝石同系同阶合成需先研究强化科技。配方图鉴逐项显示材料，明确选择主宝石与实际材料，预览后确认才消耗。准备阶段才可收塔、合成、出售和开战；战斗推进科技。守住20波结束，无无尽。</p></li>
+      <li><strong>守卫灵姬：英雄与防线协作</strong><p>WASD持续移动；右键地面移动，右键敌人指定普攻目标。Q破阵斩、E瞬步、R共鸣护罩：按键后在地图点击目标。Q一级、E二级、R六级开放，消耗法力并有冷却。英雄自动攻击近敌，死亡10秒复活，神女死亡才失败。前往左右精英营地，战胜后在“任务”领取一次性装备／补给；三件装备选一，可花金币强化。守住15波，无无尽。</p></li>
+      <li><strong>机关军团：单人对战AI</strong><p>“建造”部署有生命的守军，“任务”购买工人、安排雇佣兵或强化国王，准备阶段不产资源。主动开战后双方锁阵；雇佣兵进入对手战场，成交才增加永久收入。未成交订单可取消全退军需。顶部侦察切换真实敌方地图，侦察时不能建造。波后守军复原、国王损伤保留，报告解释双方战果。一方国王死亡结束，同时死亡为平局，无无尽。</p></li>
       <li><strong>研究科技，扩展防线</strong><p>部署科技提高全场塔容量并逐级解锁种类；出售立即释放容量。强化科技开放更高塔等级，仍需单独付费升级已有塔。点击顶部“科技”打开研究抽屉；“建造”展开工事带，选定工事后自动收起，也可点击“收起建造”手动关闭。两项科技各自逐级研究，共用一个研究位，开始时扣金币，完成后才生效。取消未完成研究全额退款，进度清零。</p></li>
       <li><strong>搭配火力，迎战首领</strong><p>防御单位会自动攻击或提供辅助。观察射程，组合输出与控制，调整防线来迎战阶段首领。</p></li>
-      <li><strong>暂停、战报与无尽挑战</strong><p>循环圈与核心保卫战清空 20 波，自由迷宫清空 12 波后通关；这三种玩法可保留防线、金币、耐久、科技与研究继续无尽。灵枢护送抵达终点后结束。暂停、返回菜单和结算冻结全部计时，倍速同步推进。四种对局分别保留在本页内，切换不会清零；结束的对局可随时返回战报，只有重新开始才重置，刷新页面会丢失本页对局。随时使用静音调整体验。</p></li>
+      <li><strong>暂停、战报与无尽挑战</strong><p>循环圈与核心保卫战清空 20 波，自由迷宫清空 12 波后通关；这三种玩法可保留防线、金币、耐久、科技与研究继续无尽。灵枢护送抵达终点后结束。暂停、返回菜单和结算冻结全部计时，倍速同步推进。七种对局分别保留在本页内，切换不会清零；结束的对局可随时返回战报，只有重新开始才重置，刷新页面会丢失本页对局。随时使用静音调整体验。</p></li>
     </ol>
     <p class="help-footer">方向键移动光标 · Shift + 方向键微调 · Enter 放置 / 选择 · 空格暂停 / 恢复 · 右键 / Esc 取消建造</p>
   </dialog>

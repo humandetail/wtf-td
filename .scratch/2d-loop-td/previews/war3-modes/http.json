@@ -1,0 +1,72 @@
+{
+  "verifiedAt": "2026-10-31T13:18:31.162Z",
+  "method": "HEAD",
+  "browser": false,
+  "results": [
+    {
+      "path": "/game/",
+      "status": 200,
+      "type": "text/html; charset=utf-8"
+    },
+    {
+      "path": "/game/main.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/game/render.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/game/special-render.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/game/gem-session.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/game/hero-session.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/game/legion-session.js",
+      "status": 200,
+      "type": "text/javascript; charset=utf-8"
+    },
+    {
+      "path": "/game/assets/maps/gem/scene.png",
+      "status": 200,
+      "type": "image/png"
+    },
+    {
+      "path": "/game/assets/maps/hero/scene.png",
+      "status": 200,
+      "type": "image/png"
+    },
+    {
+      "path": "/game/assets/maps/legion/scene.png",
+      "status": 200,
+      "type": "image/png"
+    },
+    {
+      "path": "/game/assets/modes/gem/atlas.png",
+      "status": 200,
+      "type": "image/png"
+    },
+    {
+      "path": "/game/assets/modes/hero/atlas.png",
+      "status": 200,
+      "type": "image/png"
+    },
+    {
+      "path": "/game/assets/modes/shared/objectives.png",
+      "status": 200,
+      "type": "image/png"
+    }
+  ]
+}

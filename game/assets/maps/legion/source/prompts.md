@@ -1,0 +1,5 @@
+# 原始场景生成记录
+
+内置ImageGen，现有迷宫图仅作材质参考。新地面不烘焙路线，敌路与建造净空由对应geometry模块和渲染器共同决定。旧素材不动，scene.png与保留原图字节一致。
+
+Production top-down 2D game battlefield background, landscape8:5, coherent painterly matte jade/bronze Chinese fantasy fused with small industrial tech. Reference image is STYLE/MATERIAL ONLY, do not copy its layout. World1280x800. Entire playable x110..1170,y100..700 stays FLAT, OPEN, EMPTY and quiet for free placement and actors. No roads, no rings, no grid, no slots, no central core, no units, no UI,text,numbers,logos. Actual routes/objectives rendered by code. Restrained surface texture, warm upper-left light, matching chunky existing sprites. Decoration confined outside playable bounds. This is a disciplined bronze-and-jade military training arena. Broad quiet blue-green stone floor, subtle bronze seams, perfectly open square combat ground. Bottom low flat throne foundation centered640690 within southern margin, empty. North only subtle invader gateway. Strong symmetrical architecture only at outside edges, no lines or pads in the player deployment interior. This is a full-sized single faction battlefield which code mirrors/colors for two competing sides.

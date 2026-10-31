@@ -70,7 +70,9 @@ export function createAudio() {
   /** @param {{type: string, code?: string} | string} event */
   function play(event) {
     if (!context || context.state !== 'running' || muted) return;
-    const type = typeof event === 'string' ? event : event.type;
+    const originalType = typeof event === 'string' ? event : event.type;
+    const aliases = { fusion: 'upgrade', 'hero-attack': 'shot', 'hero-skill': 'upgrade', 'hero-hit': 'core-hit', 'hero-death': 'core-hit', 'hero-respawn': 'wave-clear', 'hero-level': 'research-complete', 'camp-clear': 'checkpoint', 'camp-reward': 'supply', attack: 'shot', damage: 'hit', 'king-attack': 'shot', 'king-death': 'core-hit', draw: 'wave-clear' };
+    const type = aliases[originalType] || originalType;
     if (!(type in cooldowns)) return;
     const now = context.currentTime;
     if (now - (lastPlayed.get(type) ?? -Infinity) < cooldowns[type]) return;

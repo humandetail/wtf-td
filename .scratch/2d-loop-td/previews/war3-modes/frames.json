@@ -1,0 +1,441 @@
+{
+  "loaded": 43,
+  "frames": {
+    "loop-retained": {
+      "mode": "loop",
+      "wave": 0,
+      "phase": "menu",
+      "elapsed": 0,
+      "towers": 0,
+      "enemies": 0,
+      "coreHealth": 20,
+      "events": [],
+      "placement": null,
+      "effectTime": 0
+    },
+    "defense-retained": {
+      "mode": "defense",
+      "wave": 0,
+      "phase": "menu",
+      "elapsed": 0,
+      "towers": 0,
+      "enemies": 0,
+      "coreHealth": 20,
+      "events": [],
+      "placement": null,
+      "effectTime": 0
+    },
+    "escort-retained": {
+      "mode": "escort",
+      "wave": 0,
+      "phase": "menu",
+      "elapsed": 0,
+      "towers": 0,
+      "enemies": 0,
+      "coreHealth": 100,
+      "events": [],
+      "placement": null,
+      "effectTime": 0
+    },
+    "maze-retained": {
+      "mode": "maze",
+      "wave": 0,
+      "phase": "menu",
+      "elapsed": 0,
+      "towers": 0,
+      "enemies": 0,
+      "coreHealth": 20,
+      "events": [],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-combat": {
+      "mode": "gem",
+      "wave": 4,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 37.84999999999999,
+      "towers": 4,
+      "enemies": 5,
+      "coreHealth": 20,
+      "events": [
+        "shot",
+        "hit",
+        "shot",
+        "hit"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F01-fusion": {
+      "mode": "gem",
+      "wave": 5,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 48.54999999999938,
+      "towers": 4,
+      "enemies": 1,
+      "coreHealth": 20,
+      "events": [
+        "fusion",
+        "build",
+        "wave"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F01-combat": {
+      "mode": "gem",
+      "wave": 5,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 51.54999999999921,
+      "towers": 4,
+      "enemies": 6,
+      "coreHealth": 20,
+      "events": [
+        "shot",
+        "hit",
+        "hit",
+        "hit"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F02-fusion": {
+      "mode": "gem",
+      "wave": 6,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 60.4499999999987,
+      "towers": 4,
+      "enemies": 1,
+      "coreHealth": 20,
+      "events": [
+        "fusion",
+        "fusion",
+        "build",
+        "research-start",
+        "wave"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F02-combat": {
+      "mode": "gem",
+      "wave": 6,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 61.94999999999862,
+      "towers": 4,
+      "enemies": 4,
+      "coreHealth": 20,
+      "events": [
+        "shot",
+        "shot",
+        "shot",
+        "hit",
+        "hit",
+        "hit",
+        "shot",
+        "hit"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F03-fusion": {
+      "mode": "gem",
+      "wave": 6,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 65.59999999999842,
+      "towers": 3,
+      "enemies": 1,
+      "coreHealth": 20,
+      "events": [
+        "fusion",
+        "build",
+        "research-start",
+        "wave"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F03-combat": {
+      "mode": "gem",
+      "wave": 6,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 69.09999999999822,
+      "towers": 3,
+      "enemies": 6,
+      "coreHealth": 20,
+      "events": [
+        "shot",
+        "hit",
+        "kill",
+        "shot",
+        "hit"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F04-fusion": {
+      "mode": "gem",
+      "wave": 10,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 119.09999999999538,
+      "towers": 6,
+      "enemies": 1,
+      "coreHealth": 20,
+      "events": [
+        "fusion",
+        "fusion",
+        "build",
+        "fusion",
+        "research-start",
+        "wave"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F04-combat": {
+      "mode": "gem",
+      "wave": 10,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 129.59999999999522,
+      "towers": 6,
+      "enemies": 7,
+      "coreHealth": 20,
+      "events": [
+        "shot",
+        "hit",
+        "shot",
+        "hit"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F05-fusion": {
+      "mode": "gem",
+      "wave": 14,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 188.0500000000085,
+      "towers": 5,
+      "enemies": 1,
+      "coreHealth": 20,
+      "events": [
+        "fusion",
+        "build",
+        "fusion",
+        "wave",
+        "shot",
+        "hit"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "gem-F05-combat": {
+      "mode": "gem",
+      "wave": 15,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 226.60000000001727,
+      "towers": 5,
+      "enemies": 1,
+      "coreHealth": 20,
+      "events": [
+        "shot",
+        "hit",
+        "hit",
+        "echo"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "hero-movement": {
+      "mode": "hero",
+      "wave": 1,
+      "phase": "playing",
+      "elapsed": 15.10000000000008,
+      "towers": 2,
+      "enemies": 1,
+      "coreHealth": 100,
+      "events": [],
+      "placement": {
+        "x": 640,
+        "y": 300,
+        "skill": "Q",
+        "ok": true
+      },
+      "effectTime": 0
+    },
+    "hero-Q": {
+      "mode": "hero",
+      "wave": 1,
+      "phase": "playing",
+      "elapsed": 16.200000000000095,
+      "towers": 2,
+      "enemies": 1,
+      "coreHealth": 100,
+      "events": [
+        "hit",
+        "kill",
+        "hero-skill"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "hero-warning": {
+      "mode": "hero",
+      "wave": 5,
+      "phase": "playing",
+      "elapsed": 124.49999999999507,
+      "towers": 2,
+      "enemies": 6,
+      "coreHealth": 100,
+      "events": [],
+      "placement": null,
+      "effectTime": 0
+    },
+    "hero-E": {
+      "mode": "hero",
+      "wave": 5,
+      "phase": "playing",
+      "elapsed": 124.59999999999506,
+      "towers": 2,
+      "enemies": 6,
+      "coreHealth": 100,
+      "events": [
+        "hero-skill"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "hero-R": {
+      "mode": "hero",
+      "wave": 10,
+      "phase": "playing",
+      "elapsed": 318.3000000000381,
+      "towers": 2,
+      "enemies": 1,
+      "coreHealth": 91,
+      "events": [
+        "hit",
+        "hero-skill",
+        "hero-skill"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "hero-camp": {
+      "mode": "hero",
+      "wave": 0,
+      "phase": "playing",
+      "elapsed": 2.499999999999999,
+      "towers": 2,
+      "enemies": 1,
+      "coreHealth": 100,
+      "events": [],
+      "placement": null,
+      "effectTime": 0
+    },
+    "hero-death-stress": {
+      "mode": "hero",
+      "wave": 1,
+      "phase": "playing",
+      "elapsed": 15.750000000000089,
+      "towers": 0,
+      "enemies": 18,
+      "coreHealth": 92,
+      "events": [
+        "hero-hit",
+        "hero-death"
+      ],
+      "placement": null,
+      "effectTime": 0,
+      "scenario": {
+        "waveSize": 18,
+        "enemyHealthScale": 100,
+        "initialDelay": 1000
+      }
+    },
+    "legion-unit-death": {
+      "mode": "legion",
+      "wave": 1,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 2.3499999999999996,
+      "towers": 4,
+      "enemies": 5,
+      "coreHealth": 1200,
+      "events": [
+        "attack",
+        "attack",
+        "damage",
+        "unit-death",
+        "damage",
+        "unit-death"
+      ],
+      "placement": null,
+      "effectTime": 0.2
+    },
+    "legion-player": {
+      "mode": "legion",
+      "wave": 4,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 27.15000000000025,
+      "towers": 4,
+      "enemies": 9,
+      "coreHealth": 1200,
+      "events": [
+        "attack",
+        "attack",
+        "damage",
+        "damage"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "legion-scout": {
+      "mode": "legion",
+      "wave": 4,
+      "phase": "playing",
+      "turnPhase": "combat",
+      "elapsed": 27.15000000000025,
+      "towers": 4,
+      "enemies": 11,
+      "coreHealth": 1200,
+      "events": [
+        "attack",
+        "attack",
+        "damage",
+        "damage"
+      ],
+      "placement": null,
+      "effectTime": 0
+    },
+    "legion-formation": {
+      "mode": "legion",
+      "wave": 8,
+      "phase": "playing",
+      "turnPhase": "planning",
+      "elapsed": 94.34999999999678,
+      "towers": 4,
+      "enemies": 0,
+      "coreHealth": 1200,
+      "events": [
+        "attack",
+        "damage",
+        "unit-death",
+        "round-end"
+      ],
+      "placement": null,
+      "effectTime": 0
+    }
+  }
+}
