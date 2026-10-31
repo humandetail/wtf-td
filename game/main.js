@@ -414,9 +414,10 @@ function bindControls() {
       event.preventDefault(); game.togglePause(); updateUI();
     } else if (event.key === 'Escape') {
       event.preventDefault();
+      const hadDrawer = !element('command-drawer').hidden;
       setDrawer();
       selectedTowerId = null; cancelBuild();
-      canvas.focus({ preventScroll: true });
+      if (!hadDrawer) canvas.focus({ preventScroll: true });
     }
   });
   document.addEventListener('visibilitychange', () => {
