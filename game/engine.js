@@ -1,7 +1,7 @@
 import {TOWERS, ENEMIES, MAX_LEVEL, towerStats, effectiveTowerStats} from './catalog.js';
-import {placementStatus, pointOnLoop} from './geometry.js';
+import {placementStatus, createRoadPosition, advanceOnRoad} from './geometry.js';
 /**
- * @param {{startingGold?:number,limit?:number,waveInterval?:number,spawnInterval?:number,initialDelay?:number,waveCount?:number,waveSize?:(wave:number)=>number,enemyHealthScale?:number,enemySpeedScale?:number,rewardScale?:number}} options
+ * @param {{startingGold?:number,limit?:number,waveInterval?:number,spawnInterval?:number,initialDelay?:number,waveCount?:number,waveSize?:(wave:number)=>number,enemyHealthScale?:number,enemySpeedScale?:number,rewardScale?:number,random?:()=>number}} options
  */
 export function createGame(options={}) {
  const startingGold=options.startingGold??400;
@@ -26,7 +26,7 @@ export function createGame(options={}) {
   const entry=queue.shift(),def=ENEMIES.find(e=>e.code===entry.code);
   const scale=1+(entry.wave-1)*.16;
   const maxHp=def.hp*scale*(entry.boss?10:1)*(options.enemyHealthScale??1);
-  state.enemies.push({id:nextEnemyId++,code:entry.code,hp:maxHp,maxHp,...pointOnLoop(0),progress:0,boss:entry.boss,speed:def.speed*(entry.boss ? .72 : 1)*(options.enemySpeedScale??1),reward:Math.max(1,Math.round(def.reward*(entry.boss?8:1)*(options.rewardScale??1))),slowUntil:0,slowFactor:1,rootUntil:0});
+  state.enemies.push({id:nextEnemyId++,code:entry.code,hp:maxHp,maxHp,...createRoadPosition(),progress:0,boss:entry.boss,speed:def.speed*(entry.boss ? .72 : 1)*(options.enemySpeedScale??1),reward:Math.max(1,Math.round(def.reward*(entry.boss?8:1)*(options.rewardScale??1))),slowUntil:0,slowFactor:1,rootUntil:0});
   if(state.enemies.length>=state.limit){state.phase='defeat';events.push({type:'defeat',message:'环路积怪已达上限'});}
  }
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -88,8 +88,9 @@ export function createGame(options={}) {
     if(stats.kind==='barrier'&&distance(tower,enemy)<=stats.range)factor=Math.min(factor,stats.slow);
    }
    if(enemy.rootUntil>state.elapsed)factor=0;
-   enemy.progress+=enemy.speed*factor*dt;
-   Object.assign(enemy,pointOnLoop(enemy.progress));
+   const travel=enemy.speed*factor*dt;
+   enemy.progress+=travel;
+   advanceOnRoad(enemy,travel,options.random);
   }
   combat(dt);
   if(!state.endless&&state.wave>=waveCount&&!queue.length&&!state.enemies.length){state.phase='victory';events.push({type:'victory',message:'二十波已清场，环路守卫成功！'});}

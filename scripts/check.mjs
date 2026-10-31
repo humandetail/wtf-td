@@ -5,7 +5,7 @@ import {inflateSync} from 'node:zlib';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
-import {FOOTPRINT, BUILD_CENTER_BOUNDS, ROAD_SEGMENTS, LOOP_LENGTH, pointOnLoop, placementStatus} from '../game/geometry.js';
+import {FOOTPRINT, BUILD_CENTER_BOUNDS, ROAD_SEGMENTS, ROAD_NODES, placementStatus} from '../game/geometry.js';
 import {SLOTS as V2_SLOTS, LOOP_LENGTH as V2_LENGTH, pointOnLoop as v2Point} from '../game/assets/maps/v2/source/layout-geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFile(resolve(root, file));
@@ -121,9 +121,13 @@ const v3Width=groundV3.readUInt32BE(16),v3Height=groundV3.readUInt32BE(20);
 assert(Math.abs(v3Width/v3Height-1.6)<.025&&v3Width>=1280&&v3Height>=800,'v3 地表比例或尺寸错误');
 await checkPng('game/assets/maps/v3/ground.png',v3Width,v3Height,false);
 const roadV3=await checkPng('game/assets/maps/v3/road.png',1280,800,true);
-for(let distance=0;distance<LOOP_LENGTH;distance+=2){
-  const p=pointOnLoop(distance);
-  assert(roadV3.alpha[Math.round(p.y)*1280+Math.round(p.x)]>=240,'v3 巡逻路线偏离实际路网');
+for(const [index,node] of ROAD_NODES.entries())for(const neighbor of node.neighbors){
+  const end=ROAD_NODES[neighbor],length=Math.hypot(end.x-node.x,end.y-node.y);
+  assert(length>0&&end.neighbors.includes(index),'路网存在无效或单向连接');
+  for(let distance=0;distance<=length;distance+=2){
+    const x=node.x+(end.x-node.x)*distance/length,y=node.y+(end.y-node.y)*distance/length;
+    assert(roadV3.alpha[Math.round(y)*1280+Math.round(x)]>=240,'v3 随机行走道路偏离实际路网');
+  }
 }
 for(const segment of ROAD_SEGMENTS)assert.equal(placementStatus((segment.x1+segment.x2)/2,(segment.y1+segment.y2)/2).ok,false,'路网存在可建造通道');
 let freePoints=0;

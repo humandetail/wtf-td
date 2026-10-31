@@ -105,26 +105,66 @@ test('surviving enemies loop and overlap waves, pause freezes and large ticks st
  assert.equal(game.drainEvents().filter(e=>e.type==='defeat').length,1);
 });
 
-test('one enemy traverses both rings, cross and spokes then returns past the entry', () => {
- const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1});game.start();
- // Visible coordinate windows on the locked 9352-pixel patrol, at 86 pixels/second.
- const checkpoints=[
-  [10,930,940,59,61], [16,1203,1205,300,315], [25,850,870,739,741],
-  [40,75,77,225,245], [50,638,642,175,185], [54,950,960,209,211],
-  [58,979,981,520,535], [65,435,450,589,591], [70,299,301,295,305],
-  [76,639,641,290,302], [78,700,720,399,401], [84,1203,1205,415,425], [90,1000,1015,739,741],
-  [96,639,641,585,600], [98,639,641,415,425], [102,310,325,399,401], [109,95,105,59,61],
- ];
- let previousTime=0,previousProgress=0,id;
- for(const [time,minX,maxX,minY,maxY] of checkpoints){
-  game.tick(time-previousTime);previousTime=time;
-  assert.equal(game.state.enemies.length,1);const enemy=game.state.enemies[0];id??=enemy.id;
-  assert.equal(enemy.id,id);
-  assert.ok(enemy.x>=minX&&enemy.x<=maxX&&enemy.y>=minY&&enemy.y<=maxY,`patrol position at ${time}s: ${enemy.x},${enemy.y}`);
-  assert.ok(enemy.progress>previousProgress);previousProgress=enemy.progress;
+function seededRandom(seed) {
+ return () => ((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+}
+
+test('enemies randomly continue or turn at a junction, deciding only upon arrival', () => {
+ for(const [choice,expected] of [[0,[678,60]],[.999,[640,98]]]){
+  let decisions=0;
+  const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1,random:()=>{decisions++;return choice;}});game.start();
+  game.tick(6);assert.equal(decisions,0);
+  game.tick(1);const enemy=game.state.enemies[0];
+  assert.equal(decisions,1);
+  assert.ok(Math.abs(enemy.x-expected[0])<.001&&Math.abs(enemy.y-expected[1])<.001);
+  assert.ok(enemy.progress>600);assert.equal(game.state.kills,0);
  }
- assert.ok(game.state.enemies[0].progress>9352);
- assert.equal(game.state.kills,0);assert.equal(game.state.phase,'playing');
+ let decisions=0;
+ const group=createGame({initialDelay:0,waveCount:1,waveSize:()=>3,spawnInterval:.02,random:()=>decisions++%2?.999:0});group.start();group.tick(7);
+ assert.equal(decisions,3,'each enemy chooses independently at the same junction');
+ assert.ok(group.state.enemies[0].x>640&&group.state.enemies[0].y===60);
+ assert.ok(group.state.enemies[1].x===640&&group.state.enemies[1].y>60);
+});
+
+test('the central crossing offers left, right and straight without reversing', () => {
+ for(const [choice,expected,angle] of [[0,[640,442],Math.PI/2],[.5,[598,400],Math.PI],[.999,[682,400],0]]){
+  const choices=[.999,.999,choice];let decisions=0;
+  const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1,random:()=>choices[decisions++]});game.start();
+  game.tick(11);const enemy=game.state.enemies[0];
+  assert.equal(decisions,3);
+  assert.ok(Math.abs(enemy.x-expected[0])<.001&&Math.abs(enemy.y-expected[1])<.001,`${enemy.x},${enemy.y}`);
+  assert.equal(enemy.angle,angle);
+ }
+});
+
+test('random walkers stay on roads through repeated junctions, pause, high speed and restart', () => {
+ // Explicit visible road coordinates keep this check independent of the graph builder.
+ const onRoad=(x,y)=>
+  ((y===60||y===740)&&x>=76&&x<=1204)||((x===76||x===1204)&&y>=60&&y<=740)||
+  ((y===210||y===590)&&x>=300&&x<=980)||((x===300||x===980)&&y>=210&&y<=590)||
+  (x===640&&y>=60&&y<=740)||(y===400&&x>=76&&x<=1204);
+ const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>6,spawnInterval:.02,enemySpeedScale:20,random:seededRandom(42)});game.start();
+ game.tick(.5);game.togglePause();const frozen=game.state.enemies.map(e=>[e.x,e.y,e.angle,e.progress]);
+ game.tick(5);assert.deepEqual(game.state.enemies.map(e=>[e.x,e.y,e.angle,e.progress]),frozen);game.togglePause();
+ const seen=new Set();let previous=game.state.enemies.map(e=>[e.x,e.y]);
+ for(let i=0;i<800;i++){
+  game.tick(.05);
+  for(const [index,enemy] of game.state.enemies.entries()){
+   assert.ok(onRoad(enemy.x,enemy.y),`off road: ${enemy.x},${enemy.y}`);
+   assert.ok(Math.hypot(enemy.x-previous[index][0],enemy.y-previous[index][1])<=enemy.speed*.05+.001,'no teleport at junction');
+   if(enemy.x===640&&enemy.y>210&&enemy.y<590)seen.add('cross');
+   if((enemy.y===210||enemy.y===590)&&enemy.x>300&&enemy.x<980)seen.add('inner');
+   if(enemy.y===60||enemy.y===740||enemy.x===76||enemy.x===1204)seen.add('outer');
+  }
+  previous=game.state.enemies.map(e=>[e.x,e.y]);
+ }
+ assert.deepEqual([...seen].sort(),['cross','inner','outer']);
+ assert.equal(game.state.enemies.length,6);assert.ok(game.state.enemies.every(e=>e.progress>e.speed*39.9));
+ assert.ok(new Set(game.state.enemies.map(e=>`${e.x},${e.y}`)).size>1);
+ game.restart();game.tick(.05);
+ assert.equal(game.state.enemies[0].id,1);assert.ok(Math.abs(game.state.enemies[0].x-162)<.001);assert.equal(game.state.enemies[0].y,60);
+ const fast=createGame({initialDelay:0,waveCount:1,waveSize:()=>1,enemySpeedScale:2000,random:()=>.999});fast.start();fast.tick(.05);
+ const enemy=fast.state.enemies[0];assert.ok(Math.abs(enemy.progress-8600)<.001);assert.ok(onRoad(enemy.x,enemy.y));
 });
 
 test('automatic fire kills targets once and awards gold through visible combat events', () => {
@@ -184,7 +224,7 @@ test('radar boosts damage, repair arm accelerates fire, supply produces gold', (
 });
 
 test('20 scheduled waves include four persistent bosses; victory waits for final spawn and clear, then endless retains economy', () => {
- const game=createGame({startingGold:100000,initialDelay:0,waveInterval:.3,spawnInterval:.02,waveSize:()=>1,enemyHealthScale:.05});game.start();
+ const game=createGame({startingGold:100000,initialDelay:0,waveInterval:.3,spawnInterval:.02,waveSize:()=>1,enemyHealthScale:.05,random:seededRandom(7)});game.start();
  game.tick(6.2);
  assert.equal(game.state.wave,20);
  assert.equal(game.state.enemies.filter(e=>e.boss).length,4);
@@ -221,7 +261,8 @@ test('funds and session phase guard commands; early launch awards no gold and ca
 });
 
 test('normal economy supports a 20-wave clear using only coordinate purchases, upgrades and elapsed player time', () => {
- const game=createGame();game.start();
+ for(const seed of [1,42,2026]){
+ const game=createGame({random:seededRandom(seed)});game.start();
  const plan=[[190.25,140.5,'T01'],[390.75,140.25,'T03'],[490.5,140.75,'T05'],[190.5,200.25,'T04'],[190.75,260.5,'T03'],[190.25,320.75,'T04']];
  for(let elapsed=0;elapsed<1000&&game.state.phase==='playing';elapsed+=.5){
   const next=plan.find(([x,y])=>!game.state.towers.some(t=>t.x===x&&t.y===y));
@@ -231,4 +272,5 @@ test('normal economy supports a 20-wave clear using only coordinate purchases, u
  }
  assert.equal(game.state.phase,'victory');assert.equal(game.state.wave,20);assert.equal(game.state.kills,624);
  assert.equal(game.state.towers.length,6);
+ }
 });

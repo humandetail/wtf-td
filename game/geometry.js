@@ -12,29 +12,46 @@ export const ROAD_SEGMENTS = [
 ].map(([x1,y1,x2,y2]) => ({ x1,y1,x2,y2 }));
 export const ROAD_PATH = 'M76 60H1204V740H76Z M300 210H980V590H300Z M640 60V740 M76 400H1204';
 
-// Patrol visits both rings, the central cross and every connecting spoke.
-const route = [
-  [76,60],[1204,60],[1204,740],[76,740],[76,60],[640,60],
-  [640,210],[980,210],[980,590],[300,590],[300,210],[640,210],
-  [640,400],[980,400],[1204,400],[1204,740],[640,740],
-  [640,590],[640,400],[300,400],[76,400],[76,60],
-];
-export const LOOP = route.map(([x,y])=>({x,y}));
-export const SEGMENTS = LOOP.slice(1).map((end,index)=>{
-  const start=LOOP[index];
-  return {start,end,length:Math.hypot(end.x-start.x,end.y-start.y)};
-});
-export const LOOP_LENGTH = SEGMENTS.reduce((sum,segment)=>sum+segment.length,0);
-export function pointOnLoop(distance) {
-  let remaining=((distance%LOOP_LENGTH)+LOOP_LENGTH)%LOOP_LENGTH;
-  for(const segment of SEGMENTS){
-    if(remaining<=segment.length){
-      const t=remaining/segment.length;
-      return {x:segment.start.x+(segment.end.x-segment.start.x)*t,y:segment.start.y+(segment.end.y-segment.start.y)*t,angle:Math.atan2(segment.end.y-segment.start.y,segment.end.x-segment.start.x)};
-    }
-    remaining-=segment.length;
+// Split the artwork's straight roads at every endpoint and intersection.
+const onRoad=(road,x,y)=>x>=Math.min(road.x1,road.x2)&&x<=Math.max(road.x1,road.x2)&&y>=Math.min(road.y1,road.y2)&&y<=Math.max(road.y1,road.y2);
+/** @type {{x:number,y:number,neighbors:number[]}[]} */
+export const ROAD_NODES=[];
+function addNode(x,y){
+  if(!ROAD_NODES.some(node=>node.x===x&&node.y===y))ROAD_NODES.push({x,y,neighbors:[]});
+}
+for(const road of ROAD_SEGMENTS){addNode(road.x1,road.y1);addNode(road.x2,road.y2);}
+for(const horizontal of ROAD_SEGMENTS.filter(road=>road.y1===road.y2)){
+  for(const vertical of ROAD_SEGMENTS.filter(road=>road.x1===road.x2)){
+    if(onRoad(horizontal,vertical.x1,horizontal.y1)&&onRoad(vertical,vertical.x1,horizontal.y1))addNode(vertical.x1,horizontal.y1);
   }
-  return {...ENTRY,angle:0};
+}
+for(const road of ROAD_SEGMENTS){
+  const nodes=ROAD_NODES.map((node,index)=>({...node,index})).filter(node=>onRoad(road,node.x,node.y)).sort((a,b)=>a.x-b.x||a.y-b.y);
+  for(let i=1;i<nodes.length;i++){
+    ROAD_NODES[nodes[i-1].index].neighbors.push(nodes[i].index);
+    ROAD_NODES[nodes[i].index].neighbors.push(nodes[i-1].index);
+  }
+}
+export function createRoadPosition(){
+  const roadFrom=ROAD_NODES.findIndex(node=>node.x===ENTRY.x&&node.y===ENTRY.y);
+  const roadTo=ROAD_NODES[roadFrom].neighbors.find(index=>ROAD_NODES[index].x>ENTRY.x);
+  return {...ENTRY,angle:0,roadFrom,roadTo};
+}
+export function advanceOnRoad(entity,distance,random=Math.random){
+  let remaining=distance;
+  while(remaining>0){
+    const target=ROAD_NODES[entity.roadTo],dx=target.x-entity.x,dy=target.y-entity.y;
+    const length=Math.hypot(dx,dy);
+    if(remaining<length){
+      entity.x+=dx*remaining/length;entity.y+=dy*remaining/length;
+      break;
+    }
+    entity.x=target.x;entity.y=target.y;remaining-=length;
+    const exits=target.neighbors.filter(index=>index!==entity.roadFrom);
+    const next=exits[exits.length===1?0:Math.floor(random()*exits.length)];
+    entity.roadFrom=entity.roadTo;entity.roadTo=next;
+    entity.angle=Math.atan2(ROAD_NODES[next].y-target.y,ROAD_NODES[next].x-target.x);
+  }
 }
 
 const halfX=FOOTPRINT.width/2,halfY=FOOTPRINT.height/2;
