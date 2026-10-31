@@ -9,6 +9,7 @@
 
 /* Battlefield first: fixed HUD and build dock, all remaining space belongs to the map. */
 body.in-game{overflow:hidden}
+body.in-game .app-shell{max-width:none}
 .game-screen{height:100svh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px;padding:6px;overflow:auto;overscroll-behavior:contain}
 .game-screen.focus-mode{grid-template-rows:auto minmax(0,1fr)}
 .status-bar{min-height:48px;padding:5px 12px;gap:16px;flex-wrap:nowrap;overflow-x:auto;border-bottom:1px solid #847447;scrollbar-width:thin}
