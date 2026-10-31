@@ -3,34 +3,75 @@ import assert from 'node:assert/strict';
 import {createGame} from '../engine.js';
 import {TOWERS, ENEMIES, towerStats, effectiveTowerStats} from '../catalog.js';
 
-test('player builds, upgrades five levels, sells and restarts a clean session', () => {
-  const game = createGame({startingGold:10000});
-  assert.equal(game.state.phase, 'menu');
-  game.start();
-  assert.equal(TOWERS.length,12);
-  assert.equal(ENEMIES.length,12);
-  assert.equal(game.build(99,'T01').ok,false);
-  assert.equal(game.build(1,'T01').ok,true);
-  assert.equal(game.state.gold,9900);
-  assert.equal(game.build(1,'T01').ok,false);
-  assert.equal(game.build(2,'unknown').ok,false);
-  const initialDamage = towerStats(game.state.towers[0]).damage;
-  for(let i=0;i<4;i++) assert.equal(game.upgrade(1).ok,true);
-  assert.equal(game.state.towers[0].level,5);
-  assert.equal(game.upgrade(1).ok,false);
-  assert.ok(towerStats(game.state.towers[0]).damage>initialDamage);
-  const refund=towerStats(game.state.towers[0]).sellValue;
-  const before=game.state.gold;
-  assert.equal(game.sell(1).ok,true);
-  assert.equal(game.state.gold,before+refund);
-  assert.equal(game.state.towers.length,0);
-  game.build(20,'T12'); game.togglePause(); game.setSpeed(3); game.restart();
-  assert.equal(game.state.gold,10000);
-  assert.equal(game.state.paused,false);
-  assert.equal(game.state.speed,1);
-  assert.deepEqual(game.state.towers,[]);
-  assert.deepEqual(game.state.enemies,[]);
-  assert.equal(game.state.wave,0);
+test('arbitrary coordinates build exact positions with an allocated tower ID', () => {
+ const game=createGame();
+ assert.equal(game.canBuild(190.25,140.5,'T01').ok,false);
+ game.start();
+ assert.equal(game.canBuild(190.25,140.5,'T01').ok,true);
+ const built=game.build(190.25,140.5,'T01');
+ assert.equal(built.ok,true);assert.equal(built.towerId,1);
+ assert.equal(game.state.gold,300);
+ assert.equal(game.state.towers[0].x,190.25);assert.equal(game.state.towers[0].y,140.5);
+ assert.equal('slotId' in game.state.towers[0],false);
+});
+
+test('placement rejects roads, hub, edges, nonfinite inputs and overlapping footprints without side effects', () => {
+ const game=createGame({startingGold:10000});game.start();
+ const invalid=[ [300,300], [640,140], [400,400], [640,340], [540,330],
+  [154,140], [1126,140], [190,124], [190,676], [390,170], [250,300],
+  [-100,140], [NaN,140], [190,Infinity], [Infinity,NaN] ];
+ const before=game.state.gold;
+ for(let repeat=0;repeat<3;repeat++)for(const [x,y] of invalid){
+  const preview=game.canBuild(x,y,'T01');assert.equal(preview.ok,false,`${x},${y}`);
+  assert.deepEqual(game.build(x,y,'T01'),preview);
+ }
+ assert.equal(game.build(190,140,'unknown').ok,false);
+ assert.equal(game.state.gold,before);assert.deepEqual(game.state.towers,[]);assert.deepEqual(game.drainEvents(),[]);
+ assert.equal(game.build(190,140,'T01').towerId,1);
+ for(const [x,y] of [[190,140],[287,140],[190,197]]){
+  assert.equal(game.canBuild(x,y,'T01').ok,false);assert.equal(game.build(x,y,'T01').ok,false);
+ }
+ assert.equal(game.build(390.75,140.25,'T03').towerId,2);
+ assert.equal(game.state.towers.length,2);
+ assert.equal(game.build(155,125,'T01').ok,false); // This legal boundary point overlaps the first tower.
+ const boundary=createGame();boundary.start();
+ assert.equal(boundary.build(155,125,'T01').ok,true);
+ assert.equal(boundary.build(1125,675,'T01').ok,true);
+});
+
+test('repeated unaffordable commands preserve money and the next successful tower ID', () => {
+ const game=createGame({startingGold:200});game.start();
+ const first=game.build(190,140,'T01').towerId;
+ for(let repeat=0;repeat<5;repeat++){
+  assert.deepEqual(game.canBuild(390,140,'T03'),{ok:false,message:'金币不足'});
+  assert.deepEqual(game.build(390,140,'T03'),{ok:false,message:'金币不足'});
+ }
+ assert.equal(game.state.gold,100);assert.equal(game.state.towers.length,1);
+ assert.equal(game.sell(first).ok,true);
+ assert.equal(game.build(390,140,'T01').towerId,2);
+});
+
+test('tower IDs select the correct unit through upgrades, sale, rebuilding and restart', () => {
+ const game=createGame({startingGold:10000});game.start();
+ assert.equal(TOWERS.length,12);assert.equal(ENEMIES.length,12);
+ const first=game.build(190,140,'T01').towerId;
+ const second=game.build(390,140,'T03').towerId;
+ const initialDamage=towerStats(game.state.towers[0]).damage;
+ for(let i=0;i<4;i++)assert.equal(game.upgrade(first).ok,true);
+ assert.equal(game.upgrade(first).ok,false);
+ assert.equal(game.state.towers[0].level,5);assert.equal(game.state.towers[1].level,1);
+ assert.ok(towerStats(game.state.towers[0]).damage>initialDamage);
+ const refund=towerStats(game.state.towers[0]).sellValue,before=game.state.gold;
+ assert.equal(game.sell(first).ok,true);assert.equal(game.state.gold,before+refund);
+ const rebuilt=game.build(190,140,'T12').towerId;
+ assert.ok(rebuilt>second);assert.equal(game.upgrade(first).ok,false);assert.equal(game.sell(first).ok,false);
+ assert.equal(game.upgrade(second).ok,true);assert.equal(game.state.towers.find(t=>t.id===second).level,2);
+ game.launchWave();game.tick(.1);
+ assert.equal(game.build(490,140,'T01').towerId,4); // Enemy spawning uses a separate ID sequence.
+ game.togglePause();game.setSpeed(3);game.restart();
+ assert.equal(game.state.gold,10000);assert.equal(game.state.paused,false);assert.equal(game.state.speed,1);
+ assert.deepEqual(game.state.towers,[]);assert.deepEqual(game.state.enemies,[]);assert.equal(game.state.wave,0);
+ assert.equal(game.build(190,140,'T01').towerId,1);
 });
 
 test('surviving enemies loop and overlap waves, pause freezes and large ticks stop at the cap', () => {
@@ -48,32 +89,30 @@ test('surviving enemies loop and overlap waves, pause freezes and large ticks st
  assert.equal(game.drainEvents().filter(e=>e.type==='defeat').length,1);
 });
 
-test('one surviving enemy traverses the four folded districts and returns past the entry with travelled progress intact', () => {
+test('one enemy traverses both rings, cross and spokes then returns past the entry', () => {
  const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1});game.start();
- // Coordinate windows come from the map's visible districts, not the path sampler.
+ // Visible coordinate windows on the locked 9352-pixel patrol, at 86 pixels/second.
  const checkpoints=[
-  [10,975,1000,340,365], // northeast turn into the creek approach
-  [20,765,785,545,575], // southeast fold back toward the middle
-  [30,175,195,545,580], // southwest ruins return
-  [35,310,340,280,300], // bamboo fold toward the west boundary
-  [44.1,640,650,124,126], // entry crossed after a complete lap
-  [45,710,730,124,126], // moving onward along the entry straight again
+  [10,930,940,59,61], [16,1203,1205,300,315], [25,850,870,739,741],
+  [40,75,77,225,245], [50,638,642,175,185], [54,950,960,209,211],
+  [58,979,981,520,535], [65,435,450,589,591], [70,299,301,295,305],
+  [76,639,641,290,302], [78,700,720,399,401], [84,1203,1205,415,425], [90,1000,1015,739,741],
+  [96,639,641,585,600], [98,639,641,415,425], [102,310,325,399,401], [109,95,105,59,61],
  ];
  let previousTime=0,previousProgress=0,id;
  for(const [time,minX,maxX,minY,maxY] of checkpoints){
   game.tick(time-previousTime);previousTime=time;
-  assert.equal(game.state.enemies.length,1);
-  const enemy=game.state.enemies[0];id??=enemy.id;
+  assert.equal(game.state.enemies.length,1);const enemy=game.state.enemies[0];id??=enemy.id;
   assert.equal(enemy.id,id);
-  assert.ok(enemy.x>=minX&&enemy.x<=maxX&&enemy.y>=minY&&enemy.y<=maxY,`district position at ${time}s`);
+  assert.ok(enemy.x>=minX&&enemy.x<=maxX&&enemy.y>=minY&&enemy.y<=maxY,`patrol position at ${time}s: ${enemy.x},${enemy.y}`);
   assert.ok(enemy.progress>previousProgress);previousProgress=enemy.progress;
  }
- assert.ok(game.state.enemies[0].progress>3789);
+ assert.ok(game.state.enemies[0].progress>9352);
  assert.equal(game.state.kills,0);assert.equal(game.state.phase,'playing');
 });
 
 test('automatic fire kills targets once and awards gold through visible combat events', () => {
- const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>3,spawnInterval:.1,enemyHealthScale:.3});game.start();game.build(3,'T01');
+ const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>3,spawnInterval:.1,enemyHealthScale:.3});game.start();game.build(190,140,'T01');
  const gold=game.state.gold;game.tick(12);
  assert.equal(game.state.kills,3);
  assert.equal(game.state.gold,gold+24);
@@ -87,8 +126,8 @@ test('automatic fire kills targets once and awards gold through visible combat e
 
 function combatSession(code, support) {
  const game=createGame({startingGold:10000,initialDelay:0,waveCount:1,waveSize:()=>4,spawnInterval:.02,enemyHealthScale:100});game.start();game.tick(.2);
- if(code)game.build(3,code);
- if(support)game.build(2,support);
+ if(code)game.build(190,140,code);
+ if(support)game.build(390,140,support);
  game.drainEvents();return game;
 }
 test('area weapons and chain lightning strike groups while single fire strikes one enemy', () => {
@@ -121,7 +160,7 @@ test('radar boosts damage, repair arm accelerates fire, supply produces gold', (
   if(support==='T09')assert.ok(displayed.range>towerStats(tower).range);
   if(support==='T10')assert.ok(displayed.interval<towerStats(tower).interval);
  }
- const game=createGame({initialDelay:100});game.start();game.build(1,'T11');const gold=game.state.gold;game.tick(8.1);
+ const game=createGame({initialDelay:100});game.start();game.build(190,140,'T11');const gold=game.state.gold;game.tick(8.1);
  assert.equal(game.state.gold,gold+12);
  assert.ok(game.drainEvents().some(e=>e.type==='income'&&e.amount===12));
  assert.equal(game.upgrade(1).ok,true);const upgradedGold=game.state.gold;game.tick(8);
@@ -137,7 +176,8 @@ test('20 scheduled waves include four persistent bosses; victory waits for final
  game.tick(100);
  assert.equal(game.state.phase,'playing');
  assert.equal(game.state.enemies.filter(e=>e.boss).length,4);
- for(let slot=1;slot<=20;slot++)game.build(slot,'T04');
+ for(let y=140;y<=660;y+=60)for(let x=170;x<=1110;x+=100)if(game.canBuild(x,y,'T04').ok)game.build(x,y,'T04');
+ assert.ok(game.state.towers.length>20,'valid packing has no legacy 20-tower cap');
  game.tick(120);
  assert.equal(game.state.phase,'victory');
  assert.equal(game.state.kills,24);
@@ -152,25 +192,27 @@ test('20 scheduled waves include four persistent bosses; victory waits for final
 
 test('funds and session phase guard commands; early launch awards no gold and cannot skip a pending queue', () => {
  const game=createGame({waveCount:1,waveSize:()=>3,spawnInterval:2,enemyHealthScale:.1});
- assert.equal(game.build(3,'T01').ok,false);game.start();game.build(3,'T01');
- game.build(4,'T03');const gold=game.state.gold;
- assert.equal(game.build(2,'T05').ok,false);assert.equal(game.upgrade(3).ok,false);assert.equal(game.state.gold,gold);
+ assert.equal(game.build(190,140,'T01').ok,false);game.start();game.build(190,140,'T01');
+ game.build(390,140,'T03');const gold=game.state.gold;
+ assert.deepEqual(game.canBuild(490,140,'T05'),{ok:false,message:'金币不足'});
+ assert.equal(game.build(490,140,'T05').ok,false);assert.equal(game.upgrade(1).ok,false);assert.equal(game.state.gold,gold);
  assert.equal(game.launchWave().ok,true);assert.equal(game.state.gold,gold);
  assert.equal(game.launchWave().ok,false);game.tick(.1);
  assert.equal(game.state.phase,'playing');assert.equal(game.state.kills,1);
  game.tick(5);assert.equal(game.state.phase,'victory');assert.equal(game.state.kills,3);
- assert.equal(game.build(2,'T01').ok,false);assert.equal(game.sell(3).ok,false);
+ assert.equal(game.build(490,140,'T01').ok,false);assert.equal(game.sell(1).ok,false);
  game.restart();assert.equal(game.state.wave,0);game.tick(.1);assert.equal(game.state.wave,0);
 });
 
-test('normal economy supports a 20-wave clear using only purchases, upgrades and elapsed player time', () => {
+test('normal economy supports a 20-wave clear using only coordinate purchases, upgrades and elapsed player time', () => {
  const game=createGame();game.start();
- const plan=[[3,'T01'],[4,'T03'],[2,'T05'],[1,'T04'],[19,'T04'],[20,'T03'],[11,'T04'],[12,'T03'],[7,'T05'],[8,'T04'],[6,'T03'],[5,'T04'],[10,'T03'],[9,'T04'],[17,'T04'],[18,'T03'],[13,'T04'],[14,'T03'],[15,'T04'],[16,'T03']];
+ const plan=[[190.25,140.5,'T01'],[390.75,140.25,'T03'],[490.5,140.75,'T05'],[190.5,200.25,'T04'],[190.75,260.5,'T03'],[190.25,320.75,'T04']];
  for(let elapsed=0;elapsed<1000&&game.state.phase==='playing';elapsed+=.5){
-  const next=plan.find(([slot])=>!game.state.towers.some(t=>t.slotId===slot));
-  if(next)game.build(...next);
-  if(game.state.towers.length>=6){const tower=game.state.towers.find(t=>t.level<5);if(tower)game.upgrade(tower.slotId);}
+  const next=plan.find(([x,y])=>!game.state.towers.some(t=>t.x===x&&t.y===y));
+  if(next&&game.canBuild(...next).ok)assert.equal(game.build(...next).ok,true);
+  if(game.state.towers.length>=6){const tower=game.state.towers.find(t=>t.level<5);if(tower)game.upgrade(tower.id);}
   game.tick(.5);game.drainEvents();
  }
  assert.equal(game.state.phase,'victory');assert.equal(game.state.wave,20);assert.equal(game.state.kills,624);
+ assert.equal(game.state.towers.length,6);
 });

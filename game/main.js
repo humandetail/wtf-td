@@ -1,6 +1,6 @@
 import { createGame } from './engine.js';
 import { TOWERS, effectiveTowerStats, MAX_LEVEL } from './catalog.js';
-import { SLOTS, WORLD } from './geometry.js';
+import { WORLD } from './geometry.js';
 import { createAudio } from './audio.js';
 import { loadArtwork, createRenderer } from './render.js';
 
@@ -21,8 +21,12 @@ const roles = {
   supply: '金币补给', barrier: '区域减速',
 };
 let renderer;
-let selectedSlot = null;
+let selectedTowerId = null;
 let armedCode = null;
+let placement = null;
+let pointerPosition = null;
+let keyboardMode = false;
+const keyboardPointer = { x: 190, y: 140 };
 let view = 'menu';
 let lastPhase = 'menu';
 let noticeUntil = 0;
@@ -55,33 +59,52 @@ function resultMessage(result) {
   updateUI();
 }
 
-function chooseSlot(slotId) {
-  selectedSlot = slotId;
-  selectedSignature = '';
-  const occupied = game.state.towers.some(tower => tower.slotId === slotId);
-  if (armedCode && !occupied) {
-    const result = game.build(slotId, armedCode);
-    if (result.ok) armedCode = null;
+function refreshPlacement() {
+  placement = armedCode && pointerPosition
+    ? { ...pointerPosition, code: armedCode, ...game.canBuild(pointerPosition.x, pointerPosition.y, armedCode) }
+    : null;
+  const pending = TOWERS.find(item => item.code === armedCode);
+  const status = element('build-status');
+  const message = pending
+    ? `${pending.name} · ${pending.price} 金币 · ${placement ? placement.message : '移动到绿色区域放置，可连续建造'}`
+    : '先选工事，再在绿色区域放置。';
+  if (status.textContent !== message) status.textContent = message;
+  status.classList.toggle('invalid', !!placement && !placement.ok);
+  element('cancel-build-button').hidden = !armedCode;
+}
+
+function cancelBuild() {
+  armedCode = null;
+  placement = null;
+  updateUI();
+}
+
+function activatePoint(point) {
+  pointerPosition = point;
+  if (armedCode) {
+    const result = game.build(point.x, point.y, armedCode);
+    if (result.ok) selectedTowerId = result.towerId;
     resultMessage(result);
   } else {
-    if (occupied) armedCode = null;
+    selectedTowerId = renderer.hitTest(point.x, point.y, game.state.towers);
+    if (!selectedTowerId) notice('先选工事，再在绿色区域放置。');
     updateUI();
   }
 }
 
 function updateSelection() {
-  const tower = game.state.towers.find(tower => tower.slotId === selectedSlot);
-  const signature = `${selectedSlot}/${tower?.code}/${tower?.level}/${game.state.gold}/${armedCode}`;
+  const tower = game.state.towers.find(tower => tower.id === selectedTowerId);
+  const signature = `${selectedTowerId}/${game.state.towers.map(item => `${item.id}:${item.level}`).join(',')}/${game.state.gold}/${armedCode}`;
   if (selectedSignature === signature) return;
   selectedSignature = signature;
-  element('selected-slot-label').textContent = selectedSlot ? `塔位 ${String(selectedSlot).padStart(2, '0')}` : '防线指挥';
+  element('selected-slot-label').textContent = armedCode ? '建造模式' : tower ? '已选防御单位' : '防线指挥';
   element('tower-panel').hidden = !tower;
   element('selection-hint').hidden = !!tower;
   if (!tower) {
     const pending = TOWERS.find(item => item.code === armedCode);
     element('selection-hint').textContent = pending
-      ? `已选${pending.name}（${pending.price} 金币），点击空塔位部署。`
-      : selectedSlot ? '塔位已选中，点击右侧防御单位即可建造。' : '点击地图空塔位，再选择防御单位；也可以先选单位。';
+      ? `已选${pending.name}（${pending.price} 金币），在绿色区域任意放置。右键或 Esc 取消建造。`
+      : '先选工事，再在绿色区域放置；点击已有工事查看属性。';
     return;
   }
   const stats = effectiveTowerStats(tower, game.state.towers);
@@ -131,6 +154,7 @@ function updateUI() {
     card.setAttribute('aria-pressed', String(armedCode === code));
     card.classList.toggle('unaffordable', state.gold < definition.price);
   }
+  refreshPlacement();
   updateSelection();
   if (lastPhase !== state.phase) {
     lastPhase = state.phase;
@@ -157,8 +181,13 @@ function enterGame(restart = false) {
   void audio.unlock();
   if (restart) {
     game.restart();
-    selectedSlot = null;
+    selectedTowerId = null;
     armedCode = null;
+    placement = null;
+    pointerPosition = null;
+    keyboardMode = false;
+    keyboardPointer.x = 190;
+    keyboardPointer.y = 140;
     renderer.reset();
   } else if (game.state.phase === 'menu') game.start();
   else if (game.state.paused) game.togglePause();
@@ -190,8 +219,8 @@ function bindControls() {
     showView('menu');
     element('start-button').focus();
   });
-  element('upgrade-button').addEventListener('click', () => resultMessage(game.upgrade(selectedSlot)));
-  element('sell-button').addEventListener('click', () => resultMessage(game.sell(selectedSlot)));
+  element('upgrade-button').addEventListener('click', () => resultMessage(game.upgrade(selectedTowerId)));
+  element('sell-button').addEventListener('click', () => resultMessage(game.sell(selectedTowerId)));
   element('help-button').addEventListener('click', () => {
     helpPaused = game.state.phase === 'playing' && !game.state.paused;
     if (helpPaused) game.togglePause();
@@ -203,45 +232,63 @@ function bindControls() {
     helpPaused = false;
     updateUI();
   });
+  element('cancel-build-button').addEventListener('click', cancelBuild);
   element('shop-list').addEventListener('click', event => {
     const card = /** @type {HTMLElement} */ (event.target).closest('button[data-code]');
     if (!card) return;
-    const code = /** @type {HTMLButtonElement} */ (card).dataset.code;
+    armedCode = /** @type {HTMLButtonElement} */ (card).dataset.code;
+    selectedTowerId = null;
     void audio.unlock();
-    const occupied = game.state.towers.some(tower => tower.slotId === selectedSlot);
-    if (selectedSlot && !occupied) {
-      const result = game.build(selectedSlot, code);
-      if (result.ok) armedCode = null;
-      resultMessage(result);
-    } else {
-      armedCode = code;
-      if (occupied) selectedSlot = null;
-      notice(`已选${TOWERS.find(tower => tower.code === code).name}，点击空塔位部署。`);
-      updateUI();
-    }
+    notice(`已选${TOWERS.find(tower => tower.code === armedCode).name}，在绿色区域放置。右键或 Esc 取消。`);
+    updateUI();
+    canvas.focus({ preventScroll: true });
   });
   function pointer(event) {
     const bounds = canvas.getBoundingClientRect();
-    return renderer.hitTest((event.clientX - bounds.left) / bounds.width * WORLD.width, (event.clientY - bounds.top) / bounds.height * WORLD.height);
+    return {
+      x: (event.clientX - bounds.left) / bounds.width * WORLD.width,
+      y: (event.clientY - bounds.top) / bounds.height * WORLD.height,
+    };
   }
   canvas.addEventListener('click', event => {
-    const slot = pointer(event);
+    keyboardMode = false;
     void audio.unlock();
-    if (slot) chooseSlot(slot);
-    else { selectedSlot = null; updateUI(); }
+    const point = pointer(event);
+    Object.assign(keyboardPointer, point);
+    activatePoint(point);
   });
-  canvas.addEventListener('pointermove', event => renderer.setHover(pointer(event)));
-  canvas.addEventListener('pointerleave', () => renderer.setHover(null));
+  canvas.addEventListener('pointermove', event => {
+    keyboardMode = false;
+    pointerPosition = pointer(event);
+    Object.assign(keyboardPointer, pointerPosition);
+    refreshPlacement();
+  });
+  canvas.addEventListener('pointerleave', () => {
+    pointerPosition = null;
+    refreshPlacement();
+  });
+  canvas.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    cancelBuild();
+  });
   canvas.addEventListener('keydown', event => {
     if (event.key.startsWith('Arrow')) {
+      keyboardMode = true;
       event.preventDefault();
-      const index = SLOTS.findIndex(slot => slot.id === selectedSlot);
-      const delta = ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : 1;
-      selectedSlot = SLOTS[(index + delta + SLOTS.length) % SLOTS.length].id;
-      selectedSignature = '';
-      updateUI();
-    } else if (event.key === 'Enter' && selectedSlot && armedCode) {
-      event.preventDefault(); chooseSlot(selectedSlot);
+      const step = event.shiftKey ? 4 : 16;
+      if (event.key === 'ArrowLeft') keyboardPointer.x -= step;
+      if (event.key === 'ArrowRight') keyboardPointer.x += step;
+      if (event.key === 'ArrowUp') keyboardPointer.y -= step;
+      if (event.key === 'ArrowDown') keyboardPointer.y += step;
+      keyboardPointer.x = Math.max(0, Math.min(WORLD.width, keyboardPointer.x));
+      keyboardPointer.y = Math.max(0, Math.min(WORLD.height, keyboardPointer.y));
+      pointerPosition = { ...keyboardPointer };
+      refreshPlacement();
+    } else if (event.key === 'Enter') {
+      keyboardMode = true;
+      event.preventDefault();
+      void audio.unlock();
+      activatePoint({ ...keyboardPointer });
     }
   });
   document.addEventListener('keydown', event => {
@@ -249,7 +296,7 @@ function bindControls() {
     if (event.key === ' ' && !['BUTTON', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName)) {
       event.preventDefault(); game.togglePause(); updateUI();
     } else if (event.key === 'Escape') {
-      selectedSlot = null; armedCode = null; updateUI();
+      selectedTowerId = null; cancelBuild();
     }
   });
   document.addEventListener('visibilitychange', () => {
@@ -290,7 +337,7 @@ async function boot() {
       if (view === 'game') {
         game.tick(dt);
         syncEvents();
-        renderer.draw(game.state, selectedSlot, armedCode, dt);
+        renderer.draw(game.state, selectedTowerId, placement, dt, keyboardMode ? keyboardPointer : null);
         uiIn -= dt;
         if (uiIn <= 0) { updateUI(); uiIn = .1; }
         if (performance.now() > noticeUntil) element('notice').hidden = true;

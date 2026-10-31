@@ -1,5 +1,5 @@
 import {TOWERS, ENEMIES, MAX_LEVEL, towerStats, effectiveTowerStats} from './catalog.js';
-import {SLOTS, pointOnLoop} from './geometry.js';
+import {placementStatus, pointOnLoop} from './geometry.js';
 /**
  * @param {{startingGold?:number,limit?:number,waveInterval?:number,spawnInterval?:number,initialDelay?:number,waveCount?:number,waveSize?:(wave:number)=>number,enemyHealthScale?:number,enemySpeedScale?:number,rewardScale?:number}} options
  */
@@ -11,7 +11,7 @@ export function createGame(options={}) {
  let events=[];
  /** @type {{code:string,boss:boolean,wave:number}[]} */
  let queue=[];
- let spawnIn=0, nextId=1;
+ let spawnIn=0, nextEnemyId=1, nextTowerId=1;
  const waveInterval=Math.max(.1,options.waveInterval??26);
  const spawnInterval=Math.max(.02,options.spawnInterval??.65);
  const waveCount=options.waveCount??20;
@@ -26,7 +26,7 @@ export function createGame(options={}) {
   const entry=queue.shift(),def=ENEMIES.find(e=>e.code===entry.code);
   const scale=1+(entry.wave-1)*.16;
   const maxHp=def.hp*scale*(entry.boss?10:1)*(options.enemyHealthScale??1);
-  state.enemies.push({id:nextId++,code:entry.code,hp:maxHp,maxHp,...pointOnLoop(0),progress:0,boss:entry.boss,speed:def.speed*(entry.boss ? .72 : 1)*(options.enemySpeedScale??1),reward:Math.max(1,Math.round(def.reward*(entry.boss?8:1)*(options.rewardScale??1))),slowUntil:0,slowFactor:1,rootUntil:0});
+  state.enemies.push({id:nextEnemyId++,code:entry.code,hp:maxHp,maxHp,...pointOnLoop(0),progress:0,boss:entry.boss,speed:def.speed*(entry.boss ? .72 : 1)*(options.enemySpeedScale??1),reward:Math.max(1,Math.round(def.reward*(entry.boss?8:1)*(options.rewardScale??1))),slowUntil:0,slowFactor:1,rootUntil:0});
   if(state.enemies.length>=state.limit){state.phase='defeat';events.push({type:'defeat',message:'环路积怪已达上限'});}
  }
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -36,7 +36,7 @@ export function createGame(options={}) {
   events.push({type:'hit',x:enemy.x,y:enemy.y,amount,color});
   if(enemy.hp===0){state.kills++;state.gold+=enemy.reward;events.push({type:'kill',x:enemy.x,y:enemy.y,code:enemy.code,amount:enemy.reward,color});}
  }
- // ponytail: at most 20 towers / 80 live enemies; bounded scans avoid a spatial index.
+ // ponytail: footprint packing bounds tower count; use a spatial index if larger maps need it.
  function combat(dt){
   for(const tower of state.towers){
    const stats=effectiveTowerStats(tower,state.towers);
@@ -98,7 +98,7 @@ export function createGame(options={}) {
  const playable=()=>state.phase==='playing';
  const game={state,
  start(){if(state.phase==='menu') state.phase='playing';},
- restart(){Object.assign(state,{phase:'playing',paused:false,speed:1,gold:startingGold,wave:0,nextWaveIn:options.initialDelay??18,elapsed:0,kills:0,endless:false,towers:[],enemies:[]});events=[];queue=[];spawnIn=0;nextId=1;},
+ restart(){Object.assign(state,{phase:'playing',paused:false,speed:1,gold:startingGold,wave:0,nextWaveIn:options.initialDelay??18,elapsed:0,kills:0,endless:false,towers:[],enemies:[]});events=[];queue=[];spawnIn=0;nextEnemyId=1;nextTowerId=1;},
  tick(seconds){
   if(!Number.isFinite(seconds)||seconds<=0||!playable()||state.paused)return;
   let remaining=seconds*state.speed;
@@ -108,19 +108,28 @@ export function createGame(options={}) {
   if(!playable()||state.paused||queue.length||(!state.endless&&state.wave>=waveCount))return result(false,'当前不能提前出怪');
   beginWave();return result(true,'下一波开始');
  },
- build(slotId,code){
+ /** @param {number} x @param {number} y @param {string} code */
+ canBuild(x,y,code){
   if(!playable()) return result(false,'请先开始对局');
-  const slot=SLOTS.find(slot=>slot.id===slotId),def=TOWERS.find(t=>t.code===code);
-  if(!slot||!def) return result(false,'无效塔位或防御单位');
-  if(state.towers.some(t=>t.slotId===slotId)) return result(false,'塔位已占用');
-  if(state.gold<def.price) return result(false,'金币不足');
-  state.gold-=def.price;
-  state.towers.push({id:slotId,slotId,code,level:1,spent:def.price,x:slot.x,y:slot.y,angle:0});
-  events.push({type:'build',x:slot.x,y:slot.y,code}); return result(true,'建造完成');
+  const def=TOWERS.find(t=>t.code===code);
+  if(!def) return result(false,'无效防御单位');
+  const placement=placementStatus(x,y,state.towers);
+  if(!placement.ok)return placement;
+  if(state.gold<def.price)return result(false,'金币不足');
+  return placement;
  },
- upgrade(slotId){
+ /** @param {number} x @param {number} y @param {string} code @returns {{ok:boolean,message:string,towerId?:number}} */
+ build(x,y,code){
+  const status=game.canBuild(x,y,code);
+  if(!status.ok)return status;
+  const def=TOWERS.find(t=>t.code===code),towerId=nextTowerId++;
+  state.gold-=def.price;
+  state.towers.push({id:towerId,code,level:1,spent:def.price,x,y,angle:0});
+  events.push({type:'build',x,y,code});return {ok:true,message:'建造完成',towerId};
+ },
+ upgrade(id){
   if(!playable()) return result(false,'当前不能升级');
-  const tower=state.towers.find(t=>t.slotId===slotId);
+  const tower=state.towers.find(t=>t.id===id);
   if(!tower) return result(false,'请先选择防御单位');
   if(tower.level>=MAX_LEVEL) return result(false,'已达最高等级');
   const cost=towerStats(tower).upgradeCost;
@@ -128,10 +137,10 @@ export function createGame(options={}) {
   state.gold-=cost;tower.spent+=cost;tower.level++;
   events.push({type:'upgrade',x:tower.x,y:tower.y,code:tower.code});return result(true,'升级完成');
  },
- sell(slotId){
+ sell(id){
   if(!playable()) return result(false,'当前不能出售');
-  const tower=state.towers.find(t=>t.slotId===slotId);
-  if(!tower) return result(false,'塔位为空');
+  const tower=state.towers.find(t=>t.id===id);
+  if(!tower) return result(false,'防御单位不存在');
   const amount=towerStats(tower).sellValue;state.gold+=amount;state.towers=state.towers.filter(t=>t!==tower);
   events.push({type:'sell',x:tower.x,y:tower.y,amount});return result(true,'出售完成');
  },

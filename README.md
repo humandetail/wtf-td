@@ -1,6 +1,6 @@
 # 环界 · 2D 循环圈塔防
 
-基于现有科技防御单位与东方玄幻敌人素材制作的单人浏览器游戏。当前使用竹林山门、科技营地、溪谷石桥、符阵遗迹组成的四防区地图，原素材与初版地图完整保留。
+基于现有科技防御单位与东方玄幻敌人素材制作的单人浏览器游戏。当前按参考图采用外环、内环和中心连接路网，取消固定塔位，在可建造区域连续坐标放塔。原素材及历次地图完整保留。
 
 ```sh
 npm install
@@ -11,8 +11,8 @@ npm run dev
 
 - [正式规格](.scratch/2d-loop-td/spec.md) 与 [实现记录](.scratch/2d-loop-td/implementation.md)
 - [开发任务票](.scratch/2d-loop-td/issues/10-integration-and-handoff.md)
-- [地图制作说明](game/map-art.md) 与 [新版生成提示词](game/assets/maps/v2/source/prompts.md)
-- [新版地图资源合成预览](game/assets/maps/v2/preview.png)
+- [地图制作说明](game/map-art.md) 与 [新版生成提示词](game/assets/maps/v3/source/prompts.md)
+- [新版地图布局预览](game/assets/maps/v3/preview.png) 与 [自由建造区域示意](game/assets/maps/v3/build-preview.png)
 - [用户真实验收清单](game/qa/manual-checklist.md)
 
 `npm run typecheck` 检查代码类型，`npm run check` 同时核验原素材完整性和资源引用。公开对局规则检查可以单独运行 `node --test game/tests/session.test.mjs`。

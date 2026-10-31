@@ -1,9 +1,9 @@
-import { WORLD, SLOTS, ZONES, ENTRY, LOOP_LENGTH, pointOnLoop } from './geometry.js';
+import { WORLD, FOOTPRINT, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ZONES, ENTRY } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
-const MAPS = new URL('./assets/maps/v2/', import.meta.url);
+const MAPS = new URL('./assets/maps/v3/', import.meta.url);
 
 function loadImage(url) {
   return new Promise((resolve, reject) => {
@@ -21,9 +21,8 @@ export async function loadArtwork(onProgress) {
   const manifest = await response.json();
   const units = new Map();
   const effects = new Map();
-  const props = new Map();
   const tasks = [];
-  const result = { units, effects, props, ground: null, road: null, pad: null, bridges: null };
+  const result = { units, effects, ground: null, road: null };
   for (const entry of manifest.units) {
     const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
@@ -32,10 +31,7 @@ export async function loadArtwork(onProgress) {
   for (const entry of manifest.effects) {
     tasks.push(async () => { effects.set(entry.code, await loadImage(new URL(entry.path, ORIGINALS))); });
   }
-  for (const entry of manifest.props.filter(prop => ['P01', 'P02'].includes(prop.code))) {
-    tasks.push(async () => { props.set(entry.code, await loadImage(new URL(entry.path, ORIGINALS))); });
-  }
-  for (const name of ['ground', 'road', 'pad', 'bridges']) {
+  for (const name of ['ground', 'road']) {
     tasks.push(async () => { result[name] = await loadImage(new URL(`${name}.png`, MAPS)); });
   }
   let complete = 0;
@@ -43,7 +39,7 @@ export async function loadArtwork(onProgress) {
   const worker = async () => {
     while (tasks.length) {
       await tasks.shift()();
-      onProgress(++complete, manifest.units.length + manifest.effects.length + 6);
+      onProgress(++complete, manifest.units.length + manifest.effects.length + 2);
     }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
@@ -77,16 +73,19 @@ export function createRenderer(canvas, artwork) {
   const backdrop = background.getContext('2d');
   backdrop.drawImage(artwork.ground, 0, 0, WORLD.width, WORLD.height);
   backdrop.drawImage(artwork.road, 0, 0, WORLD.width, WORLD.height);
-  backdrop.drawImage(artwork.bridges, 0, 0, WORLD.width, WORLD.height);
-  for (const slot of SLOTS) backdrop.drawImage(artwork.pad, slot.x - 45, slot.y - 25, 90, 50);
-  for (const [code, x, y] of [['P01', 880, 400], ['P02', 880, 265]]) {
-    const prop = artwork.props.get(code);
-    if (prop) backdrop.drawImage(prop, Number(x) - 64, Number(y) - 80, 128, 128);
-  }
+
+  const buildMask = document.createElement('canvas');
+  buildMask.width = WORLD.width; buildMask.height = WORLD.height;
+  const mask = buildMask.getContext('2d');
+  mask.fillStyle = '#9ae6ad45';
+  mask.fillRect(BUILD_CENTER_BOUNDS.x, BUILD_CENTER_BOUNDS.y, BUILD_CENTER_BOUNDS.width, BUILD_CENTER_BOUNDS.height);
+  for (const area of BUILD_EXCLUSIONS) mask.clearRect(area.x, area.y, area.width, area.height);
+  const freeMask = document.createElement('canvas');
+  freeMask.width = WORLD.width; freeMask.height = WORLD.height;
+  const free = freeMask.getContext('2d');
 
   /** @type {any[]} */
   let particles = [];
-  let hoverSlot = null;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function ring(x, y, radius, color, alpha = 1, width = 2) {
@@ -113,7 +112,7 @@ export function createRenderer(canvas, artwork) {
 
   function drawUnit(entity, tower, elapsed) {
     const unit = artwork.units.get(entity.code);
-    const size = tower ? 136 : entity.boss ? 184 : 126;
+    const size = tower ? 128 : entity.boss ? 184 : 126;
     ctx.fillStyle = '#18271b3d';
     ctx.beginPath();
     ctx.ellipse(entity.x, entity.y + 3, tower ? 31 : entity.boss ? 26 : 15, tower ? 11 : 7, 0, 0, Math.PI * 2);
@@ -190,36 +189,25 @@ export function createRenderer(canvas, artwork) {
     particles = particles.filter(item => item.age < item.life);
   }
 
-  function draw(state, selectedSlot, armedCode, dt = 0) {
+  function draw(state, selectedTowerId, placement, dt = 0, cursor = null) {
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.drawImage(background, 0, 0);
-    for (let distance = 130; distance < LOOP_LENGTH; distance += 240) {
-      const p = pointOnLoop(distance);
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      ctx.rotate(p.angle);
-      ctx.strokeStyle = '#9c966457';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-4, -6); ctx.lineTo(3, 0); ctx.lineTo(-4, 6);
-      ctx.stroke();
-      ctx.restore();
+    if (placement) {
+      free.clearRect(0, 0, WORLD.width, WORLD.height);
+      free.drawImage(buildMask, 0, 0);
+      for (const tower of state.towers) {
+        free.clearRect(tower.x - FOOTPRINT.width - FOOTPRINT.gap, tower.y - FOOTPRINT.height - FOOTPRINT.gap, (FOOTPRINT.width + FOOTPRINT.gap) * 2, (FOOTPRINT.height + FOOTPRINT.gap) * 2);
+      }
+      ctx.drawImage(freeMask, 0, 0);
     }
     for (const zone of ZONES) {
       text(zone.name, zone.x, zone.y, zone.color, 20);
     }
-    text('入侵入口', ENTRY.x, ENTRY.y + 48, '#e9e8c9', 13);
-    for (const slot of SLOTS) {
-      if (slot.id === selectedSlot || slot.id === hoverSlot) {
-        ring(slot.x, slot.y, 42, '#ffe39b', 1, slot.id === selectedSlot ? 3 : 1.5);
-      }
-      if (!state.towers.some(tower => tower.slotId === slot.id)) {
-        text(`＋`, slot.x, slot.y - 1, slot.id === selectedSlot ? '#fff1ae' : '#d9dfbd', 20);
-      }
-    }
-    const selected = state.towers.find(tower => tower.slotId === selectedSlot);
-    const position = SLOTS.find(slot => slot.id === selectedSlot);
-    const range = selected ? effectiveTowerStats(selected, state.towers).range : TOWERS.find(tower => tower.code === armedCode)?.range;
+    text('入侵入口', ENTRY.x + 55, ENTRY.y + 43, '#e9e8c9', 13);
+    const selected = state.towers.find(tower => tower.id === selectedTowerId);
+    if (selected) ring(selected.x, selected.y, 45, '#ffe39b', 1, 2.5);
+    const position = placement || selected;
+    const range = placement ? TOWERS.find(tower => tower.code === placement.code)?.range : selected ? effectiveTowerStats(selected, state.towers).range : 0;
     if (position && range) {
       ctx.save();
       ctx.fillStyle = '#f7df8612';
@@ -236,6 +224,25 @@ export function createRenderer(canvas, artwork) {
       ...state.enemies.map(entity => ({ entity, tower: false })),
     ].sort((a, b) => a.entity.y - b.entity.y);
     for (const actor of actors) drawUnit(actor.entity, actor.tower, state.elapsed);
+    if (placement) {
+      const color = placement.ok ? '#a4e6ae' : '#f29a84';
+      const unit = artwork.units.get(placement.code);
+      ctx.save();
+      ctx.globalAlpha = .52;
+      if (unit?.masterImage) ctx.drawImage(unit.masterImage, placement.x - 64, placement.y - 80, 128, 128);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = placement.ok ? '#71cf8b35' : '#e7786635';
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+      ctx.fillRect(placement.x - FOOTPRINT.width / 2, placement.y - FOOTPRINT.height / 2, FOOTPRINT.width, FOOTPRINT.height);
+      ctx.strokeRect(placement.x - FOOTPRINT.width / 2, placement.y - FOOTPRINT.height / 2, FOOTPRINT.width, FOOTPRINT.height);
+      const labelX = Math.max(130, Math.min(WORLD.width - 130, placement.x));
+      const labelY = placement.y > 100 ? placement.y - 91 : placement.y + 49;
+      text(placement.ok ? '点击建造' : placement.message, labelX, labelY, color, 15);
+      ctx.restore();
+    } else if (cursor) {
+      ctx.save();ctx.strokeStyle = '#f4d789';ctx.lineWidth = 2;
+      ctx.beginPath();ctx.moveTo(cursor.x - 10, cursor.y);ctx.lineTo(cursor.x + 10, cursor.y);ctx.moveTo(cursor.x, cursor.y - 10);ctx.lineTo(cursor.x, cursor.y + 10);ctx.stroke();ctx.restore();
+    }
     drawParticles(state.paused ? 0 : dt);
     if (state.paused) {
       ctx.fillStyle = '#10201952';
@@ -250,9 +257,8 @@ export function createRenderer(canvas, artwork) {
   return {
     draw, event,
     reset() { particles = []; },
-    setHover(slotId) { hoverSlot = slotId; },
-    hitTest(x, y) {
-      return SLOTS.find(slot => Math.hypot(slot.x - x, (slot.y - y) * 1.3) < 47)?.id ?? null;
+    hitTest(x, y, towers) {
+      return [...towers].sort((a,b)=>b.y-a.y).find(tower => Math.abs(tower.x - x) <= FOOTPRINT.width / 2 && y >= tower.y - 65 && y <= tower.y + FOOTPRINT.height / 2)?.id ?? null;
     },
   };
 }

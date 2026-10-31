@@ -33,7 +33,7 @@
         <img class="hero-tower" src="../outputs/units/tech-heavy-howitzer/master.png" alt="">
         <span class="art-caption">科技防线 / 东方异兽</span>
       </div>
-      <p class="menu-footer">闭合环路 · 固定塔位 · 策略布防</p>
+      <p class="menu-footer">外环内环 · 中心互通 · 自由布防</p>
     </section>
 
     <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
@@ -56,13 +56,13 @@
       <div class="battle-layout">
         <div class="battle-main">
           <div class="map-frame">
-            <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。点击塔位选择，再从右侧选择防御单位建造。">浏览器需要支持画布才能运行游戏。</canvas>
+            <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。先选工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
             <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
           </div>
-          <section class="command-bar" aria-label="塔位详情">
+          <section class="command-bar" aria-label="防御单位详情">
             <div class="selected-summary">
               <p id="selected-slot-label" class="eyebrow">防线指挥</p>
-              <p id="selection-hint">点击地图上的塔位，开始布置防线。</p>
+              <p id="selection-hint">先选工事，再在绿色区域放置。</p>
               <div id="tower-panel" hidden>
                 <h2 id="tower-title">防御单位</h2>
                 <p id="tower-description"></p>
@@ -74,7 +74,9 @@
           </section>
         </div>
         <aside class="build-sidebar" aria-labelledby="build-heading">
-          <div class="sidebar-heading"><p class="eyebrow">建造序列</p><h2 id="build-heading">防御工事</h2><p>先选塔位，再选单位建造。</p></div>
+          <div class="sidebar-heading"><p class="eyebrow">建造序列</p><h2 id="build-heading">防御工事</h2><p>先选工事，再在绿色区域放置。</p></div>
+          <p id="build-status" class="build-status" role="status" aria-live="polite">先选工事，再在绿色区域放置。</p>
+          <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
           <div id="shop-list" class="shop-list" aria-label="可建造的防御单位"></div>
           <p class="shop-tip">输出、控制与辅助搭配，让每一段环路都成为火力区。</p>
         </aside>
@@ -96,12 +98,12 @@
     <div class="dialog-heading"><p class="eyebrow">作战手册</p><button id="close-help" class="button compact" type="button" autofocus>关闭</button></div>
     <h2 id="help-title">让环路成为你的防线</h2>
     <ol class="help-steps">
-      <li><strong>选择塔位，建造工事</strong><p>点击地图上的固定塔位，再选择防御单位。金币来自击杀，用于建造和升级；出售可回收部分投入。</p></li>
-      <li><strong>没有终点，只有积压</strong><p>敌人沿闭合环路持续前进，绕过一圈也不会消失。新波次按时到来，场上怪物达到容怪上限即失败。</p></li>
+      <li><strong>选择工事，自由布防</strong><p>先选右侧工事，再在绿色区域任意放置，可连续建造。道路、中心枢纽及重叠区域不可放置，红色预览显示原因。右键、Esc 或“取消建造”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
+      <li><strong>没有终点，只有积压</strong><p>外环、内环与中心通道彼此连通，敌人沿巡逻路线持续前进，绕过一圈也不会消失。新波次按时到来，场上怪物达到容怪上限即失败。</p></li>
       <li><strong>搭配火力，迎战首领</strong><p>防御单位会自动攻击或提供辅助。观察射程，组合输出与控制，调整防线来迎战阶段首领。</p></li>
       <li><strong>清空常规关卡，继续挑战</strong><p>完成 20 波并消灭剩余敌人即可通关，随后可以保留防线进入无尽模式。随时使用暂停、倍速和静音调整体验。</p></li>
     </ol>
-    <p class="help-footer">鼠标点击布防 · 空格暂停 / 恢复 · Esc 取消选择</p>
+    <p class="help-footer">方向键移动光标 · Shift + 方向键微调 · Enter 放置 / 选择 · 空格暂停 / 恢复 · 右键 / Esc 取消建造</p>
   </dialog>
   <script type="module" src="./main.js"></script>
 </body>
