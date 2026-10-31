@@ -6,3 +6,45 @@
 .build-sidebar{display:flex;flex-direction:column}.research-panel{padding:0 6px 14px;border-bottom:1px solid var(--line);margin-bottom:14px;flex:none}.research-panel h2{font-size:17px}.research-card{padding:8px 0;border-bottom:1px solid #35483b80}.research-card h3{margin:0 0 3px;font-size:14px;color:var(--jade)}.research-card p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px}.research-card .button{width:100%;min-height:31px;padding:5px 8px}.research-card .button:disabled,#upgrade-button:disabled{opacity:1;color:var(--muted);background:var(--panel-deep);border-color:var(--line)}#research-status{font-size:12px;color:var(--muted);margin-top:9px;font-variant-numeric:tabular-nums}#research-progress{width:100%;height:8px;display:block;margin:8px 0;accent-color:var(--gold)}#cancel-research-button{width:100%;margin-top:3px;min-height:31px;padding:5px 8px}.capacity-label{font-family:system-ui,sans-serif;font-size:12px;color:var(--gold);font-weight:400;white-space:nowrap}.sidebar-heading{padding-bottom:8px}.build-status{min-height:0;flex:none}.shop-list{overflow-y:auto;max-height:clamp(160px,calc(100svh - 600px),380px);min-height:160px;align-content:start;scrollbar-gutter:stable;overscroll-behavior:contain}.tower-card .availability{color:var(--jade);font-size:11px;margin-top:4px}.tower-card.unaffordable{opacity:1}.tower-card.unaffordable .availability{color:var(--danger)}.tower-card.locked img{filter:grayscale(.75) drop-shadow(0 3px 3px #0005);opacity:.65}.tower-card.locked{background:var(--panel-deep)}.tower-card.locked[aria-pressed="true"]{border-color:var(--gold);background:#3c3c27}.shop-tip{padding-top:10px;flex:none}
 @media(max-width:900px){.build-sidebar{max-height:none}.research-panel{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.research-panel h2,#research-status,#research-progress,#cancel-research-button{grid-column:1/-1}.shop-list{max-height:340px;min-height:0}.research-card{min-width:0}}
 @media(max-width:600px){.research-panel{gap:0 10px}.research-card .button{font-size:12px}}
+
+/* Battlefield first: fixed HUD and build dock, all remaining space belongs to the map. */
+body.in-game{overflow:hidden}
+.game-screen{height:100svh;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px;padding:6px;overflow:auto;overscroll-behavior:contain}
+.game-screen.focus-mode{grid-template-rows:auto minmax(0,1fr)}
+.status-bar{min-height:48px;padding:5px 12px;gap:16px;flex-wrap:nowrap;overflow-x:auto;border-bottom:1px solid #847447;scrollbar-width:thin}
+.wordmark{font-size:23px}.wordmark span{display:none}
+.resource{min-width:max-content;flex-direction:row;align-items:baseline;gap:7px;white-space:nowrap}
+.resource strong{font-size:19px;line-height:1.3}.status-label{font-size:12px}
+.pressure-status{position:relative;min-width:135px;max-width:175px;padding-bottom:6px}
+.pressure-label{gap:9px}.pressure-label strong{font-size:17px}
+.pressure-track{position:absolute;bottom:0;left:0;right:0;height:3px;margin:0}
+.next-wave strong{font-size:15px}.game-controls{flex-wrap:nowrap;flex-shrink:0;gap:4px;width:auto;padding:0;border:0}
+.game-controls .button{white-space:nowrap;min-height:34px;padding:6px 9px;font-size:13px}
+#research-button{border-color:#537d7e;color:#b2e2de}#research-button[aria-expanded="true"]{background:#254441}
+#focus-button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.battle-stage{position:relative;min-width:0;min-height:180px;display:flex}
+.map-frame{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center;background:#0c1512;border-color:#3e5147;box-shadow:none}
+#game-canvas{flex:none;width:0;height:0;aspect-ratio:auto;max-width:none}
+.notice{top:12px;padding:8px 14px;font-size:13px;z-index:2;max-width:calc(100% - 32px)}
+.command-drawer{position:absolute;z-index:3;right:10px;top:10px;bottom:10px;width:min(350px,calc(100% - 20px));overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:16px;background:#15241cf5;border:1px solid #7b8057;border-top:2px solid #9f83bc;box-shadow:0 10px 35px #0009}
+.drawer-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.drawer-heading h2{font-size:18px;white-space:nowrap}.drawer-heading .button{white-space:nowrap;min-height:34px;padding:6px 9px}
+#selected-slot-label{font-size:12px;color:var(--gold)}#selection-hint{font-size:14px}
+#tower-title{font-size:20px}#tower-description{font-size:14px;line-height:1.7;margin:10px 0 14px}
+.tower-stats{gap:8px 16px;font-size:14px}.tower-actions{flex-direction:column}.tower-actions .button{width:100%;overflow-wrap:anywhere}
+.research-panel{display:block;padding:0;margin:0;border:0}.research-panel h2{font-size:15px;color:var(--muted)}
+.research-card{padding:14px 0}.research-card h3{font-size:15px;color:#addbd5}.research-card p{font-size:14px;line-height:1.65;margin:8px 0 10px}
+.research-card .button,#cancel-research-button{min-height:38px;padding:8px;font-size:13px;white-space:normal;overflow-wrap:anywhere}
+#research-status{font-size:13px;line-height:1.6;margin-top:14px}#research-progress{height:10px}
+.build-dock{min-width:0;background:var(--panel-deep);border:1px solid var(--line);padding:7px 9px 8px}
+.build-toolbar{display:flex;align-items:center;gap:12px;min-height:30px;margin-bottom:6px}
+.build-toolbar h2{font-size:14px;white-space:nowrap;flex:none}.capacity-label{font-size:13px;flex:none}
+.build-status{padding:0;font-size:13px;min-width:0;flex:1;line-height:1.45}.cancel-build{margin:0;flex:none;min-height:30px!important;padding:4px 8px!important}
+.shop-list{display:flex;gap:6px;min-height:0;max-height:136px;overflow-x:auto;overflow-y:auto;scrollbar-gutter:auto;scrollbar-width:thin;overscroll-behavior:contain;padding-bottom:3px}
+.tower-card{display:grid;grid-template-columns:37px minmax(0,1fr);grid-template-rows:auto auto auto;column-gap:7px;row-gap:1px;align-content:center;align-items:center;text-align:left;flex:0 0 174px;min-width:174px;min-height:92px;padding:7px 8px}
+.tower-card img{grid-column:1;grid-row:1/3;width:37px;height:44px}.tower-card strong{grid-column:2;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.tower-card .price{grid-column:2;font-size:13px}.tower-card .role{display:none}.tower-card .availability{grid-column:1/-1;font-size:12px;line-height:1.45;margin:3px 0 0;white-space:normal;overflow-wrap:anywhere;color:var(--jade)}
+.tower-card.unaffordable{opacity:1}.tower-card.unaffordable .availability{color:var(--danger)}
+@media(max-width:1150px){.status-bar{gap:12px}.kills{display:none}.game-screen{padding:5px}}
+@media(max-width:650px){.game-screen{padding:4px;gap:4px}.status-bar{padding:5px 8px;gap:12px}.wordmark{font-size:21px}.build-toolbar{flex-wrap:wrap;gap:5px 10px}.build-status{flex-basis:calc(100% - 140px);order:1}.cancel-build{order:2}.build-dock{padding:6px}.tower-card{flex-basis:166px;min-width:166px}.command-drawer{padding:12px}.notice{max-width:calc(100% - 16px);padding:6px 10px}}
+@media(max-height:500px){.game-screen{grid-template-rows:auto minmax(180px,1fr) auto}.game-screen.focus-mode{grid-template-rows:auto minmax(180px,1fr)}.shop-list{max-height:105px}}

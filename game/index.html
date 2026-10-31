@@ -36,7 +36,7 @@
       <p class="menu-footer">外环内环 · 中心互通 · 自由布防</p>
     </section>
 
-    <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
+    <section id="game-screen" class="game-screen focus-mode" aria-label="防御战场" hidden>
       <header class="status-bar">
         <a class="wordmark" href="./" aria-label="环界首页">环界<span>循环圈塔防</span></a>
         <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
@@ -45,24 +45,28 @@
           <div class="pressure-label"><span class="status-label">环路积怪</span><strong><span id="enemy-value">—</span><span class="muted"> / <span id="enemy-limit">—</span></span></strong></div>
           <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
         </div>
+        <div class="resource next-wave"><span class="status-label">下一波</span><strong id="next-wave-value">—</strong></div>
         <div class="resource kills"><span class="status-label">已击杀</span><strong id="kill-value">—</strong></div>
         <nav class="game-controls" aria-label="对局控制">
+          <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
+          <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="展开建造带，选择防御工事">建造</button>
           <button id="pause-button" class="button compact" type="button">暂停</button>
           <button id="speed-button" class="button compact" type="button">1× 速度</button>
           <button id="mute-button" class="button compact" type="button" aria-pressed="false">声音开</button>
           <button id="menu-button" class="button compact quiet" type="button">主菜单</button>
         </nav>
       </header>
-      <div class="battle-layout">
-        <div class="battle-main">
-          <div class="map-frame">
-            <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。先选工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
-            <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
-          </div>
-          <section class="command-bar" aria-label="防御单位详情">
+      <div id="battle-stage" class="battle-stage">
+        <div class="map-frame">
+          <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。先点顶部“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
+          <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+        </div>
+        <aside id="command-drawer" class="command-drawer" aria-labelledby="drawer-title" hidden>
+          <div class="drawer-heading"><h2 id="drawer-title">科技指挥</h2><button id="close-drawer-button" class="button compact" type="button">收起 · Esc</button></div>
+          <section id="selection-panel" aria-label="防御单位详情" hidden>
             <div class="selected-summary">
               <p id="selected-slot-label" class="eyebrow">防线指挥</p>
-              <p id="selection-hint">先选工事，再在绿色区域放置。</p>
+              <p id="selection-hint">先点顶部“建造”选择工事，再在绿色区域放置。</p>
               <div id="tower-panel" hidden>
                 <h2 id="tower-title">防御单位</h2>
                 <p id="tower-description"></p>
@@ -70,10 +74,7 @@
                 <div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="sell-button" class="button" type="button">出售</button></div>
               </div>
             </div>
-            <div class="wave-preview"><span class="status-label">下一波</span><strong id="next-wave-value">—</strong><p>怪物达到容怪上限时，防线失守。</p></div>
           </section>
-        </div>
-        <aside class="build-sidebar" aria-labelledby="build-heading">
           <section id="research-panel" class="research-panel" aria-label="科技研究">
             <h2>科技研究</h2>
             <div class="research-card">
@@ -90,13 +91,16 @@
             <progress id="research-progress" aria-label="当前研究进度" max="1" value="0" hidden></progress>
             <button id="cancel-research-button" class="button compact" type="button" hidden>取消研究</button>
           </section>
-          <div class="sidebar-heading"><p class="eyebrow">建造序列</p><h2 id="build-heading">防御工事 <span id="tower-capacity" class="capacity-label">容量 0 / 4</span></h2><p>先选工事，再在绿色区域放置。</p></div>
-          <p id="build-status" class="build-status" role="status" aria-live="polite">先选工事，再在绿色区域放置。</p>
-          <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
-          <div id="shop-list" class="shop-list" aria-label="可建造的防御单位"></div>
-          <p class="shop-tip">输出、控制与辅助搭配，让每一段环路都成为火力区。</p>
         </aside>
       </div>
+      <section id="build-dock" class="build-dock" aria-labelledby="build-heading" hidden>
+        <div class="build-toolbar">
+          <h2 id="build-heading">防御工事</h2><span id="tower-capacity" class="capacity-label">容量 0 / 4</span>
+          <p id="build-status" class="build-status" role="status" aria-live="polite">先点顶部“建造”选择工事，再在绿色区域放置。</p>
+          <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
+        </div>
+        <div id="shop-list" class="shop-list" aria-label="可建造的十二种防御单位，横向滚动查看更多"></div>
+      </section>
     </section>
 
     <section id="end-screen" class="end-screen" aria-labelledby="end-title" hidden>
@@ -114,9 +118,9 @@
     <div class="dialog-heading"><p class="eyebrow">作战手册</p><button id="close-help" class="button compact" type="button" autofocus>关闭</button></div>
     <h2 id="help-title">让环路成为你的防线</h2>
     <ol class="help-steps">
-      <li><strong>选择工事，自由布防</strong><p>先选右侧工事，再在绿色区域任意放置，可连续建造。道路、中心枢纽及重叠区域不可放置，红色预览显示原因。右键、Esc 或“取消建造”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
+      <li><strong>选择工事，自由布防</strong><p>先点顶部“建造”展开底部工事带，选择工事后在绿色区域任意放置，可连续建造。道路、中心枢纽及重叠区域不可放置，红色预览显示原因。右键、Esc 或“取消建造”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
       <li><strong>没有终点，只有积压</strong><p>普通怪物和 Boss 都从地图中心出生，每只独立等概率选择上、下、左、右。外环、内环与中心通道彼此连通，敌人在交叉点随机选择前进方向，不原地掉头，绕行也不会消失。新波次按时到来，场上怪物达到容怪上限即失败。</p></li>
-      <li><strong>研究科技，扩展防线</strong><p>部署科技提高全场塔容量并逐级解锁种类；出售立即释放容量。强化科技开放更高塔等级，仍需单独付费升级已有塔。两项科技各自逐级研究，共用一个研究位，开始时扣金币，完成后才生效。取消未完成研究全额退款，进度清零。</p></li>
+      <li><strong>研究科技，扩展防线</strong><p>部署科技提高全场塔容量并逐级解锁种类；出售立即释放容量。强化科技开放更高塔等级，仍需单独付费升级已有塔。点击顶部“科技”打开研究抽屉；“建造”展开工事带，选定工事后自动收起，也可点击“收起建造”手动关闭。两项科技各自逐级研究，共用一个研究位，开始时扣金币，完成后才生效。取消未完成研究全额退款，进度清零。</p></li>
       <li><strong>搭配火力，迎战首领</strong><p>防御单位会自动攻击或提供辅助。观察射程，组合输出与控制，调整防线来迎战阶段首领。</p></li>
       <li><strong>清空常规关卡，继续挑战</strong><p>完成 20 波并消灭剩余敌人即可通关，通关时未完成研究冻结，进入无尽后保留防线、金币、科技与研究剩余时间继续挑战。暂停及返回菜单冻结研究，倍速同步加快研究。失败后停止推进，重新开始将科技和任务重置。随时使用静音调整体验。</p></li>
     </ol>

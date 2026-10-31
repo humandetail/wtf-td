@@ -33,9 +33,54 @@ let lastPhase = 'menu';
 let noticeUntil = 0;
 let helpPaused = false;
 let selectedSignature = '';
+let drawerTrigger = canvas;
+
+function setBuildDock(open) {
+  const dock = element('build-dock');
+  const restoreFocus = !open && dock.contains(document.activeElement);
+  if (open) setDrawer();
+  dock.hidden = !open;
+  element('game-screen').classList.toggle('focus-mode', !open);
+  const button = element('focus-button');
+  button.setAttribute('aria-pressed', String(!open));
+  button.setAttribute('aria-expanded', String(open));
+  button.textContent = open ? '收起建造' : '建造';
+  button.title = open ? '收起建造带，展开完整战场' : '展开建造带，选择防御工事';
+  if (restoreFocus) canvas.focus({ preventScroll: true });
+}
+
+function setDrawer(mode = null, trigger = canvas) {
+  if (mode) setBuildDock(false);
+  const drawer = element('command-drawer');
+  const restoreFocus = drawer.contains(document.activeElement);
+  drawer.hidden = !mode;
+  element('research-panel').hidden = mode !== 'research';
+  element('selection-panel').hidden = mode !== 'tower';
+  element('drawer-title').textContent = mode === 'tower' ? '工事详情' : '科技指挥';
+  element('research-button').setAttribute('aria-expanded', String(mode === 'research'));
+  if (mode) {
+    drawerTrigger = trigger;
+    element('close-drawer-button').focus({ preventScroll: true });
+  } else if (restoreFocus) {
+    const target = drawerTrigger.isConnected && !drawerTrigger.closest('[hidden]') ? drawerTrigger : canvas;
+    target.focus({ preventScroll: true });
+  }
+}
+
+function fitBattlefield() {
+  const frame = canvas.parentElement;
+  new ResizeObserver(entries => {
+    const { width, height } = entries[0].contentRect;
+    const fittedWidth = Math.max(0, Math.min(width, height * WORLD.width / WORLD.height));
+    canvas.style.width = `${fittedWidth}px`;
+    canvas.style.height = `${fittedWidth * WORLD.height / WORLD.width}px`;
+  }).observe(frame);
+}
 
 function showView(name) {
+  if (name !== 'game') setDrawer();
   view = name;
+  document.body.classList.toggle('in-game', name === 'game');
   for (const screen of ['menu', 'game', 'end']) element(`${screen}-screen`).hidden = name !== screen;
 }
 
@@ -74,7 +119,7 @@ function refreshPlacement() {
   const eligibility = pending ? game.canBuildType(pending.code) : null;
   const message = pending
     ? `${pending.name} · ${pending.price} 金币 · ${placement ? placement.message : !eligibility.ok ? eligibility.message : '移动到绿色区域放置，可连续建造'}`
-    : '先选工事，再在绿色区域放置。';
+    : '先点顶部“建造”选择工事，再在绿色区域放置。';
   if (status.textContent !== message) status.textContent = message;
   status.classList.toggle('invalid', pending && (!eligibility.ok || !!placement && !placement.ok));
   element('cancel-build-button').hidden = !armedCode;
@@ -94,7 +139,8 @@ function activatePoint(point) {
     resultMessage(result);
   } else {
     selectedTowerId = renderer.hitTest(point.x, point.y, game.state.towers);
-    if (!selectedTowerId) notice('先选工事，再在绿色区域放置。');
+    if (selectedTowerId) setDrawer('tower', canvas);
+    else { setDrawer(); notice('先点顶部“建造”选择工事，再在绿色区域放置。'); }
     updateUI();
   }
 }
@@ -111,7 +157,7 @@ function updateSelection() {
     const pending = TOWERS.find(item => item.code === armedCode);
     element('selection-hint').textContent = pending
       ? `已选${pending.name}（${pending.price} 金币），在绿色区域任意放置。右键或 Esc 取消建造。`
-      : '先选工事，再在绿色区域放置；点击已有工事查看属性。';
+      : '先点顶部“建造”选择工事，再在绿色区域放置；点击已有工事查看属性。';
     return;
   }
   const stats = effectiveTowerStats(tower, game.state.towers);
@@ -225,6 +271,7 @@ function showEnd() {
 }
 
 function enterGame(restart = false) {
+  const freshSession = restart || game.state.phase === 'menu';
   void audio.unlock();
   if (restart) {
     game.restart();
@@ -238,13 +285,23 @@ function enterGame(restart = false) {
     renderer.reset();
   } else if (game.state.phase === 'menu') game.start();
   else if (game.state.paused) game.togglePause();
+  if (freshSession) setBuildDock(false);
   showView('game');
+  if (freshSession) notice('点击顶部“建造”选择工事；“科技”打开研究。', 5);
   lastPhase = game.state.phase;
   updateUI();
   canvas.focus({ preventScroll: true });
 }
 
 function bindControls() {
+  element('research-button').addEventListener('click', () => {
+    const isOpen = element('research-button').getAttribute('aria-expanded') === 'true';
+    setDrawer(isOpen ? null : 'research', element('research-button'));
+  });
+  element('close-drawer-button').addEventListener('click', () => setDrawer());
+  element('focus-button').addEventListener('click', () => {
+    setBuildDock(element('build-dock').hidden);
+  });
   element('start-button').addEventListener('click', () => enterGame());
   element('restart-button').addEventListener('click', () => enterGame(true));
   element('endless-button').addEventListener('click', () => {
@@ -293,8 +350,10 @@ function bindControls() {
   element('shop-list').addEventListener('click', event => {
     const card = /** @type {HTMLElement} */ (event.target).closest('button[data-code]');
     if (!card) return;
+    setDrawer();
     armedCode = /** @type {HTMLButtonElement} */ (card).dataset.code;
     selectedTowerId = null;
+    setBuildDock(false);
     void audio.unlock();
     const eligibility = game.canBuildType(armedCode);
     notice(`已选${TOWERS.find(tower => tower.code === armedCode).name} · ${eligibility.ok ? '在绿色区域放置，右键或 Esc 取消。' : eligibility.message}`);
@@ -354,7 +413,10 @@ function bindControls() {
     if (event.key === ' ' && !['BUTTON', 'INPUT', 'SELECT'].includes(document.activeElement?.tagName)) {
       event.preventDefault(); game.togglePause(); updateUI();
     } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setDrawer();
       selectedTowerId = null; cancelBuild();
+      canvas.focus({ preventScroll: true });
     }
   });
   document.addEventListener('visibilitychange', () => {
@@ -385,6 +447,7 @@ async function boot() {
       card.append(image, name, price, role, availability); shop.append(card);
     }
     bindControls();
+    fitBattlefield();
     element('loading-screen').hidden = true;
     showView('menu');
     updateUI();

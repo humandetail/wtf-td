@@ -115,33 +115,35 @@ for(const id of [8,20]){
   }
 }
 console.log('✓ v2 归档路线、20 个塔位与两处桥头支撑保持有效');
-const groundV3=await read('game/assets/maps/v3/ground.png');
-assert(groundV3.equals(await read('game/assets/maps/v3/source/ground-imagegen-original.png')),'v3 地表与保留原图不一致');
-const v3Width=groundV3.readUInt32BE(16),v3Height=groundV3.readUInt32BE(20);
-assert(Math.abs(v3Width/v3Height-1.6)<.025&&v3Width>=1280&&v3Height>=800,'v3 地表比例或尺寸错误');
-await checkPng('game/assets/maps/v3/ground.png',v3Width,v3Height,false);
-const roadV3=await checkPng('game/assets/maps/v3/road.png',1280,800,true);
-for(const [index,node] of ROAD_NODES.entries())for(const neighbor of node.neighbors){
+for(const version of ['v3','v4']){
+ const ground=await read(`game/assets/maps/${version}/ground.png`);
+ assert(ground.equals(await read(`game/assets/maps/${version}/source/ground-imagegen-original.png`)),`${version} 地表与保留原图不一致`);
+ const width=ground.readUInt32BE(16),height=ground.readUInt32BE(20);
+ assert(Math.abs(width/height-1.6)<.025&&width>=1280&&height>=800,`${version} 地表比例或尺寸错误`);
+ await checkPng(`game/assets/maps/${version}/ground.png`,width,height,false);
+ const road=await checkPng(`game/assets/maps/${version}/road.png`,1280,800,true);
+ for(const [index,node] of ROAD_NODES.entries())for(const neighbor of node.neighbors){
   const end=ROAD_NODES[neighbor],length=Math.hypot(end.x-node.x,end.y-node.y);
   assert(length>0&&end.neighbors.includes(index),'路网存在无效或单向连接');
   for(let distance=0;distance<=length;distance+=2){
-    const x=node.x+(end.x-node.x)*distance/length,y=node.y+(end.y-node.y)*distance/length;
-    assert(roadV3.alpha[Math.round(y)*1280+Math.round(x)]>=240,'v3 随机行走道路偏离实际路网');
+   const x=node.x+(end.x-node.x)*distance/length,y=node.y+(end.y-node.y)*distance/length;
+   assert(road.alpha[Math.round(y)*1280+Math.round(x)]>=240,`${version} 随机行走道路偏离实际路网`);
   }
-}
-for(const segment of ROAD_SEGMENTS)assert.equal(placementStatus((segment.x1+segment.x2)/2,(segment.y1+segment.y2)/2).ok,false,'路网存在可建造通道');
-let freePoints=0;
-for(let y=BUILD_CENTER_BOUNDS.y;y<=BUILD_CENTER_BOUNDS.y+BUILD_CENTER_BOUNDS.height;y+=13){
+ }
+ for(const segment of ROAD_SEGMENTS)assert.equal(placementStatus((segment.x1+segment.x2)/2,(segment.y1+segment.y2)/2).ok,false,'路网存在可建造通道');
+ let freePoints=0;
+ for(let y=BUILD_CENTER_BOUNDS.y;y<=BUILD_CENTER_BOUNDS.y+BUILD_CENTER_BOUNDS.height;y+=13){
   for(let x=BUILD_CENTER_BOUNDS.x;x<=BUILD_CENTER_BOUNDS.x+BUILD_CENTER_BOUNDS.width;x+=19){
-    if(!placementStatus(x,y).ok)continue;
-    freePoints++;
-    for(const dx of [-FOOTPRINT.width/2,0,FOOTPRINT.width/2])for(const dy of [-FOOTPRINT.height/2,0,FOOTPRINT.height/2]){
-      assert(roadV3.alpha[Math.round(y+dy)*1280+Math.round(x+dx)]<240,'允许建造点的完整占地压上了道路');
-    }
+   if(!placementStatus(x,y).ok)continue;
+   freePoints++;
+   for(const dx of [-FOOTPRINT.width/2,0,FOOTPRINT.width/2])for(const dy of [-FOOTPRINT.height/2,0,FOOTPRINT.height/2]){
+    assert(road.alpha[Math.round(y+dy)*1280+Math.round(x+dx)]<240,`${version} 允许建造点的完整占地压上了道路`);
+   }
   }
+ }
+ assert(freePoints>100,'自由建造区域不足或退化成固定放置点');
+ console.log(`✓ ${version} 路网像素、禁止压路与 ${freePoints} 个非固定建造采样点有效`);
 }
-assert(freePoints>100,'自由建造区域不足或退化成固定放置点');
-console.log(`✓ v3 路网像素、禁止压路与 ${freePoints} 个非固定建造采样点有效`);
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());
 assert(required?.length, 'UI 契约缺少 ID 清单');

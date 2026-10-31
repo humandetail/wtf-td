@@ -3,7 +3,7 @@ import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
-const MAPS = new URL('./assets/maps/v3/', import.meta.url);
+const MAPS = new URL('./assets/maps/v4/', import.meta.url);
 
 function loadImage(url) {
   return new Promise((resolve, reject) => {
@@ -223,8 +223,8 @@ export function createRenderer(canvas, artwork) {
       ctx.restore();
     }
     ctx.restore();
-    text('出怪核心', ENTRY.x, ENTRY.y - 7, '#fff0c4', 20);
-    text('四向随机出怪', ENTRY.x, ENTRY.y + 20, '#f7d397', 13);
+    text('出怪核心', ENTRY.x, ENTRY.y - 68, '#fff0c4', 18);
+    text('四向随机出怪', ENTRY.x, ENTRY.y + 68, '#f7d397', 13);
     const selected = state.towers.find(tower => tower.id === selectedTowerId);
     if (selected) ring(selected.x, selected.y, 45, '#ffe39b', 1, 2.5);
     const position = placement || selected;
