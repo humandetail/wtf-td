@@ -24,8 +24,8 @@
         <div class="mode-selector" role="group" aria-label="选择玩法">
           <button id="mode-loop-button" class="mode-card" type="button" aria-pressed="true"><strong>循环圈</strong><span>循环游走 · 控制积怪</span></button>
           <button id="mode-defense-button" class="mode-card" type="button" aria-pressed="false"><strong>核心保卫战</strong><span>四路轮攻 · 守住耐久</span></button>
-          <button id="mode-harvest-button" class="mode-card" type="button" aria-pressed="false"><strong>灵脉采集</strong><span>选择灵脉 · 带回灵能</span></button>
-          <button id="mode-storm-button" class="mode-card" type="button" aria-pressed="false"><strong>裂隙风暴</strong><span>双路入侵 · 脉冲求生</span></button>
+          <button id="mode-escort-button" class="mode-card" type="button" aria-pressed="false"><strong>灵枢护送</strong><span>启停载具 · 搬迁防线</span></button>
+          <button id="mode-maze-button" class="mode-card" type="button" aria-pressed="false"><strong>自由迷宫</strong><span>任意布障 · 改写路线</span></button>
         </div>
         <p id="mode-description" class="mode-description" aria-live="polite">敌人在环路中持续游走，积怪达到上限即失败。下一波按时到来。</p>
         <div class="menu-actions">
@@ -80,33 +80,25 @@
                 <h2 id="tower-title">防御单位</h2>
                 <p id="tower-description"></p>
                 <div id="tower-stats" class="tower-stats"></div>
-                <div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="sell-button" class="button" type="button">出售</button></div>
+                <div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="relocate-button" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" class="button" type="button">出售</button></div>
               </div>
             </div>
           </section>
           <section id="mission-panel" class="mission-panel" aria-label="当前任务" hidden>
             <p id="mission-objective"></p>
-            <div id="harvest-mission" hidden>
-              <h3 id="harvest-total">灵能 0 / 240</h3>
-              <p>每份获得 40 灵能、60 金币。切换或停止会丢弃本份进度，已收取产出保留。</p>
-              <div class="harvest-sites" role="group" aria-label="选择采集点">
-                <button id="harvest-site-0" class="button" type="button" aria-pressed="false">青玉</button>
-                <button id="harvest-site-1" class="button" type="button" aria-pressed="false">赤铜</button>
-                <button id="harvest-site-2" class="button" type="button" aria-pressed="false">紫晶</button>
-              </div>
-              <p id="harvest-status" role="status">尚未采集</p>
-              <progress id="harvest-progress" aria-label="本份采集进度" max="30" value="0"></progress>
-              <button id="stop-harvest-button" class="button" type="button">停止采集</button>
-              <button id="evacuate-button" class="button primary" type="button">启动撤离</button>
-              <progress id="extraction-progress" aria-label="撤离进度" max="20" value="0" hidden></progress>
-              <p>撤离不可取消：立即出现四路伏击，停止后续常规波次；核心存活至倒计时结束即可成功。</p>
+            <div id="escort-mission" hidden>
+              <h3 id="convoy-status">已停车 · 0 / 2480</h3>
+              <progress id="convoy-progress" aria-label="护送路线进度" max="2480" value="0"></progress>
+              <button id="convoy-toggle-button" class="button primary" type="button">启程 / 继续前进</button>
+              <button id="convoy-repair-button" class="button" type="button">停车维修 · 60 金币 / +6 耐久</button>
+              <p>敌人从前后伏击，近身后会持续攻击。800 / 1600 距离自动停车并补给 100 金币，需要主动继续。</p>
+              <p>选择已有塔可搬迁：25 金币，保留等级与投资，停机 3 游戏秒。提前把火力布置在下一段路线。</p>
             </div>
-            <div id="storm-mission" hidden>
-              <h3 id="survival-status">生存剩余 360 秒</h3>
-              <p id="storm-status" role="status"></p>
-              <p>每分钟最后 20 秒为风暴；北南与东西交替来袭，每 30 秒补给 45 金币。</p>
-              <button id="pulse-button" class="button primary" type="button">释放过载脉冲</button>
-              <p id="pulse-description"></p>
+            <div id="maze-mission" hidden>
+              <h3 id="maze-route-status">当前路线</h3>
+              <button id="maze-wall-button" class="button primary" type="button">布置能量路障 · 20 金币</button>
+              <p>塔与路障均可任意位置建造，实际改变敌人的路线；绿色预览显示新的通路。不能封死入口或场上敌人的退路，也不能盖住敌人。</p>
+              <p>路障最多 24 块，不占塔容量，无需研究。点击选中后可拆除，返还 15 金币，不能升级。守住出口，清空 12 波后可进入无尽。</p>
             </div>
           </section>
           <section id="research-panel" class="research-panel" aria-label="科技研究">
@@ -132,7 +124,7 @@
             <p id="build-status" class="build-status" role="status" aria-live="polite">先点顶部“建造”选择工事，再在绿色区域放置。</p>
             <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
           </div>
-          <div id="shop-list" class="shop-list" aria-label="可建造的十二种防御单位，横向滚动查看更多"></div>
+          <div id="shop-list" class="shop-list" aria-label="十二种防御单位；迷宫额外提供路障，横向滚动查看更多"></div>
         </section>
       </div>
     </section>
@@ -155,11 +147,11 @@
       <li><strong>选择工事，自由布防</strong><p>先点顶部“建造”展开底部工事带，选择工事后在绿色区域任意放置，可连续建造。道路、中心枢纽及重叠区域不可放置，红色预览显示原因。右键、Esc 或“取消建造”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
       <li><strong>没有终点，只有积压</strong><p>循环圈中，普通怪物和 Boss 都从地图中心出生，每只独立等概率选择上、下、左、右。外环、内环与中心通道彼此连通，敌人在交叉点随机选择前进方向，不原地掉头，绕行也不会消失。新波次按时到来，场上怪物达到容怪上限即失败。</p></li>
       <li><strong>核心保卫战：守住终点</strong><p>每波按北、东、南、西轮换入口，敌人沿单向道路抵达中央后消失。核心共 20 点耐久，普通怪漏过扣 1，Boss 扣 5，漏怪不获得击杀奖励。核心归零即失败。首波准备 18 秒；每波清场获得 40 + 波次 × 5 金币，随后准备 12 秒。清场前不会开启下一波。</p></li>
-      <li><strong>灵脉采集：带回灵能</strong><p>点击“任务”选择青玉、赤铜、紫晶灵脉，分别关联北、东、南入口。每点三份储量，每 30 游戏秒收取 40 灵能和 60 金币，连续开采直到耗尽。切换或停止丢弃未完成的本份进度。首波准备 18 秒，随后每 20 秒来袭，采集中敌人从关联入口进攻；停止时轮换入口，不发清场补给。采够 240 灵能后主动启动撤离，立即投入四路共 24 只普通敌人，停止采集与常规波次，核心再存活 20 游戏秒即成功，无需清场。本任务不能进入无尽。</p></li>
-      <li><strong>裂隙风暴：坚守六分钟</strong><p>核心存活 360 游戏秒即胜利，无需清场。首波准备 18 秒，随后每 18 秒北南、东西交替双路入侵，每 30 秒获得 45 金币补给。每分钟最后 20 秒为风暴，敌人移速提升 25%，任务面板显示状态和变化倒计时。“过载脉冲”对普通敌人造成最大生命 35%、Boss 12% 伤害并定身 2 秒，冷却 30 游戏秒；空场不能施放且不消耗冷却。暂停仍可施放，冷却和定身随游戏时间冻结。</p></li>
+      <li><strong>灵枢护送：移动的防线</strong><p>载具初始停车，耐久 100；打开“任务”主动启程或停车，沿 S 路线到达终点即胜利。敌人每 18 秒从路线前后伏击，接近后持续攻击，停车也不会停止敌人或波次。到 800 / 1600 距离自动停车，各补给 100 金币，需主动继续。仅停车时可花 60 金币恢复 6 耐久。选择已有塔可用 25 金币搬迁至任意合法位置，保留 ID、等级与投资，但停机 3 游戏秒；期间不攻击、不提供辅助与收入，不能重复搬迁。右键或 Esc 取消。载具归零即失败，无无尽。</p></li>
+      <li><strong>自由迷宫：建造改变路线</strong><p>没有预设道路。敌人从左侧入口寻找右侧出口，塔与能量路障都能改变实际可达路径。位置连续自由，不吸附塔位；绿色预览显示待建造后的路线，红色显示失败原因。不能封死入口或任一在途敌人的通路，不能盖住敌人及其下一行走目标。路障 20 金币，最多 24 块，不占科技塔容量；选中可拆返 15，不能升级。建造和拆除立即重算路线，在途敌人也会连续转向。出口 20 耐久，普通漏怪扣 1、Boss 扣 5。首波 18 秒准备，清场后准备 10 秒并补给 40 + 波次 × 5 金币；共 12 波，第 4 / 8 / 12 波有首领。清场且出口存活即胜利，可保留迷宫进入无尽。</p></li>
       <li><strong>研究科技，扩展防线</strong><p>部署科技提高全场塔容量并逐级解锁种类；出售立即释放容量。强化科技开放更高塔等级，仍需单独付费升级已有塔。点击顶部“科技”打开研究抽屉；“建造”展开工事带，选定工事后自动收起，也可点击“收起建造”手动关闭。两项科技各自逐级研究，共用一个研究位，开始时扣金币，完成后才生效。取消未完成研究全额退款，进度清零。</p></li>
       <li><strong>搭配火力，迎战首领</strong><p>防御单位会自动攻击或提供辅助。观察射程，组合输出与控制，调整防线来迎战阶段首领。</p></li>
-      <li><strong>暂停、战报与无尽挑战</strong><p>循环圈与核心保卫战清空 20 波后通关，裂隙风暴坚守六分钟后通关；这三种玩法可保留防线、金币、核心耐久、科技和研究继续无尽，风暴同时保留累计时间与脉冲冷却。灵脉采集以主动撤离成功为终点。暂停、返回菜单和结算冻结全部计时，倍速同步推进。四种对局分别保留在本页内，切换不会清零；结束的对局可随时返回战报，只有重新开始才重置，刷新页面会丢失本页对局。随时使用静音调整体验。</p></li>
+      <li><strong>暂停、战报与无尽挑战</strong><p>循环圈与核心保卫战清空 20 波，自由迷宫清空 12 波后通关；这三种玩法可保留防线、金币、耐久、科技与研究继续无尽。灵枢护送抵达终点后结束。暂停、返回菜单和结算冻结全部计时，倍速同步推进。四种对局分别保留在本页内，切换不会清零；结束的对局可随时返回战报，只有重新开始才重置，刷新页面会丢失本页对局。随时使用静音调整体验。</p></li>
     </ol>
     <p class="help-footer">方向键移动光标 · Shift + 方向键微调 · Enter 放置 / 选择 · 空格暂停 / 恢复 · 右键 / Esc 取消建造</p>
   </dialog>

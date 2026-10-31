@@ -187,6 +187,13 @@ console.log(`✓ ${directory} 实际场景 ${paintedSamples} 个路面色彩采�
 const loopSegments=ROAD_NODES.flatMap((node,index)=>node.neighbors.filter(n=>n>index).map(n=>({x1:node.x,y1:node.y,x2:ROAD_NODES[n].x,y2:ROAD_NODES[n].y})));
 await checkPaintedScene('game/assets/maps/v5',loopSegments,ROAD_NODES,PLAZA,placementStatus,700);
 await checkPaintedScene('game/assets/maps/core-defense',DEFENSE_ROAD_SEGMENTS,DEFENSE_LANES.flatMap(lane=>lane.points.map(([x,y])=>({x,y}))),DEFENSE_PLAZA,defensePlacementStatus,300);
+for(const mode of ['escort','maze']){
+ const directory=`game/assets/maps/${mode}`,bytes=await read(`${directory}/scene.png`);
+ assert(bytes.equals(await read(`${directory}/source/scene-imagegen-original.png`)),`${mode} 场景原图未保留`);
+ const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
+ assert(width>=1280&&height>=800&&Math.abs(width/height-1.6)<.025,`${mode} 场地尺寸或比例错误`);
+ await checkPng(`${directory}/scene.png`,width,height,false);
+}
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());
 assert(required?.length, 'UI 契约缺少 ID 清单');

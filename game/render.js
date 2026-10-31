@@ -1,7 +1,8 @@
-import { WORLD, FOOTPRINT, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ENTRY } from './geometry.js';
+import { WORLD, FOOTPRINT, BUILD_BOUNDS, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ENTRY } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 import { DEFENSE_CORE, DEFENSE_LANES, DEFENSE_BUILD_EXCLUSIONS } from './defense-geometry.js';
-import { HARVEST_SITES, HARVEST_DURATION } from './modes.js';
+import {ESCORT_POINTS,ESCORT_CHECKPOINTS,ESCORT_BUILD_EXCLUSIONS,pointOnEscortRoute} from './escort-geometry.js';
+import {MAZE_ENTRY,MAZE_EXIT,WALL_FOOTPRINT} from './maze-geometry.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
@@ -24,7 +25,7 @@ export async function loadArtwork(onProgress) {
   const units = new Map();
   const effects = new Map();
   const tasks = [];
-  const result = { units, effects, ground: null, defenseGround: null };
+  const result = { units, effects, ground: null, defenseGround: null,escortGround:null,mazeGround:null,convoyImage:null,wallImage:null };
   for (const entry of manifest.units) {
     const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
@@ -35,12 +36,15 @@ export async function loadArtwork(onProgress) {
   }
   tasks.push(async () => { result.ground = await loadImage(new URL('scene.png', MAPS)); });
   tasks.push(async () => { result.defenseGround = await loadImage(new URL('./assets/maps/core-defense/scene.png', import.meta.url)); });
+  for(const mode of ['escort','maze'])tasks.push(async()=>{result[`${mode}Ground`]=await loadImage(new URL(`./assets/maps/${mode}/scene.png`,import.meta.url));});
+  tasks.push(async()=>{result.convoyImage=await loadImage(new URL('props/P01-tech-supply-crate.png',ORIGINALS));});
+  tasks.push(async()=>{result.wallImage=await loadImage(new URL('props/P02-portable-generator.png',ORIGINALS));});
   let complete = 0;
   // ponytail: six concurrent image decodes keep the initial menu responsive.
   const worker = async () => {
     while (tasks.length) {
       await tasks.shift()();
-      onProgress(++complete, manifest.units.length + manifest.effects.length + 2);
+      onProgress(++complete, manifest.units.length + manifest.effects.length + 6);
     }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
@@ -62,8 +66,8 @@ function spriteFor(unit, angle) {
 // The canvas and non-browser interaction checks use the same picking boundary.
 export function hitTest(x, y, towers) {
   const ordered = [...towers].sort((a,b)=>b.y-a.y);
-  const base = ordered.find(tower => Math.abs(tower.x-x) <= FOOTPRINT.width/2 && Math.abs(tower.y-y) <= FOOTPRINT.height/2);
-  const sprite = base || ordered.find(tower => Math.abs(tower.x-x) <= FOOTPRINT.width/2 && y >= tower.y-65 && y <= tower.y+FOOTPRINT.height/2);
+  const base = ordered.find(tower => Math.abs(tower.x-x) <= (tower.code==='WALL'?30:FOOTPRINT.width/2) && Math.abs(tower.y-y) <= (tower.code==='WALL'?30:FOOTPRINT.height/2));
+  const sprite = base || ordered.find(tower => tower.code!=='WALL' && Math.abs(tower.x-x) <= FOOTPRINT.width/2 && y >= tower.y-65 && y <= tower.y+FOOTPRINT.height/2);
   return sprite?.id ?? null;
 }
 
@@ -80,6 +84,8 @@ export function createRenderer(canvas, artwork) {
   for (const {mode, ground, exclusions} of [
     {mode:'loop', ground:artwork.ground, exclusions:BUILD_EXCLUSIONS},
     {mode:'defense', ground:artwork.defenseGround, exclusions:DEFENSE_BUILD_EXCLUSIONS},
+    {mode:'escort', ground:artwork.escortGround, exclusions:ESCORT_BUILD_EXCLUSIONS},
+    {mode:'maze', ground:artwork.mazeGround, exclusions:[]},
   ]) {
     const background = document.createElement('canvas');
     background.width = WORLD.width; background.height = WORLD.height;
@@ -126,7 +132,72 @@ export function createRenderer(canvas, artwork) {
     ctx.fillText(label, x, y);
   }
 
+  function drawWall(x,y){
+    ctx.save();
+    ctx.fillStyle='#172c2860';ctx.beginPath();ctx.ellipse(x,y+8,32,14,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#9adad0';ctx.fillStyle='#9adad022';ctx.lineWidth=2;
+    ctx.beginPath();
+    for(const [index,[dx,dy]]of [[-30,-15],[-15,-30],[15,-30],[30,-15],[30,15],[15,30],[-15,30],[-30,15]].entries()){
+      if(index===0)ctx.moveTo(x+dx,y+dy);else ctx.lineTo(x+dx,y+dy);
+    }
+    ctx.closePath();ctx.fill();ctx.stroke();
+    if(artwork.wallImage)ctx.drawImage(artwork.wallImage,x-48,y-60,96,96);
+    ring(x,y+5,31,'#9adad0',.6,1.5);
+    ctx.restore();
+  }
+
+  function drawConvoy(entity){
+    ring(entity.x,entity.y+3,39,'#a7f3df',.95,3);
+    ctx.fillStyle='#192b2380';ctx.beginPath();ctx.ellipse(entity.x,entity.y+5,30,10,0,0,Math.PI*2);ctx.fill();
+    if(artwork.convoyImage)ctx.drawImage(artwork.convoyImage,entity.x-64,entity.y-80,128,128);
+  }
+
+  function traceRoute(points,color,width,dash=[]){
+    if(!points?.length)return;
+    ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);
+    ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);for(const point of points.slice(1))ctx.lineTo(point.x,point.y);ctx.stroke();ctx.restore();
+  }
+
+  function drawTacticalGround(state,placement){
+    if(state.mode==='escort'){
+      const points=ESCORT_POINTS.map(([x,y])=>({x,y}));
+      traceRoute(points,'#4ac8ae24',48);
+      traceRoute(points,'#1b443bb3',6,[12,9]);
+      traceRoute(points,'#d0ebc3e6',2.5,[12,9]);
+      for(const [index,progress] of ESCORT_CHECKPOINTS.entries()){
+        const point=pointOnEscortRoute(progress);
+        ring(point.x,point.y,27,index<state.convoy.checkpointIndex?'#9aa888':'#e3c785',.8,2);
+        text(`补给 ${index+1}`,point.x+70,point.y,'#e7d8a3',12);
+      }
+      for(const progress of state.ambushPoints){const point=pointOnEscortRoute(progress);ring(point.x,point.y,23,'#edb391',.65,2);}
+      const end=pointOnEscortRoute(Infinity);
+      ring(end.x,end.y,34,'#b9e9c1',.9,3);text('交付终点',end.x-20,end.y-52,'#d4f1cd',14);
+    }else if(state.mode==='maze'){
+      const structures=[...state.towers,...state.walls];
+      // Adjacent emitters visibly seal the same narrow gaps as the flow field.
+      for(let i=0;i<structures.length;i++)for(const other of structures.slice(i+1)){
+        const unit=structures[i];if(unit.code!=='WALL'&&other.code!=='WALL')continue;
+        const a=unit.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT,b=other.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+        const dx=Math.abs(unit.x-other.x)-(a.width+b.width)/2,dy=Math.abs(unit.y-other.y)-(a.height+b.height)/2;
+        if(dx>20||dy>20)continue;
+        const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+        const from={x:clamp(other.x,unit.x-a.width/2,unit.x+a.width/2),y:clamp(other.y,unit.y-a.height/2,unit.y+a.height/2)};
+        const to={x:clamp(unit.x,other.x-b.width/2,other.x+b.width/2),y:clamp(unit.y,other.y-b.height/2,other.y+b.height/2)};
+        traceRoute([from,to],'#9ae6d755',12);traceRoute([from,to],'#b4f8e2cc',3);
+      }
+      traceRoute(state.mazeRoute,'#dcc48025',16);
+      traceRoute(state.mazeRoute,'#e7dba8aa',3,[9,7]);
+      if(placement?.ok&&placement.route)traceRoute(placement.route,'#98ead9',3,[5,5]);
+      ring(MAZE_ENTRY.x,MAZE_ENTRY.y,25,'#e6b58e',.9,3);
+      ring(MAZE_EXIT.x,MAZE_EXIT.y,25,'#acf1d2',.9,3);
+      text('入侵',MAZE_ENTRY.x+25,MAZE_ENTRY.y-48,'#f6d4aa',14);
+      text('守住出口',MAZE_EXIT.x-42,MAZE_EXIT.y-48,'#b5f2d8',14);
+    }
+  }
+
   function drawUnit(entity, tower, elapsed) {
+    if(entity.code==='WALL'){drawWall(entity.x,entity.y);return;}
+    if(entity.convoy){drawConvoy(entity);return;}
     const unit = artwork.units.get(entity.code);
     const size = tower ? 128 : entity.boss ? 184 : 126;
     ctx.fillStyle = tower ? '#18271b3d' : '#18271b66';
@@ -139,7 +210,7 @@ export function createRenderer(canvas, artwork) {
       ctx.drawImage(sprite, entity.x - size * .5, entity.y - size * .625 + bob, size, size);
     }
     if (tower) {
-      text(`Lv.${entity.level}`, entity.x, entity.y + 27, '#f3d88e', 12);
+      text((entity.readyAt??0)>elapsed?`搬迁 ${(entity.readyAt-elapsed).toFixed(1)}s`:`Lv.${entity.level}`, entity.x, entity.y + 27, '#f3d88e', 12);
       if (['radar', 'overclock', 'barrier', 'supply'].includes(towerStats(entity).kind)) {
         ring(entity.x, entity.y + 2, 34, towerStats(entity).color, .45, 1.5);
       }
@@ -155,7 +226,7 @@ export function createRenderer(canvas, artwork) {
   }
 
   function event(event) {
-    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65, pulse: .8 };
+    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65,relocate:.65 };
     if (!(event.type in lifetimes)) return;
     particles.push({ ...event, age: 0, life: lifetimes[event.type] });
     if (particles.length > 240) particles = particles.slice(-240);
@@ -196,94 +267,59 @@ export function createRenderer(canvas, artwork) {
           const effect = artwork.effects.get('F06');
           if (effect) ctx.drawImage(effect, item.x - 35, item.y - 50, 70, 70);
         }
-      } else if (item.type === 'pulse') {
-        ring(item.x, item.y, 45 + progress * 720, '#d5c1ff', 1, 4);
-        ring(item.x, item.y, 30 + progress * 540, '#a8eaff', .7, 2);
       } else if (item.type === 'core-hit') {
         ring(item.x, item.y, 32 + progress * 36, '#ff947e', 1, 3);
-        text(`核心 -${item.amount}`, item.x, item.y - 60 - progress * 18, '#ffd0b8', 16);
+        text(`${item.label||'核心'} -${item.amount}`, item.x, item.y - 60 - progress * 18, '#ffd0b8', 16);
       } else {
         ring(item.x, item.y, 30 + progress * 25, item.type === 'upgrade' ? '#b2f4d5' : '#f3d177', 1, 3);
-        text(item.type === 'upgrade' ? '升级' : '部署', item.x, item.y - 65 - progress * 10, '#fff0b5', 16);
+        text(item.type === 'upgrade' ? '升级' : item.type==='relocate'?'搬迁':'部署', item.x, item.y - 65 - progress * 10, '#fff0b5', 16);
       }
       ctx.restore();
     }
     particles = particles.filter(item => item.age < item.life);
   }
 
-  function drawMission(state) {
-    if (state.mode === 'harvest') {
-      for (const [index,site] of HARVEST_SITES.entries()) {
-        const [x,y] = DEFENSE_LANES[site.lane].points[0];
-        const active = state.harvest?.site === index;
-        const remaining = state.deposits[index];
-        const color = remaining ? active ? '#a0f4e1' : '#e1cf9d' : '#a1aaa1';
-        ring(x,y,active && !reduceMotion ? 28 + Math.sin(state.elapsed * 2) * 3 : 28,color,remaining ? .9 : .4,active ? 3 : 1.5);
-        text(`${site.name} · ${remaining}${active ? ' · 采集中' : ''}`,Math.max(110,Math.min(1170,x)),y+46,color,13);
-        if (active) {
-          ctx.save(); ctx.strokeStyle = '#a0f4e1'; ctx.lineWidth = 4;
-          ctx.beginPath();
-          ctx.arc(x,y,33,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-state.harvest.remaining/HARVEST_DURATION));
-          ctx.stroke(); ctx.restore();
-        }
-      }
-      if (state.extractionRemaining !== null) {
-        ring(DEFENSE_CORE.x,DEFENSE_CORE.y,reduceMotion ? 65 : 65 + Math.sin(state.elapsed*2)*7,'#a0f4e1',.85,3);
-        text(`撤离 · ${Math.ceil(state.extractionRemaining)} 秒`,DEFENSE_CORE.x,DEFENSE_CORE.y-83,'#bbffe6',18);
-      }
-    } else if (state.mode === 'storm') {
-      if (state.stormActive) {
-        ctx.fillStyle = '#60419322'; ctx.fillRect(0,0,WORLD.width,WORLD.height);
-        ctx.save(); ctx.strokeStyle = '#c9b9f2'; ctx.globalAlpha = .22; ctx.lineWidth = 2;
-        for (let i=0;i<15;i++) {
-          const x=(i*97+(reduceMotion ? 0 : state.elapsed*32))%WORLD.width;
-          const y=(i*137)%WORLD.height;
-          ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-35,y+15);ctx.stroke();
-        }
-        ctx.restore();
-        ring(DEFENSE_CORE.x,DEFENSE_CORE.y,79,'#d3b9ff',.65,2);
-      }
-      text(state.stormActive ? '裂隙风暴 · 敌速 +25%' : '风暴间歇',640,34,state.stormActive ? '#e4ceff' : '#c8d5c2',15);
-      const lanes=state.wave>0 && state.wave%2===0 ? [1,3] : [0,2];
-      for (const lane of lanes) {
-        const [x,y]=DEFENSE_LANES[lane].points[0];
-        ring(x,y,27,'#cfb4fb',.8,2);
-        text(`${DEFENSE_LANES[lane].name}路裂隙`,Math.max(100,Math.min(1180,x)),y+46,'#dfceff',13);
-      }
-    }
-  }
-
   function draw(state, selectedTowerId, placement, dt = 0, cursor = null) {
-    const mode = state.mode === 'loop' ? 'loop' : 'defense';
+    const mode = state.mode;
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.drawImage(backgrounds[mode], 0, 0);
-    drawMission(state);
+    drawTacticalGround(state,placement);
     if (placement) {
       free.clearRect(0, 0, WORLD.width, WORLD.height);
-      free.drawImage(buildMasks[mode], 0, 0);
-      for (const tower of state.towers) {
-        free.clearRect(tower.x - FOOTPRINT.width - FOOTPRINT.gap, tower.y - FOOTPRINT.height - FOOTPRINT.gap, (FOOTPRINT.width + FOOTPRINT.gap) * 2, (FOOTPRINT.height + FOOTPRINT.gap) * 2);
+      const footprint=placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+      if(mode==='maze'){
+        free.fillStyle='#9ae6ad45';
+        free.fillRect(BUILD_BOUNDS.x+footprint.width/2,BUILD_BOUNDS.y+footprint.height/2,BUILD_BOUNDS.width-footprint.width,BUILD_BOUNDS.height-footprint.height);
+      }else free.drawImage(buildMasks[mode], 0, 0);
+      for (const tower of [...state.towers,...state.walls||[]]) {
+        if(placement.relocating&&tower.id===placement.towerId)continue;
+        const other=tower.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+        const halfX=(footprint.width+other.width)/2+8,halfY=(footprint.height+other.height)/2+8;
+        free.clearRect(tower.x-halfX,tower.y-halfY,halfX*2,halfY*2);
       }
       ctx.drawImage(freeMask, 0, 0);
     }
+    if(mode==='loop'||mode==='defense'){
     ctx.save();
     ctx.globalAlpha = reduceMotion ? .16 : .16 + Math.sin(state.elapsed * 2) * .05;
     ctx.strokeStyle = '#d0c39c'; ctx.lineWidth = 1.5;
     const core = mode === 'defense' ? DEFENSE_CORE : ENTRY;
     ctx.beginPath(); ctx.ellipse(core.x, core.y, 29, 20, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
-    const coreLabel = {loop:'出怪核心',defense:'防守核心',harvest:'撤离核心',storm:'风暴核心'};
-    text(coreLabel[state.mode] || '防守核心', core.x, core.y + 73, '#ded8b8', 14);
-    if (state.mode === 'defense') {
+    text(mode === 'defense' ? '防守核心' : '出怪核心', core.x, core.y + 73, '#ded8b8', 14);
+    if (mode === 'defense') {
       const lane = DEFENSE_LANES[state.waveActive ? state.attackLane : state.wave % 4];
       const [x,y] = lane.points[0];
       ring(x,y,27,state.waveActive ? '#ffb68a' : '#bddbd0',.8);
       text(`${lane.name}路${state.waveActive ? '来袭' : '预告'}`, x, y + 46, '#ffe1b5', 13);
     }
-    const selected = state.towers.find(tower => tower.id === selectedTowerId);
+    }
+    const selected = [...state.towers,...state.walls||[]].find(tower => tower.id === selectedTowerId);
     if (selected) ring(selected.x, selected.y, 45, '#ffe39b', 1, 2.5);
     const position = placement || selected;
-    const range = placement ? TOWERS.find(tower => tower.code === placement.code)?.range : selected ? effectiveTowerStats(selected, state.towers).range : 0;
+    const movingTower=placement?.relocating?state.towers.find(t=>t.id===placement.towerId):null;
+    const active=state.towers.filter(t=>(t.readyAt??0)<=state.elapsed);
+    const range = movingTower ? effectiveTowerStats({...movingTower,x:placement.x,y:placement.y},active).range : placement ? TOWERS.find(tower => tower.code === placement.code)?.range : selected ? selected.code==='WALL'?0:effectiveTowerStats(selected, active).range : 0;
     if (position && range) {
       ctx.save();
       ctx.fillStyle = '#f7df8612';
@@ -297,23 +333,28 @@ export function createRenderer(canvas, artwork) {
     }
     const actors = [
       ...state.towers.map(entity => ({ entity, tower: true })),
+      ...(state.walls||[]).map(entity=>({entity,tower:true})),
       ...state.enemies.map(entity => ({ entity, tower: false })),
+      ...(state.convoy?[{entity:{...state.convoy,convoy:true},tower:false}]:[]),
     ].sort((a, b) => a.entity.y - b.entity.y);
     for (const actor of actors) drawUnit(actor.entity, actor.tower, state.elapsed);
+    if(state.convoy){const convoy=state.convoy;text(convoy.moving?'护送载具 · 行进':'护送载具 · 停车',Math.max(100,Math.min(1180,convoy.x)),convoy.y+40,'#c4ffdf',14);}
     if (placement) {
       const color = placement.ok ? '#a4e6ae' : '#f29a84';
       const unit = artwork.units.get(placement.code);
       ctx.save();
       ctx.globalAlpha = .52;
+      if(placement.code==='WALL')drawWall(placement.x,placement.y);
       if (unit?.masterImage) ctx.drawImage(unit.masterImage, placement.x - 64, placement.y - 80, 128, 128);
       ctx.globalAlpha = 1;
       ctx.fillStyle = placement.ok ? '#71cf8b35' : '#e7786635';
       ctx.strokeStyle = color; ctx.lineWidth = 2.5;
-      ctx.fillRect(placement.x - FOOTPRINT.width / 2, placement.y - FOOTPRINT.height / 2, FOOTPRINT.width, FOOTPRINT.height);
-      ctx.strokeRect(placement.x - FOOTPRINT.width / 2, placement.y - FOOTPRINT.height / 2, FOOTPRINT.width, FOOTPRINT.height);
+      const size=placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+      ctx.fillRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
+      ctx.strokeRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
       const labelX = Math.max(130, Math.min(WORLD.width - 130, placement.x));
       const labelY = placement.y > 100 ? placement.y - 91 : placement.y + 49;
-      text(placement.ok ? '点击建造' : placement.message, labelX, labelY, color, 15);
+      text(placement.ok ? placement.relocating?'点击搬迁':'点击建造' : placement.message, labelX, labelY, color, 15);
       ctx.restore();
     } else if (cursor) {
       ctx.save();ctx.strokeStyle = '#f4d789';ctx.lineWidth = 2;

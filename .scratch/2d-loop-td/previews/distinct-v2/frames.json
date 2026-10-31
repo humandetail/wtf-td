@@ -1,0 +1,58 @@
+{
+  "maze-open": {
+    "mode": "maze",
+    "elapsed": 0,
+    "coreHealth": 20,
+    "enemies": 0,
+    "convoy": null,
+    "mazeLength": 1180,
+    "walls": 0
+  },
+  "maze-built": {
+    "mode": "maze",
+    "elapsed": 89.99999999999703,
+    "coreHealth": 20,
+    "enemies": 3,
+    "convoy": null,
+    "mazeLength": 1860,
+    "walls": 12
+  },
+  "escort-checkpoint": {
+    "mode": "escort",
+    "elapsed": 57.49999999999887,
+    "coreHealth": 98,
+    "enemies": 2,
+    "convoy": {
+      "x": 400,
+      "y": 180,
+      "angle": 0,
+      "remaining": 1680,
+      "arrived": false,
+      "progress": 800,
+      "length": 2480,
+      "moving": false,
+      "checkpointIndex": 1
+    },
+    "mazeLength": 0,
+    "walls": 0
+  },
+  "escort": {
+    "mode": "escort",
+    "elapsed": 90.99999999999697,
+    "coreHealth": 96.5,
+    "enemies": 2,
+    "convoy": {
+      "x": 640,
+      "y": 409.00000000003047,
+      "angle": 1.5707963267948966,
+      "remaining": 1210.9999999999695,
+      "arrived": false,
+      "progress": 1269.0000000000305,
+      "length": 2480,
+      "moving": true,
+      "checkpointIndex": 1
+    },
+    "mazeLength": 0,
+    "walls": 0
+  }
+}

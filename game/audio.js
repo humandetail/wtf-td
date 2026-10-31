@@ -8,7 +8,7 @@ export function createAudio() {
   /** @type {Set<OscillatorNode>} */
   const voices = new Set();
   const lastPlayed = new Map();
-  const cooldowns = { shot: 0.065, hit: 0.09, kill: 0.08, build: 0.12, upgrade: 0.12, sell: 0.12, wave: 0.8, 'core-hit': 0.3, 'wave-clear': 0.8, 'research-complete': 0.12, 'harvest-complete': 0.2, 'evacuation-start': 0.8, pulse: 0.3, 'storm-change': 0.8, supply: 0.2, victory: 2, defeat: 2 };
+  const cooldowns = { shot: 0.065, hit: 0.09, kill: 0.08, build: 0.12, upgrade: 0.12, sell: 0.12, wave: 0.8, 'core-hit': 0.3, 'wave-clear': 0.8, 'research-complete': 0.12, checkpoint: 0.8, 'convoy-toggle': 0.3, 'convoy-repair': 0.3, relocate: 0.3, supply: 0.2, victory: 2, defeat: 2 };
 
   async function unlock() {
     try {
@@ -106,19 +106,19 @@ export function createAudio() {
         tone(220, 220, 0.38, 'triangle', 0.25, 0.18);
         tone(329.63, 329.63, 0.40, 'sine', 0.18, 0.18);
         break;
-      case 'evacuation-start':
-      case 'storm-change':
+      case 'convoy-toggle':
         tone(130.81, 196, 0.4, 'triangle', 0.25);
         tone(196, 130.81, 0.4, 'triangle', 0.25, 0.22);
         break;
-      case 'pulse':
+      case 'relocate':
         tone(880, 110, 0.5, 'sine', 0.32);
         tone(220, 55, 0.4, 'triangle', 0.2);
         break;
       case 'core-hit':
         tone(98, 42, 0.3, 'triangle', 0.32);
         break;
-      case 'harvest-complete':
+      case 'checkpoint':
+      case 'convoy-repair':
       case 'supply':
       case 'wave-clear':
         tone(130.81, 196, 0.25, 'sine', 0.25);
