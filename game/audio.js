@@ -8,7 +8,7 @@ export function createAudio() {
   /** @type {Set<OscillatorNode>} */
   const voices = new Set();
   const lastPlayed = new Map();
-  const cooldowns = { shot: 0.065, hit: 0.09, kill: 0.08, build: 0.12, upgrade: 0.12, sell: 0.12, wave: 0.8, victory: 2, defeat: 2 };
+  const cooldowns = { shot: 0.065, hit: 0.09, kill: 0.08, build: 0.12, upgrade: 0.12, sell: 0.12, wave: 0.8, 'research-complete': 0.12, victory: 2, defeat: 2 };
 
   async function unlock() {
     try {
@@ -94,6 +94,9 @@ export function createAudio() {
         break;
       case 'upgrade':
         [440, 554.37, 659.25, 880].forEach((note, index) => tone(note, note, 0.24, 'triangle', 0.23, index * 0.065));
+        break;
+      case 'research-complete':
+        [523.25, 659.25, 783.99, 1046.5].forEach((note, index) => tone(note, note, 0.3, 'sine', 0.22, index * 0.09));
         break;
       case 'sell':
         [660, 440, 330].forEach((note, index) => tone(note, note * 0.85, 0.16, 'sine', 0.22, index * 0.055));

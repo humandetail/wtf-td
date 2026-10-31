@@ -1,5 +1,6 @@
 import { createGame } from './engine.js';
-import { TOWERS, effectiveTowerStats, MAX_LEVEL } from './catalog.js';
+import { TOWERS, effectiveTowerStats } from './catalog.js';
+import { TECHNOLOGIES, deploymentStats, towerUnlockLevel } from './research.js';
 import { WORLD } from './geometry.js';
 import { createAudio } from './audio.js';
 import { loadArtwork, createRenderer } from './render.js';
@@ -49,6 +50,11 @@ function syncEvents() {
     renderer.event(event);
     audio.play(event);
     if (event.type === 'wave') notice(event.message, 2.5);
+    if (event.type === 'research-complete') {
+      notice(event.message, 4);
+      selectedSignature = '';
+      updateUI();
+    }
   }
 }
 
@@ -65,11 +71,12 @@ function refreshPlacement() {
     : null;
   const pending = TOWERS.find(item => item.code === armedCode);
   const status = element('build-status');
+  const eligibility = pending ? game.canBuildType(pending.code) : null;
   const message = pending
-    ? `${pending.name} · ${pending.price} 金币 · ${placement ? placement.message : '移动到绿色区域放置，可连续建造'}`
+    ? `${pending.name} · ${pending.price} 金币 · ${placement ? placement.message : !eligibility.ok ? eligibility.message : '移动到绿色区域放置，可连续建造'}`
     : '先选工事，再在绿色区域放置。';
   if (status.textContent !== message) status.textContent = message;
-  status.classList.toggle('invalid', !!placement && !placement.ok);
+  status.classList.toggle('invalid', pending && (!eligibility.ok || !!placement && !placement.ok));
   element('cancel-build-button').hidden = !armedCode;
 }
 
@@ -94,7 +101,7 @@ function activatePoint(point) {
 
 function updateSelection() {
   const tower = game.state.towers.find(tower => tower.id === selectedTowerId);
-  const signature = `${selectedTowerId}/${game.state.towers.map(item => `${item.id}:${item.level}`).join(',')}/${game.state.gold}/${armedCode}`;
+  const signature = `${selectedTowerId}/${game.state.towers.map(item => `${item.id}:${item.level}`).join(',')}/${game.state.gold}/${armedCode}/${game.state.tech.deployment}:${game.state.tech.reinforcement}/${game.state.phase}`;
   if (selectedSignature === signature) return;
   selectedSignature = signature;
   element('selected-slot-label').textContent = armedCode ? '建造模式' : tower ? '已选防御单位' : '防线指挥';
@@ -120,13 +127,48 @@ function updateSelection() {
     return span;
   }));
   const upgrade = /** @type {HTMLButtonElement} */ (element('upgrade-button'));
-  upgrade.textContent = tower.level === MAX_LEVEL ? '已达最高等级'
-    : game.state.gold < stats.upgradeCost ? `金币不足 · 需要 ${stats.upgradeCost} 金币`
-      : `升级 · ${stats.upgradeCost} 金币`;
-  upgrade.title = game.state.gold < stats.upgradeCost && tower.level < MAX_LEVEL
-    ? `还需 ${stats.upgradeCost - Math.floor(game.state.gold)} 金币` : '';
-  upgrade.disabled = tower.level === MAX_LEVEL || game.state.gold < stats.upgradeCost;
+  const eligibility = game.canUpgrade(tower.id);
+  upgrade.textContent = eligibility.ok ? `升级 · ${stats.upgradeCost} 金币` : eligibility.message;
+  upgrade.title = eligibility.message;
+  upgrade.disabled = !eligibility.ok;
+  /** @type {HTMLButtonElement} */ (element('sell-button')).disabled = game.state.phase !== 'playing';
   element('sell-button').textContent = `出售 · 回收 ${stats.sellValue} 金币`;
+}
+
+function updateResearch() {
+  const { state } = game;
+  const capacity = deploymentStats(state.tech.deployment).capacity;
+  element('tower-capacity').textContent = `容量 ${state.towers.length} / ${capacity}`;
+  for (const kind of /** @type {const} */ (['deployment', 'reinforcement'])) {
+    const technology = TECHNOLOGIES[kind];
+    const level = state.tech[kind];
+    const next = technology.levels[level + 1];
+    element(`${kind}-level`).textContent = `${technology.name} · Lv.${level}`;
+    element(`${kind}-details`).textContent = next
+      ? `${next.cost} 金币 · ${next.duration} 秒 · ${kind === 'deployment'
+        ? `容量 ${next.capacity}，解锁 ${next.unlocks.map(code => TOWERS.find(tower => tower.code === code).name).join('、')}`
+        : `所有塔可升至 ${next.maxTowerLevel} 级（需另付升级费用）`}`
+      : `已满级 · ${kind === 'deployment' ? `容量 ${capacity}，全部塔种已解锁` : `所有塔可升至 ${technology.levels[level].maxTowerLevel} 级`}`;
+    const eligibility = game.canResearch(kind);
+    const button = /** @type {HTMLButtonElement} */ (element(`${kind}-research-button`));
+    button.textContent = eligibility.ok ? `研究 Lv.${level + 1}` : eligibility.message;
+    button.title = eligibility.message;
+    button.disabled = !eligibility.ok;
+  }
+  const research = state.research;
+  const progress = /** @type {HTMLProgressElement} */ (element('research-progress'));
+  progress.hidden = !research;
+  progress.max = research?.duration || 1;
+  progress.value = research ? research.duration - research.remaining : 0;
+  const frozen = state.phase !== 'playing' || state.paused;
+  const status = research
+    ? `${TECHNOLOGIES[research.kind].name} Lv.${research.level} · ${frozen ? '已冻结 · ' : ''}剩余 ${research.remaining.toFixed(1)} 秒`
+    : '研究位空闲 · 同时研究一项';
+  if (element('research-status').textContent !== status) element('research-status').textContent = status;
+  const cancel = /** @type {HTMLButtonElement} */ (element('cancel-research-button'));
+  cancel.hidden = !research;
+  cancel.disabled = state.phase !== 'playing';
+  cancel.textContent = research ? `取消研究 · 退还 ${research.cost} 金币` : '取消研究';
 }
 
 function updateUI() {
@@ -152,8 +194,13 @@ function updateUI() {
     const code = /** @type {HTMLButtonElement} */ (card).dataset.code;
     const definition = TOWERS.find(item => item.code === code);
     card.setAttribute('aria-pressed', String(armedCode === code));
-    card.classList.toggle('unaffordable', state.gold < definition.price);
+    const eligibility = game.canBuildType(code);
+    card.classList.toggle('unaffordable', !eligibility.ok);
+    card.classList.toggle('locked', state.tech.deployment < towerUnlockLevel(code));
+    card.querySelector('.availability').textContent = eligibility.ok ? '可建造' : eligibility.message;
+    card.setAttribute('title', `${definition.description} · ${eligibility.message}`);
   }
+  updateResearch();
   refreshPlacement();
   updateSelection();
   if (lastPhase !== state.phase) {
@@ -219,6 +266,16 @@ function bindControls() {
     showView('menu');
     element('start-button').focus();
   });
+  for (const kind of /** @type {const} */ (['deployment', 'reinforcement'])) {
+    element(`${kind}-research-button`).addEventListener('click', () => {
+      void audio.unlock();
+      resultMessage(game.startResearch(kind));
+    });
+  }
+  element('cancel-research-button').addEventListener('click', () => {
+    void audio.unlock();
+    resultMessage(game.cancelResearch());
+  });
   element('upgrade-button').addEventListener('click', () => resultMessage(game.upgrade(selectedTowerId)));
   element('sell-button').addEventListener('click', () => resultMessage(game.sell(selectedTowerId)));
   element('help-button').addEventListener('click', () => {
@@ -239,7 +296,8 @@ function bindControls() {
     armedCode = /** @type {HTMLButtonElement} */ (card).dataset.code;
     selectedTowerId = null;
     void audio.unlock();
-    notice(`已选${TOWERS.find(tower => tower.code === armedCode).name}，在绿色区域放置。右键或 Esc 取消。`);
+    const eligibility = game.canBuildType(armedCode);
+    notice(`已选${TOWERS.find(tower => tower.code === armedCode).name} · ${eligibility.ok ? '在绿色区域放置，右键或 Esc 取消。' : eligibility.message}`);
     updateUI();
     canvas.focus({ preventScroll: true });
   });
@@ -323,7 +381,8 @@ async function boot() {
       const name = document.createElement('strong'); name.textContent = tower.name;
       const price = document.createElement('span'); price.className = 'price'; price.textContent = `${tower.price} 金币`;
       const role = document.createElement('small'); role.className = 'role'; role.textContent = roles[tower.kind];
-      card.append(image, name, price, role); shop.append(card);
+      const availability = document.createElement('small'); availability.className = 'availability';
+      card.append(image, name, price, role, availability); shop.append(card);
     }
     bindControls();
     element('loading-screen').hidden = true;

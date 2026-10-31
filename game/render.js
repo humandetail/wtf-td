@@ -209,9 +209,22 @@ export function createRenderer(canvas, artwork) {
       ctx.drawImage(freeMask, 0, 0);
     }
     for (const zone of ZONES) {
+      if (zone.x === ENTRY.x && zone.y === ENTRY.y) continue;
       text(zone.name, zone.x, zone.y, zone.color, 20);
     }
-    text('入侵入口', ENTRY.x + 55, ENTRY.y + 43, '#e9e8c9', 13);
+    ring(ENTRY.x, ENTRY.y, 44, '#edaa72', .9, 3);
+    ring(ENTRY.x, ENTRY.y, reduceMotion ? 54 : 54 + Math.sin(state.elapsed * 2) * 3, '#edaa72', .45);
+    ctx.save();
+    ctx.translate(ENTRY.x, ENTRY.y);
+    ctx.strokeStyle = '#f7d397'; ctx.lineWidth = 3;
+    for (const angle of [-Math.PI / 2, 0, Math.PI / 2, Math.PI]) {
+      ctx.save(); ctx.rotate(angle);
+      ctx.beginPath(); ctx.moveTo(43, -6); ctx.lineTo(52, 0); ctx.lineTo(43, 6); ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+    text('出怪核心', ENTRY.x, ENTRY.y - 7, '#fff0c4', 20);
+    text('四向随机出怪', ENTRY.x, ENTRY.y + 20, '#f7d397', 13);
     const selected = state.towers.find(tower => tower.id === selectedTowerId);
     if (selected) ring(selected.x, selected.y, 45, '#ffe39b', 1, 2.5);
     const position = placement || selected;

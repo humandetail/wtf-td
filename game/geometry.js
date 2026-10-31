@@ -1,7 +1,7 @@
 export const WORLD = { width: 1280, height: 800 };
 export const ROAD_WIDTH = 48;
 export const ROAD_SHOULDER = 8;
-export const ENTRY = { x: 76, y: 60 };
+export const ENTRY = { x: 640, y: 400 };
 export const FOOTPRINT = { width: 90, height: 50, gap: 8 };
 export const BUILD_BOUNDS = { x: 110, y: 100, width: 1060, height: 600 };
 export const PLAZA = { x: 565, y: 345, width: 150, height: 110 };
@@ -32,10 +32,15 @@ for(const road of ROAD_SEGMENTS){
     ROAD_NODES[nodes[i].index].neighbors.push(nodes[i-1].index);
   }
 }
-export function createRoadPosition(){
+export function createRoadPosition(random=Math.random){
   const roadFrom=ROAD_NODES.findIndex(node=>node.x===ENTRY.x&&node.y===ENTRY.y);
-  const roadTo=ROAD_NODES[roadFrom].neighbors.find(index=>ROAD_NODES[index].x>ENTRY.x);
-  return {...ENTRY,angle:0,roadFrom,roadTo};
+  const directions=[[0,-1],[1,0],[0,1],[-1,0]];
+  const [dx,dy]=directions[Math.floor(random()*4)];
+  const roadTo=ROAD_NODES[roadFrom].neighbors.find(index=>{
+    const node=ROAD_NODES[index];
+    return Math.sign(node.x-ENTRY.x)===dx&&Math.sign(node.y-ENTRY.y)===dy;
+  });
+  return {...ENTRY,angle:Math.atan2(dy,dx),roadFrom,roadTo};
 }
 export function advanceOnRoad(entity,distance,random=Math.random){
   let remaining=distance;

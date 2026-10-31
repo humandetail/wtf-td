@@ -4,9 +4,19 @@ import {createGame} from '../engine.js';
 import {TOWERS, ENEMIES, towerStats, effectiveTowerStats} from '../catalog.js';
 import {hitTest} from '../render.js';
 
+function researchTo(game,kind,target) {
+ const durations=kind==='deployment'?[0,12,20,30]:[0,10,15,20,25];
+ while(game.state.tech[kind]<target){
+  assert.equal(game.startResearch(kind).ok,true);
+  game.tick(durations[game.state.tech[kind]+1]);
+ }
+}
+function unlockAll(game){researchTo(game,'deployment',3);researchTo(game,'reinforcement',4);}
+
+
 test('adjacent free-placed tower bases select and operate on the intended building', () => {
- const game=createGame({startingGold:10000});game.start();
- const upper=game.build(190,140,'T01'),lower=game.build(190,200,'T03');
+ const game=createGame({startingGold:10000,initialDelay:1000});game.start();researchTo(game,'reinforcement',1);
+ const upper=game.build(190,140,'T01'),lower=game.build(190,200,'T06');
  assert.equal(upper.ok,true);assert.equal(lower.ok,true);
  const selected=hitTest(190,140,game.state.towers);
  assert.equal(selected,upper.towerId);
@@ -47,7 +57,7 @@ test('placement rejects roads, hub, edges, nonfinite inputs and overlapping foot
  for(const [x,y] of [[190,140],[287,140],[190,197]]){
   assert.equal(game.canBuild(x,y,'T01').ok,false);assert.equal(game.build(x,y,'T01').ok,false);
  }
- assert.equal(game.build(390.75,140.25,'T03').towerId,2);
+ assert.equal(game.build(390.75,140.25,'T06').towerId,2);
  assert.equal(game.state.towers.length,2);
  assert.equal(game.build(155,125,'T01').ok,false); // This legal boundary point overlaps the first tower.
  const boundary=createGame();boundary.start();
@@ -59,8 +69,8 @@ test('repeated unaffordable commands preserve money and the next successful towe
  const game=createGame({startingGold:200});game.start();
  const first=game.build(190,140,'T01').towerId;
  for(let repeat=0;repeat<5;repeat++){
-  assert.deepEqual(game.canBuild(390,140,'T03'),{ok:false,message:'金币不足'});
-  assert.deepEqual(game.build(390,140,'T03'),{ok:false,message:'金币不足'});
+  assert.deepEqual(game.canBuild(390,140,'T06'),{ok:false,message:'金币不足'});
+  assert.deepEqual(game.build(390,140,'T06'),{ok:false,message:'金币不足'});
  }
  assert.equal(game.state.gold,100);assert.equal(game.state.towers.length,1);
  assert.equal(game.sell(first).ok,true);
@@ -68,10 +78,10 @@ test('repeated unaffordable commands preserve money and the next successful towe
 });
 
 test('tower IDs select the correct unit through upgrades, sale, rebuilding and restart', () => {
- const game=createGame({startingGold:10000});game.start();
+ const game=createGame({startingGold:10000,initialDelay:1000});game.start();unlockAll(game);
  assert.equal(TOWERS.length,12);assert.equal(ENEMIES.length,12);
  const first=game.build(190,140,'T01').towerId;
- const second=game.build(390,140,'T03').towerId;
+ const second=game.build(390,140,'T06').towerId;
  const initialDamage=towerStats(game.state.towers[0]).damage;
  for(let i=0;i<4;i++)assert.equal(game.upgrade(first).ok,true);
  assert.equal(game.upgrade(first).ok,false);
@@ -110,28 +120,23 @@ function seededRandom(seed) {
 }
 
 test('enemies randomly continue or turn at a junction, deciding only upon arrival', () => {
- for(const [choice,expected] of [[0,[678,60]],[.999,[640,98]]]){
+ for(const [choice,expected] of [[0,[572,210]],[.999,[640,142]]]){
   let decisions=0;
-  const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1,random:()=>{decisions++;return choice;}});game.start();
-  game.tick(6);assert.equal(decisions,0);
+  const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1,random:()=>decisions++===0?0:choice});game.start();
+  game.tick(2);assert.equal(decisions,1,'only the birth direction has been drawn');
   game.tick(1);const enemy=game.state.enemies[0];
-  assert.equal(decisions,1);
+  assert.equal(decisions,2);
   assert.ok(Math.abs(enemy.x-expected[0])<.001&&Math.abs(enemy.y-expected[1])<.001);
-  assert.ok(enemy.progress>600);assert.equal(game.state.kills,0);
+  assert.ok(enemy.progress>250);assert.equal(game.state.kills,0);
  }
- let decisions=0;
- const group=createGame({initialDelay:0,waveCount:1,waveSize:()=>3,spawnInterval:.02,random:()=>decisions++%2?.999:0});group.start();group.tick(7);
- assert.equal(decisions,3,'each enemy chooses independently at the same junction');
- assert.ok(group.state.enemies[0].x>640&&group.state.enemies[0].y===60);
- assert.ok(group.state.enemies[1].x===640&&group.state.enemies[1].y>60);
 });
 
-test('the central crossing offers left, right and straight without reversing', () => {
- for(const [choice,expected,angle] of [[0,[640,442],Math.PI/2],[.5,[598,400],Math.PI],[.999,[682,400],0]]){
-  const choices=[.999,.999,choice];let decisions=0;
+test('returning to the central crossing offers three onward exits without reversing', () => {
+ for(const [choice,expected,angle] of [[0,[640,316],-Math.PI/2],[.5,[640,484],Math.PI/2],[.999,[724,400],0]]){
+  const choices=[0,.999,0,.999,.999,choice];let decisions=0;
   const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1,random:()=>choices[decisions++]});game.start();
-  game.tick(11);const enemy=game.state.enemies[0];
-  assert.equal(decisions,3);
+  game.tick(22);const enemy=game.state.enemies[0];
+  assert.equal(decisions,6);
   assert.ok(Math.abs(enemy.x-expected[0])<.001&&Math.abs(enemy.y-expected[1])<.001,`${enemy.x},${enemy.y}`);
   assert.equal(enemy.angle,angle);
  }
@@ -162,13 +167,13 @@ test('random walkers stay on roads through repeated junctions, pause, high speed
  assert.equal(game.state.enemies.length,6);assert.ok(game.state.enemies.every(e=>e.progress>e.speed*39.9));
  assert.ok(new Set(game.state.enemies.map(e=>`${e.x},${e.y}`)).size>1);
  game.restart();game.tick(.05);
- assert.equal(game.state.enemies[0].id,1);assert.ok(Math.abs(game.state.enemies[0].x-162)<.001);assert.equal(game.state.enemies[0].y,60);
+ assert.equal(game.state.enemies[0].id,1);assert.ok(Math.abs(Math.hypot(game.state.enemies[0].x-640,game.state.enemies[0].y-400)-86)<.001);assert.ok(onRoad(game.state.enemies[0].x,game.state.enemies[0].y));
  const fast=createGame({initialDelay:0,waveCount:1,waveSize:()=>1,enemySpeedScale:2000,random:()=>.999});fast.start();fast.tick(.05);
  const enemy=fast.state.enemies[0];assert.ok(Math.abs(enemy.progress-8600)<.001);assert.ok(onRoad(enemy.x,enemy.y));
 });
 
 test('automatic fire kills targets once and awards gold through visible combat events', () => {
- const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>3,spawnInterval:.1,enemyHealthScale:.3});game.start();game.build(190,140,'T01');
+ const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>3,spawnInterval:.1,enemyHealthScale:.3,random:()=>0});game.start();game.build(500,300,'T01');
  const gold=game.state.gold;game.tick(12);
  assert.equal(game.state.kills,3);
  assert.equal(game.state.gold,gold+24);
@@ -181,9 +186,9 @@ test('automatic fire kills targets once and awards gold through visible combat e
 });
 
 function combatSession(code, support) {
- const game=createGame({startingGold:10000,initialDelay:0,waveCount:1,waveSize:()=>4,spawnInterval:.02,enemyHealthScale:100});game.start();game.tick(.2);
- if(code)game.build(190,140,code);
- if(support)game.build(390,140,support);
+ const game=createGame({startingGold:10000,initialDelay:1000,waveCount:1,waveSize:()=>4,spawnInterval:.02,enemyHealthScale:100,random:()=>0});game.start();unlockAll(game);game.launchWave();game.tick(.2);
+ if(code)game.build(500,300,code);
+ if(support)game.build(400,300,support);
  game.drainEvents();return game;
 }
 test('area weapons and chain lightning strike groups while single fire strikes one enemy', () => {
@@ -216,7 +221,7 @@ test('radar boosts damage, repair arm accelerates fire, supply produces gold', (
   if(support==='T09')assert.ok(displayed.range>towerStats(tower).range);
   if(support==='T10')assert.ok(displayed.interval<towerStats(tower).interval);
  }
- const game=createGame({initialDelay:100});game.start();game.build(190,140,'T11');const gold=game.state.gold;game.tick(8.1);
+ const game=createGame({startingGold:10000,initialDelay:1000});game.start();researchTo(game,'deployment',1);researchTo(game,'reinforcement',1);game.build(500,300,'T11');const gold=game.state.gold;game.tick(8.1);
  assert.equal(game.state.gold,gold+12);
  assert.ok(game.drainEvents().some(e=>e.type==='income'&&e.amount===12));
  assert.equal(game.upgrade(1).ok,true);const upgradedGold=game.state.gold;game.tick(8);
@@ -224,7 +229,7 @@ test('radar boosts damage, repair arm accelerates fire, supply produces gold', (
 });
 
 test('20 scheduled waves include four persistent bosses; victory waits for final spawn and clear, then endless retains economy', () => {
- const game=createGame({startingGold:100000,initialDelay:0,waveInterval:.3,spawnInterval:.02,waveSize:()=>1,enemyHealthScale:.05,random:seededRandom(7)});game.start();
+ const game=createGame({startingGold:100000,initialDelay:1000,waveInterval:.3,spawnInterval:.02,waveSize:()=>1,enemyHealthScale:.05,random:seededRandom(7)});game.start();unlockAll(game);game.launchWave();
  game.tick(6.2);
  assert.equal(game.state.wave,20);
  assert.equal(game.state.enemies.filter(e=>e.boss).length,4);
@@ -233,7 +238,7 @@ test('20 scheduled waves include four persistent bosses; victory waits for final
  assert.equal(game.state.phase,'playing');
  assert.equal(game.state.enemies.filter(e=>e.boss).length,4);
  for(let y=140;y<=660;y+=60)for(let x=170;x<=1110;x+=100)if(game.canBuild(x,y,'T04').ok)game.build(x,y,'T04');
- assert.ok(game.state.towers.length>20,'valid packing has no legacy 20-tower cap');
+ assert.equal(game.state.towers.length,20,'deployment research caps the freely placed army at 20');assert.equal(game.canBuildType('T04').ok,false);
  game.tick(120);
  assert.equal(game.state.phase,'victory');
  assert.equal(game.state.kills,24);
@@ -247,30 +252,41 @@ test('20 scheduled waves include four persistent bosses; victory waits for final
 });
 
 test('funds and session phase guard commands; early launch awards no gold and cannot skip a pending queue', () => {
- const game=createGame({waveCount:1,waveSize:()=>3,spawnInterval:2,enemyHealthScale:.1});
- assert.equal(game.build(190,140,'T01').ok,false);game.start();game.build(190,140,'T01');
- game.build(390,140,'T03');const gold=game.state.gold;
- assert.deepEqual(game.canBuild(490,140,'T05'),{ok:false,message:'金币不足'});
- assert.equal(game.build(490,140,'T05').ok,false);assert.equal(game.upgrade(1).ok,false);assert.equal(game.state.gold,gold);
+ const game=createGame({waveCount:1,waveSize:()=>3,spawnInterval:2,enemyHealthScale:.1,random:()=>0});
+ assert.equal(game.build(500,300,'T01').ok,false);game.start();game.build(500,300,'T01');
+ game.build(780,300,'T06');game.build(500,500,'T01');const gold=game.state.gold;
+ assert.deepEqual(game.canBuild(780,500,'T02'),{ok:false,message:'金币不足'});
+ assert.equal(game.build(780,500,'T02').ok,false);assert.equal(game.upgrade(1).ok,false);assert.equal(game.state.gold,gold);
  assert.equal(game.launchWave().ok,true);assert.equal(game.state.gold,gold);
  assert.equal(game.launchWave().ok,false);game.tick(.1);
  assert.equal(game.state.phase,'playing');assert.equal(game.state.kills,1);
  game.tick(5);assert.equal(game.state.phase,'victory');assert.equal(game.state.kills,3);
- assert.equal(game.build(490,140,'T01').ok,false);assert.equal(game.sell(1).ok,false);
+ assert.equal(game.build(780,500,'T01').ok,false);assert.equal(game.sell(1).ok,false);
  game.restart();assert.equal(game.state.wave,0);game.tick(.1);assert.equal(game.state.wave,0);
 });
 
-test('normal economy supports a 20-wave clear using only coordinate purchases, upgrades and elapsed player time', () => {
+test('normal economy clears 20 waves with paid research, coordinate purchases and manual upgrades', () => {
  for(const seed of [1,42,2026]){
- const game=createGame({random:seededRandom(seed)});game.start();
- const plan=[[190.25,140.5,'T01'],[390.75,140.25,'T03'],[490.5,140.75,'T05'],[190.5,200.25,'T04'],[190.75,260.5,'T03'],[190.25,320.75,'T04']];
- for(let elapsed=0;elapsed<1000&&game.state.phase==='playing';elapsed+=.5){
-  const next=plan.find(([x,y])=>!game.state.towers.some(t=>t.x===x&&t.y===y));
-  if(next&&game.canBuild(...next).ok)assert.equal(game.build(...next).ok,true);
-  if(game.state.towers.length>=6){const tower=game.state.towers.find(t=>t.level<5);if(tower)game.upgrade(tower.id);}
-  game.tick(.5);game.drainEvents();
- }
- assert.equal(game.state.phase,'victory');assert.equal(game.state.wave,20);assert.equal(game.state.kills,624);
- assert.equal(game.state.towers.length,6);
+  const game=createGame({random:seededRandom(seed)});game.start();
+  for(const point of [[500,300,'T01'],[780,300,'T01'],[500,500,'T01']])assert.equal(game.build(...point).ok,true);
+  const plan=[[780,500,'T03'],[400,300,'T11'],[880,300,'T03'],[400,500,'T03'],[880,500,'T03']];
+  for(let elapsed=0;elapsed<1000&&game.state.phase==='playing';elapsed+=.5){
+   const state=game.state;
+   if(state.tech.reinforcement===0)game.startResearch('reinforcement');
+   else if(state.towers[0].level<2)game.upgrade(state.towers[0].id);
+   else if(state.tech.deployment<1)game.startResearch('deployment');
+   else {
+    const next=plan.find(([x,y])=>!state.towers.some(t=>t.x===x&&t.y===y));
+    if(next&&game.canBuild(...next).ok)assert.equal(game.build(...next).ok,true);
+    else if(!next){
+     const upgrade=state.towers.find(t=>t.level<=state.tech.reinforcement);
+     if(upgrade)game.upgrade(upgrade.id);
+     else if(state.tech.reinforcement<4)game.startResearch('reinforcement');
+    }
+   }
+   game.tick(.5);game.drainEvents();
+  }
+  assert.equal(game.state.phase,'victory',`seed ${seed}`);assert.equal(game.state.wave,20);assert.equal(game.state.kills,624);
+  assert.deepEqual(game.state.tech,{deployment:1,reinforcement:4});assert.equal(game.state.towers.length,8);
  }
 });
