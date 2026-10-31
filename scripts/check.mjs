@@ -5,6 +5,7 @@ import {inflateSync} from 'node:zlib';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
+import {SLOTS, LOOP_LENGTH, pointOnLoop} from '../game/geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFile(resolve(root, file));
 async function files(directory) {
@@ -63,6 +64,7 @@ async function checkPng(path, width, height, transparent) {
   const decoded = inflateSync(Buffer.concat(chunks)), stride=width*channels;
   assert.equal(decoded.length,(stride+1)*height, `${path} 像素数据长度错误`);
   let previous = Buffer.alloc(stride), minAlpha=255, maxAlpha=0;
+  const alpha = transparent ? new Uint8Array(width*height) : null;
   for (let y=0;y<height;y++) {
     const offset=y*(stride+1), filter=decoded[offset], row=Buffer.from(decoded.subarray(offset+1,offset+1+stride));
     assert(filter<=4, `${path} PNG 滤波类型错误`);
@@ -72,16 +74,47 @@ async function checkPng(path, width, height, transparent) {
       const predictor=filter===1?a:filter===2?b:filter===3?Math.floor((a+b)/2):filter===4?(pa<=pb&&pa<=pc?a:pb<=pc?b:c):0;
       row[x]=(row[x]+predictor)&255;
     }
-    if (bytes[25]===4 || bytes[25]===6) for (let x=channels-1;x<stride;x+=channels) { minAlpha=Math.min(minAlpha,row[x]); maxAlpha=Math.max(maxAlpha,row[x]); }
+    if (bytes[25]===4 || bytes[25]===6) for (let x=channels-1;x<stride;x+=channels) {
+      minAlpha=Math.min(minAlpha,row[x]); maxAlpha=Math.max(maxAlpha,row[x]);
+      if(alpha)alpha[y*width+(x-channels+1)/channels]=row[x];
+    }
     else maxAlpha=255;
     previous=row;
   }
   if (transparent) assert(minAlpha<255 && maxAlpha>0 && bytes[25]!==2, `${path} 应包含透明背景与可见像素`);
   console.log(`✓ ${path}：${width} × ${height}${transparent?'，透明叠图有效':''}`);
+  return {width,height,alpha};
 }
 await checkPng('game/assets/maps/ground.png',1586,992,false);
 await checkPng('game/assets/maps/road.png',1280,800,true);
 await checkPng('game/assets/maps/pad.png',128,96,true);
+for(const name of ['ground.png','road.png','pad.png']){
+  assert((await read(`game/assets/maps/${name}`)).equals(await read(`game/assets/maps/v1/${name}`)),`初版地图归档与保留原文件不一致：${name}`);
+}
+const groundV2=await read('game/assets/maps/v2/ground.png');
+assert(groundV2.equals(await read('game/assets/maps/v2/source/ground-imagegen-original.png')),'新版地形与保留的生成原图不一致');
+const groundWidth=groundV2.readUInt32BE(16), groundHeight=groundV2.readUInt32BE(20);
+assert(Math.abs(groundWidth/groundHeight-1.6)<.025,'新版地形比例应匹配 1280×800 战场');
+assert(groundWidth>=1280&&groundHeight>=800,'新版地形分辨率不足');
+await checkPng('game/assets/maps/v2/ground.png',groundWidth,groundHeight,false);
+const roadV2=await checkPng('game/assets/maps/v2/road.png',1280,800,true);
+const bridgeV2=await checkPng('game/assets/maps/v2/bridges.png',1280,800,true);
+await checkPng('game/assets/maps/v2/pad.png',128,96,true);
+for(let distance=0;distance<LOOP_LENGTH;distance+=2){
+  const point=pointOnLoop(distance);
+  assert(roadV2.alpha[Math.round(point.y)*1280+Math.round(point.x)]>=240,'敌人路线超出新版道路实际像素');
+}
+assert.equal(SLOTS.length,20);
+assert.equal(new Set(SLOTS.map(slot=>slot.id)).size,20);
+for(const slot of SLOTS)assert.equal(roadV2.alpha[slot.y*1280+slot.x],0,`塔位 ${slot.id} 落在行进道路上`);
+for(const id of [8,20]){
+  const slot=SLOTS.find(slot=>slot.id===id);
+  for(let y=-20;y<=20;y+=10)for(let x=-40;x<=40;x+=10){
+    assert(bridgeV2.alpha[(slot.y+y)*1280+slot.x+x]>=240,`桥头塔位 ${id} 缺少完整石台支撑`);
+  }
+}
+console.log('✓ 新版环路逐 2 像素采样均位于道路上，20 个独立塔位均避开道路');
+console.log('✓ 两处桥头塔位具有完整的实际石台像素支撑');
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());
 assert(required?.length, 'UI 契约缺少 ID 清单');

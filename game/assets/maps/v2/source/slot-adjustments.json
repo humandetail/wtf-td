@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-31",
+  "moves": [
+    {
+      "id": 6,
+      "from": [
+        435,
+        580
+      ],
+      "to": [
+        440,
+        600
+      ],
+      "reason": "clear the altar retaining wall"
+    },
+    {
+      "id": 15,
+      "from": [
+        875,
+        735
+      ],
+      "to": [
+        1145,
+        735
+      ],
+      "reason": "move from cliff edge to dry grass"
+    }
+  ],
+  "bridgeheadPlatforms": [
+    {
+      "id": 8,
+      "x": 1050,
+      "y": 580
+    },
+    {
+      "id": 20,
+      "x": 1060,
+      "y": 425
+    }
+  ],
+  "reason": "provide real stone foundations beneath waterside tower pads; route and game rules unchanged"
+}

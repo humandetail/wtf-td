@@ -1,13 +1,35 @@
-# Map art integration
+# 地图制作与接入
 
-The map is three actual bitmap assets in `assets/maps/`:
+2026-10-31 更新：当前游戏使用 `assets/maps/v2/` 的四防区地图。初版的图片、源文件和旧路线保留在 `assets/maps/v1/`，原地图根目录文件也保持原样；原始 `outputs/` 与 `work/` 继续只读。
 
-- `ground.png`: built-in image_gen painted jade garden background, 1586×992. Draw at `(0,0,1280,800)`; the tiny aspect difference is insignificant and all guide positions map proportionally. Corner bamboo, jade cloud stones, bronze lanterns and the central lotus pond belong to this art. No towers, enemies or UI are baked in.
-- `road.png`: transparent 1280×800 pale stone road with engraved paving seams, soft curb and a muted yellow entry threshold at `(640,170)`. Draw at `(0,0,1280,800)` after ground. It follows exactly the `geometry.js` rounded rectangle, radius 110, with an 82-pixel paved width (78-pixel stone fill plus 2-pixel pale edge each side; outer moss curb and shadow extend a few pixels). No runtime procedural road is needed.
-- `pad.png`: transparent 128×96 stone/metal build pad with quiet ochre tabs. Draw at each exact `SLOTS` position, target 90×50, centered `(slot.x-45,slot.y-25)`. The sprite has intentional transparent padding and can sit below both empty slot markers and built towers. Do not bake slot numbers into this image.
+## 四防区与路线
 
-Draw order: ground → road → pads → unit shadows/units/effects → selection and interaction overlays. Use normal canvas world transform; no asset-specific automatic bounding-box crop.
+- **竹林山门**：竹林、石门与苔石构成入口附近和西侧回程防区。
+- **科技营地**：废弃工业黄设施、围栏与旧平台，对应东北长直线和转角。
+- **溪谷石桥**：溪水、河岸和两处石桥，对应东南回折与相邻火力覆盖。
+- **符阵遗迹**：残垣、符石和旧阶台，对应西南回程与积怪补漏。
 
-The twenty reserved clearings match four top-inner positions y292, four bottom-inner positions y508, four outer-top positions y76, four outer-bottom positions y724, two left x69 and two right x1211 positions. Road and pads do not overlap. Existing original asset folders remain read-only.
+中央层叠山石与各区地标形成视觉高度。地形高低只用于画面表现，没有额外增加高地加成、视线遮挡、封路或动态寻路规则。
 
-Generation prompts, guide and vector sources are in `assets/maps/source/`. The untouched generated source is in `assets/maps/source/ground-imagegen-original.png`. Ground was inspected visually after generation; route alignment is guaranteed by the separately drawn road layer.
+世界尺寸仍为 1280×800。新版闭合环路长约 3789.91 像素，道路宽 72 像素；20 个塔位根据直线、转角和回折重新布置。路线入口为 `(640,125)`，石桥位于 `(1040,495)` 和 `(1000,650)`。
+
+8、20 号塔位由独立桥头石台支撑；6 号避开祭坛挡墙，15 号移至东南干地。石台支撑在实际透明图层中进行像素核验，保留的生成原图本身没有涂改。
+
+道路 SVG 和怪物的移动折线由同一布局生成；实际 PNG 道路逐 2 像素核验路径中心，防止画面路线与行进轨迹分离。拐角使用二次曲线，移动折线对曲线进行细分。
+
+## 图层交付
+
+| 文件 | 用途与接入 |
+| --- | --- |
+| `v2/ground.png` | 内置 imagegen 生成并修正的四防区地形，完整铺到世界画布；原生图片和完整提示词保存在 source |
+| `v2/road.png` | 1280×800 透明道路图层，包含不同区段的铺装及入口标记 |
+| `v2/bridges.png` | 1280×800 透明石桥图层，覆盖两处溪流交叉位置 |
+| `v2/pad.png` | 复用已保留的 128×96 建造底座；在新塔位按 90×50 居中绘制 |
+| `v2/source/` | 生成源图、提示词、布局约束、道路与桥梁 SVG；源图均保留 |
+| `v2/preview.png` | 按实际游戏图层和坐标合成的地图预览，不是浏览器截图 |
+
+绘制顺序为地形 → 道路 → 石桥 → 底座 → 道具 → 单位与战斗 → 分区、入口和交互标记。原单位按已有锚点与比例绘制，不按每张方向图的外框重新裁切。
+
+## 验证边界
+
+类型与资源校验、闭合移动、逐像素路线对齐和公开对局检查由实现者执行。默认经济存在可执行的 20 波通关路线，记录见数值说明；真实浏览器试玩、试听、地图主观接受和难度平衡继续留给用户。

@@ -41,11 +41,35 @@ test('surviving enemies loop and overlap waves, pause freezes and large ticks st
  game.togglePause(); const frozen=game.state.elapsed;game.tick(10);assert.equal(game.state.elapsed,frozen);game.togglePause();
  game.setSpeed(3); game.tick(1);assert.ok(game.state.elapsed>3);
  assert.ok(game.state.enemies.some(enemy=>enemy.id===id));
- assert.ok(game.state.enemies[0].progress>2600);
+ assert.ok(game.state.enemies[0].progress>3800);
  assert.ok(game.state.enemies.length>=2);
  game.tick(100);assert.equal(game.state.phase,'defeat');assert.equal(game.state.enemies.length,4);
  const stopped=game.state.elapsed;game.tick(100);assert.equal(game.state.elapsed,stopped);
  assert.equal(game.drainEvents().filter(e=>e.type==='defeat').length,1);
+});
+
+test('one surviving enemy traverses the four folded districts and returns past the entry with travelled progress intact', () => {
+ const game=createGame({initialDelay:0,waveCount:1,waveSize:()=>1});game.start();
+ // Coordinate windows come from the map's visible districts, not the path sampler.
+ const checkpoints=[
+  [10,975,1000,340,365], // northeast turn into the creek approach
+  [20,765,785,545,575], // southeast fold back toward the middle
+  [30,175,195,545,580], // southwest ruins return
+  [35,310,340,280,300], // bamboo fold toward the west boundary
+  [44.1,640,650,124,126], // entry crossed after a complete lap
+  [45,710,730,124,126], // moving onward along the entry straight again
+ ];
+ let previousTime=0,previousProgress=0,id;
+ for(const [time,minX,maxX,minY,maxY] of checkpoints){
+  game.tick(time-previousTime);previousTime=time;
+  assert.equal(game.state.enemies.length,1);
+  const enemy=game.state.enemies[0];id??=enemy.id;
+  assert.equal(enemy.id,id);
+  assert.ok(enemy.x>=minX&&enemy.x<=maxX&&enemy.y>=minY&&enemy.y<=maxY,`district position at ${time}s`);
+  assert.ok(enemy.progress>previousProgress);previousProgress=enemy.progress;
+ }
+ assert.ok(game.state.enemies[0].progress>3789);
+ assert.equal(game.state.kills,0);assert.equal(game.state.phase,'playing');
 });
 
 test('automatic fire kills targets once and awards gold through visible combat events', () => {

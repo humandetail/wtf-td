@@ -4,7 +4,7 @@ All original assets are read-only. Application files are native ES modules. No p
 
 ## Geometry
 
-World is 1280 × 800, road centre follows the clockwise rounded loop exported by `geometry.js`, road width 82. Tower slots come from the same file. All angles in radians, screen y points down.
+World is 1280 × 800. The active v2 map uses a 72-pixel road along a clockwise folded loop through four districts. The same geometry exports ROAD_PATH for the road artwork, ENTRY for the spawn marker, ZONES for district labels, and twenty irregular SLOTS. All angles are in radians, screen y points down. The original map and its geometry are preserved under the v1 archive.
 
 ## Public game session
 

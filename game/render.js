@@ -1,9 +1,9 @@
-import { WORLD, SLOTS, LOOP_LENGTH, pointOnLoop } from './geometry.js';
+import { WORLD, SLOTS, ZONES, ENTRY, LOOP_LENGTH, pointOnLoop } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
-const MAPS = new URL('./assets/maps/', import.meta.url);
+const MAPS = new URL('./assets/maps/v2/', import.meta.url);
 
 function loadImage(url) {
   return new Promise((resolve, reject) => {
@@ -23,7 +23,7 @@ export async function loadArtwork(onProgress) {
   const effects = new Map();
   const props = new Map();
   const tasks = [];
-  const result = { units, effects, props, ground: null, road: null, pad: null };
+  const result = { units, effects, props, ground: null, road: null, pad: null, bridges: null };
   for (const entry of manifest.units) {
     const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
@@ -35,7 +35,7 @@ export async function loadArtwork(onProgress) {
   for (const entry of manifest.props.filter(prop => ['P01', 'P02'].includes(prop.code))) {
     tasks.push(async () => { props.set(entry.code, await loadImage(new URL(entry.path, ORIGINALS))); });
   }
-  for (const name of ['ground', 'road', 'pad']) {
+  for (const name of ['ground', 'road', 'pad', 'bridges']) {
     tasks.push(async () => { result[name] = await loadImage(new URL(`${name}.png`, MAPS)); });
   }
   let complete = 0;
@@ -43,7 +43,7 @@ export async function loadArtwork(onProgress) {
   const worker = async () => {
     while (tasks.length) {
       await tasks.shift()();
-      onProgress(++complete, manifest.units.length + manifest.effects.length + 5);
+      onProgress(++complete, manifest.units.length + manifest.effects.length + 6);
     }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
@@ -77,8 +77,9 @@ export function createRenderer(canvas, artwork) {
   const backdrop = background.getContext('2d');
   backdrop.drawImage(artwork.ground, 0, 0, WORLD.width, WORLD.height);
   backdrop.drawImage(artwork.road, 0, 0, WORLD.width, WORLD.height);
+  backdrop.drawImage(artwork.bridges, 0, 0, WORLD.width, WORLD.height);
   for (const slot of SLOTS) backdrop.drawImage(artwork.pad, slot.x - 45, slot.y - 25, 90, 50);
-  for (const [code, x, y] of [['P01', 352, 407], ['P02', 933, 405]]) {
+  for (const [code, x, y] of [['P01', 880, 400], ['P02', 880, 265]]) {
     const prop = artwork.props.get(code);
     if (prop) backdrop.drawImage(prop, Number(x) - 64, Number(y) - 80, 128, 128);
   }
@@ -204,7 +205,10 @@ export function createRenderer(canvas, artwork) {
       ctx.stroke();
       ctx.restore();
     }
-    text('入侵入口', 640, 211, '#e9e8c9', 13);
+    for (const zone of ZONES) {
+      text(zone.name, zone.x, zone.y, zone.color, 20);
+    }
+    text('入侵入口', ENTRY.x, ENTRY.y + 48, '#e9e8c9', 13);
     for (const slot of SLOTS) {
       if (slot.id === selectedSlot || slot.id === hoverSlot) {
         ring(slot.x, slot.y, 42, '#ffe39b', 1, slot.id === selectedSlot ? 3 : 1.5);
