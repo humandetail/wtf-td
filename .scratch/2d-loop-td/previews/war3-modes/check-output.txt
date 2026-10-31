@@ -1,0 +1,42 @@
+
+> check
+> npm run typecheck && node scripts/check.mjs
+
+
+> typecheck
+> tsc --noEmit
+
+✓ 808 个原素材文件清单与 SHA-256 完全一致
+✓ 原清单 24 个母版、192 个方向图、6 个道具、6 个特效存在
+✓ game/assets/maps/ground.png：1586 × 992
+✓ game/assets/maps/road.png：1280 × 800，透明叠图有效
+✓ game/assets/maps/pad.png：128 × 96，透明叠图有效
+✓ game/assets/maps/v2/ground.png：1586 × 992
+✓ game/assets/maps/v2/road.png：1280 × 800，透明叠图有效
+✓ game/assets/maps/v2/bridges.png：1280 × 800，透明叠图有效
+✓ game/assets/maps/v2/pad.png：128 × 96，透明叠图有效
+✓ v2 归档路线、20 个塔位与两处桥头支撑保持有效
+✓ game/assets/maps/v3/ground.png：1586 × 992
+✓ game/assets/maps/v3/road.png：1280 × 800，透明叠图有效
+✓ v3 路网像素、禁止压路与 668 个非固定建造采样点有效
+✓ game/assets/maps/v4/ground.png：1586 × 992
+✓ game/assets/maps/v4/road.png：1280 × 800，透明叠图有效
+✓ v4 路网像素、禁止压路与 668 个非固定建造采样点有效
+✓ game/assets/maps/v5/scene.png：1586 × 992
+✓ game/assets/maps/v5 实际场景 808 个路面色彩采样与 668 处建筑占地采样有效（节点装饰另行看图）
+✓ game/assets/maps/core-defense/scene.png：1586 × 992
+✓ game/assets/maps/core-defense 实际场景 335 个路面色彩采样与 1031 处建筑占地采样有效（节点装饰另行看图）
+✓ game/assets/maps/escort/scene.png：1586 × 992
+✓ game/assets/maps/maze/scene.png：1586 × 992
+✓ game/assets/maps/gem/scene.png：1586 × 992
+✓ game/assets/maps/hero/scene.png：1586 × 992
+✓ game/assets/maps/legion/scene.png：1586 × 992
+✓ game/assets/modes/hero/atlas.png：1586 × 992，透明叠图有效
+✓ game/assets/modes/hero/atlas.png：40 个生产取样帧均在边界内且有可见内容和透明留白
+✓ game/assets/modes/gem/atlas.png：1448 × 1086，透明叠图有效
+✓ game/assets/modes/gem/atlas.png：12 个生产取样帧均在边界内且有可见内容和透明留白
+✓ game/assets/modes/shared/objectives.png：1254 × 1254，透明叠图有效
+✓ game/assets/modes/shared/objectives.png：4 个生产取样帧均在边界内且有可见内容和透明留白
+✓ 101 个必需 UI ID（含17个新增模式控件）存在且无重复
+✓ game/*.js 与 scripts/*.mjs 语法检查通过
+浏览器完整对局、地图主观验收与实际试听：待用户验收。
