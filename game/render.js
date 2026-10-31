@@ -1,6 +1,7 @@
 import { WORLD, FOOTPRINT, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ENTRY } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 import { DEFENSE_CORE, DEFENSE_LANES, DEFENSE_BUILD_EXCLUSIONS } from './defense-geometry.js';
+import { HARVEST_SITES, HARVEST_DURATION } from './modes.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
@@ -154,7 +155,7 @@ export function createRenderer(canvas, artwork) {
   }
 
   function event(event) {
-    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65 };
+    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65, pulse: .8 };
     if (!(event.type in lifetimes)) return;
     particles.push({ ...event, age: 0, life: lifetimes[event.type] });
     if (particles.length > 240) particles = particles.slice(-240);
@@ -195,6 +196,9 @@ export function createRenderer(canvas, artwork) {
           const effect = artwork.effects.get('F06');
           if (effect) ctx.drawImage(effect, item.x - 35, item.y - 50, 70, 70);
         }
+      } else if (item.type === 'pulse') {
+        ring(item.x, item.y, 45 + progress * 720, '#d5c1ff', 1, 4);
+        ring(item.x, item.y, 30 + progress * 540, '#a8eaff', .7, 2);
       } else if (item.type === 'core-hit') {
         ring(item.x, item.y, 32 + progress * 36, '#ff947e', 1, 3);
         text(`核心 -${item.amount}`, item.x, item.y - 60 - progress * 18, '#ffd0b8', 16);
@@ -207,10 +211,53 @@ export function createRenderer(canvas, artwork) {
     particles = particles.filter(item => item.age < item.life);
   }
 
+  function drawMission(state) {
+    if (state.mode === 'harvest') {
+      for (const [index,site] of HARVEST_SITES.entries()) {
+        const [x,y] = DEFENSE_LANES[site.lane].points[0];
+        const active = state.harvest?.site === index;
+        const remaining = state.deposits[index];
+        const color = remaining ? active ? '#a0f4e1' : '#e1cf9d' : '#a1aaa1';
+        ring(x,y,active && !reduceMotion ? 28 + Math.sin(state.elapsed * 2) * 3 : 28,color,remaining ? .9 : .4,active ? 3 : 1.5);
+        text(`${site.name} · ${remaining}${active ? ' · 采集中' : ''}`,Math.max(110,Math.min(1170,x)),y+46,color,13);
+        if (active) {
+          ctx.save(); ctx.strokeStyle = '#a0f4e1'; ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.arc(x,y,33,-Math.PI/2,-Math.PI/2+Math.PI*2*(1-state.harvest.remaining/HARVEST_DURATION));
+          ctx.stroke(); ctx.restore();
+        }
+      }
+      if (state.extractionRemaining !== null) {
+        ring(DEFENSE_CORE.x,DEFENSE_CORE.y,reduceMotion ? 65 : 65 + Math.sin(state.elapsed*2)*7,'#a0f4e1',.85,3);
+        text(`撤离 · ${Math.ceil(state.extractionRemaining)} 秒`,DEFENSE_CORE.x,DEFENSE_CORE.y-83,'#bbffe6',18);
+      }
+    } else if (state.mode === 'storm') {
+      if (state.stormActive) {
+        ctx.fillStyle = '#60419322'; ctx.fillRect(0,0,WORLD.width,WORLD.height);
+        ctx.save(); ctx.strokeStyle = '#c9b9f2'; ctx.globalAlpha = .22; ctx.lineWidth = 2;
+        for (let i=0;i<15;i++) {
+          const x=(i*97+(reduceMotion ? 0 : state.elapsed*32))%WORLD.width;
+          const y=(i*137)%WORLD.height;
+          ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-35,y+15);ctx.stroke();
+        }
+        ctx.restore();
+        ring(DEFENSE_CORE.x,DEFENSE_CORE.y,79,'#d3b9ff',.65,2);
+      }
+      text(state.stormActive ? '裂隙风暴 · 敌速 +25%' : '风暴间歇',640,34,state.stormActive ? '#e4ceff' : '#c8d5c2',15);
+      const lanes=state.wave>0 && state.wave%2===0 ? [1,3] : [0,2];
+      for (const lane of lanes) {
+        const [x,y]=DEFENSE_LANES[lane].points[0];
+        ring(x,y,27,'#cfb4fb',.8,2);
+        text(`${DEFENSE_LANES[lane].name}路裂隙`,Math.max(100,Math.min(1180,x)),y+46,'#dfceff',13);
+      }
+    }
+  }
+
   function draw(state, selectedTowerId, placement, dt = 0, cursor = null) {
-    const mode = state.mode === 'defense' ? 'defense' : 'loop';
+    const mode = state.mode === 'loop' ? 'loop' : 'defense';
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.drawImage(backgrounds[mode], 0, 0);
+    drawMission(state);
     if (placement) {
       free.clearRect(0, 0, WORLD.width, WORLD.height);
       free.drawImage(buildMasks[mode], 0, 0);
@@ -225,8 +272,9 @@ export function createRenderer(canvas, artwork) {
     const core = mode === 'defense' ? DEFENSE_CORE : ENTRY;
     ctx.beginPath(); ctx.ellipse(core.x, core.y, 29, 20, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
-    text(mode === 'defense' ? '防守核心' : '出怪核心', core.x, core.y + 73, '#ded8b8', 14);
-    if (mode === 'defense') {
+    const coreLabel = {loop:'出怪核心',defense:'防守核心',harvest:'撤离核心',storm:'风暴核心'};
+    text(coreLabel[state.mode] || '防守核心', core.x, core.y + 73, '#ded8b8', 14);
+    if (state.mode === 'defense') {
       const lane = DEFENSE_LANES[state.waveActive ? state.attackLane : state.wave % 4];
       const [x,y] = lane.points[0];
       ring(x,y,27,state.waveActive ? '#ffb68a' : '#bddbd0',.8);

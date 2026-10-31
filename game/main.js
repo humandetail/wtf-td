@@ -1,6 +1,7 @@
 import { createGame } from './engine.js';
 import { TOWERS, effectiveTowerStats } from './catalog.js';
 import { TECHNOLOGIES, deploymentStats, towerUnlockLevel } from './research.js';
+import { MODE_DETAILS, HARVEST_SITES, HARVEST_TARGET, HARVEST_DURATION, EXTRACTION_DURATION, SURVIVAL_DURATION, PULSE_COOLDOWN } from './modes.js';
 import { WORLD } from './geometry.js';
 import { DEFENSE_LANES } from './defense-geometry.js';
 import { createAudio } from './audio.js';
@@ -15,7 +16,8 @@ function element(id) {
 
 const canvas = /** @type {HTMLCanvasElement} */ (element('game-canvas'));
 const help = /** @type {HTMLDialogElement} */ (element('help-dialog'));
-const sessions = { loop: createGame(), defense: createGame({ mode: 'defense' }) };
+const sessions = { loop: createGame(), defense: createGame({ mode: 'defense' }), harvest: createGame({ mode: 'harvest' }), storm: createGame({ mode: 'storm' }) };
+const modeNames = Object.keys(sessions);
 let game = sessions.loop;
 const audio = createAudio();
 const roles = {
@@ -57,8 +59,10 @@ function setDrawer(mode = null, trigger = canvas) {
   drawer.hidden = !mode;
   element('research-panel').hidden = mode !== 'research';
   element('selection-panel').hidden = mode !== 'tower';
-  element('drawer-title').textContent = mode === 'tower' ? '工事详情' : '科技指挥';
+  element('mission-panel').hidden = mode !== 'mission';
+  element('drawer-title').textContent = mode === 'tower' ? '工事详情' : mode === 'mission' ? '任务指挥' : '科技指挥';
   element('research-button').setAttribute('aria-expanded', String(mode === 'research'));
+  element('mission-button').setAttribute('aria-expanded', String(mode === 'mission'));
   if (mode) {
     drawerTrigger = trigger;
     element('close-drawer-button').focus({ preventScroll: true });
@@ -96,7 +100,7 @@ function syncEvents() {
   for (const event of game.drainEvents()) {
     renderer.event(event);
     audio.play(event);
-    if (['wave', 'core-hit', 'wave-clear'].includes(event.type)) notice(event.message, event.type === 'core-hit' ? 4 : 2.5);
+    if (['wave', 'core-hit', 'wave-clear', 'harvest-complete', 'evacuation-start', 'pulse', 'storm-change', 'supply'].includes(event.type)) notice(event.message, event.type === 'core-hit' ? 4 : 2.5);
     if (event.type === 'research-complete') {
       notice(event.message, 4);
       selectedSignature = '';
@@ -219,16 +223,70 @@ function updateResearch() {
   cancel.textContent = research ? `取消研究 · 退还 ${research.cost} 金币` : '取消研究';
 }
 
+function updateMission() {
+  const state = game.state;
+  const harvest = state.mode === 'harvest';
+  const storm = state.mode === 'storm';
+  const playable = state.phase === 'playing';
+  const extracting = state.extractionRemaining !== null;
+  const frozen = !playable || state.paused ? ' · 已冻结' : '';
+  element('mission-button').hidden = !harvest && !storm;
+  element('harvest-mission').hidden = !harvest;
+  element('storm-mission').hidden = !storm;
+  if (harvest) {
+    element('mission-objective').textContent = `采到 ${HARVEST_TARGET} 灵能后主动撤离，坚守 ${EXTRACTION_DURATION} 游戏秒。`;
+    element('harvest-total').textContent = `灵能 ${state.harvested} / ${HARVEST_TARGET}`;
+    HARVEST_SITES.forEach((site, index) => {
+      const button = /** @type {HTMLButtonElement} */ (element(`harvest-site-${index}`));
+      button.textContent = `${site.name} · ${DEFENSE_LANES[site.lane].name} · 剩余 ${state.deposits[index]} 份`;
+      button.setAttribute('aria-pressed', String(state.harvest?.site === index));
+      button.disabled = !playable || extracting || state.deposits[index] <= 0;
+    });
+    const remaining = state.harvest?.remaining;
+    const progress = /** @type {HTMLProgressElement} */ (element('harvest-progress'));
+    progress.max = HARVEST_DURATION;
+    progress.value = remaining === undefined ? 0 : HARVEST_DURATION - remaining;
+    element('harvest-status').textContent = extracting ? `撤离中 · 剩余 ${state.extractionRemaining.toFixed(1)} 秒${frozen}`
+      : remaining !== undefined ? `${HARVEST_SITES[state.harvest.site].name}采集中 · 本份剩余 ${remaining.toFixed(1)} 秒${frozen}` : '尚未采集 · 选择灵脉开始';
+    /** @type {HTMLButtonElement} */ (element('stop-harvest-button')).disabled = !playable || extracting || !state.harvest;
+    const evacuation = /** @type {HTMLButtonElement} */ (element('evacuate-button'));
+    evacuation.disabled = !playable || extracting || state.harvested < HARVEST_TARGET;
+    evacuation.textContent = extracting ? '撤离进行中' : state.harvested < HARVEST_TARGET ? `还需 ${HARVEST_TARGET - state.harvested} 灵能` : '启动撤离 · 四路伏击';
+    const extraction = /** @type {HTMLProgressElement} */ (element('extraction-progress'));
+    extraction.hidden = !extracting;
+    extraction.max = EXTRACTION_DURATION;
+    extraction.value = extracting ? EXTRACTION_DURATION - state.extractionRemaining : 0;
+    element('next-wave-label').textContent = extracting ? '撤离倒计时' : `灵能 ${state.harvested}/${HARVEST_TARGET}`;
+    const lane = state.harvest ? HARVEST_SITES[state.harvest.site].lane : state.wave % DEFENSE_LANES.length;
+    element('next-wave-value').textContent = extracting ? `${Math.max(0, Math.ceil(state.extractionRemaining))} 秒` : `${Math.max(0, Math.ceil(state.nextWaveIn))} 秒 · ${DEFENSE_LANES[lane].name}`;
+  } else if (storm) {
+    const cycleTime = (state.elapsed + 1e-9) % 60;
+    const changeIn = state.stormActive ? 60 - cycleTime : 40 - cycleTime;
+    const weather = `${state.stormActive ? '风暴中 · 敌人移速 +25%' : '风暴将至'} · ${Math.ceil(changeIn)} 秒后${state.stormActive ? '平息' : '增强'}`;
+    element('mission-objective').textContent = `守住核心 ${SURVIVAL_DURATION} 游戏秒；结束时无需清场。`;
+    element('survival-status').textContent = state.endless ? `无尽 · 已生存 ${Math.floor(state.elapsed)} 秒` : `生存剩余 ${Math.max(0, Math.ceil(state.survivalRemaining))} 秒${frozen}`;
+    element('storm-status').textContent = weather;
+    element('storm-status').classList.toggle('storm-active', state.stormActive);
+    const pulse = /** @type {HTMLButtonElement} */ (element('pulse-button'));
+    pulse.disabled = !playable || state.pulseRemaining > 1e-9 || state.enemies.length === 0;
+    pulse.textContent = state.pulseRemaining > 1e-9 ? `脉冲冷却 · ${state.pulseRemaining.toFixed(1)} 秒${frozen}` : state.enemies.length ? '释放过载脉冲' : '脉冲就绪 · 等待敌人';
+    element('pulse-description').textContent = `普通敌人最大生命 35% / Boss 12% 伤害，定身 2 秒；冷却 ${PULSE_COOLDOWN} 游戏秒。空场不消耗冷却。`;
+    const lanes = (state.wave + 1) % 2 ? '北 / 南' : '东 / 西';
+    element('next-wave-label').textContent = state.endless ? '无尽风暴' : `生存 ${Math.max(0, Math.ceil(state.survivalRemaining))} 秒`;
+    element('next-wave-value').textContent = `${Math.max(0, Math.ceil(state.nextWaveIn))} 秒 · ${lanes}${state.stormActive ? ' · 风暴' : ''}`;
+  }
+}
+
 function updateUI() {
   const state = game.state;
   element('gold-value').textContent = String(Math.floor(state.gold));
-  element('wave-value').textContent = state.endless ? `∞ ${state.wave}` : `${state.wave} / 20`;
+  element('wave-value').textContent = state.endless ? `∞ ${state.wave}` : ['harvest', 'storm'].includes(state.mode) ? String(state.wave) : `${state.wave} / 20`;
   element('enemy-value').textContent = String(state.enemies.length);
   element('enemy-limit').textContent = String(state.limit);
   element('kill-value').textContent = String(state.kills);
-  const defense = state.mode === 'defense';
-  element('current-mode').textContent = defense ? '核心保卫战' : '循环圈';
-  canvas.setAttribute('aria-label', `${defense ? '核心保卫战' : '循环圈'}战场。先点顶部“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。`);
+  const defense = state.mode !== 'loop';
+  element('current-mode').textContent = MODE_DETAILS[state.mode].name;
+  canvas.setAttribute('aria-label', `${MODE_DETAILS[state.mode].name}战场。先点顶部“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。`);
   element('pressure-label').textContent = defense ? '核心耐久' : '环路积怪';
   element('loop-pressure-value').hidden = defense;
   element('core-pressure-value').hidden = !defense;
@@ -262,6 +320,7 @@ function updateUI() {
     card.setAttribute('title', `${definition.description} · ${eligibility.message}`);
   }
   updateResearch();
+  updateMission();
   refreshPlacement();
   updateSelection();
   if (lastPhase !== state.phase) {
@@ -273,19 +332,24 @@ function updateUI() {
 function showEnd() {
   const state = game.state;
   const success = state.phase === 'victory';
-  const defense = state.mode === 'defense';
-  element('end-title').textContent = defense ? success ? '核心守卫成功' : '核心已被击破' : success ? '环路守卫成功' : '防线失守';
-  element('end-description').textContent = defense
-    ? success ? '二十波进攻已全部清场，核心仍然屹立。进入无尽将保留剩余耐久与研究进度。' : '漏过的敌人耗尽了核心耐久。调整入口布防与升级节奏，再守一局。'
-    : success ? '常规二十波已清场。你可以保留防线，迎接无尽挑战。'
-      : `场上怪物达到 ${state.limit} 只。调整火力覆盖与升级节奏，再守一局。`;
+  const endings = {
+    loop: ['环路守卫成功', '防线失守', '常规二十波已清场。保留防线，迎接无尽挑战。', `场上怪物达到 ${state.limit} 只。调整火力覆盖与升级节奏，再守一局。`],
+    defense: ['核心守卫成功', '核心已被击破', '二十波进攻已全部清场，核心仍然屹立。进入无尽保留剩余耐久与研究进度。', '漏过的敌人耗尽了核心耐久。调整入口布防与升级节奏，再守一局。'],
+    harvest: ['灵能撤离成功', '采集行动失败', `已携带 ${state.harvested} 灵能安全撤离，防线完成任务。`, '核心耐久耗尽，撤离行动中断。采集产出可用于加固防线，再次尝试。'],
+    storm: ['风暴生存成功', '裂隙防线失守', `已坚守 ${SURVIVAL_DURATION} 游戏秒。进入无尽保留核心、科技、累计时间与脉冲冷却。`, '核心被裂隙来敌击破。留意风暴时段，使用脉冲为防线争取时间。'],
+  };
+  const ending = endings[state.mode];
+  element('end-title').textContent = ending[success ? 0 : 1];
+  element('end-description').textContent = ending[success ? 2 : 3];
   element('end-stats').innerHTML = [
-    ...(defense ? [['核心耐久', `${state.coreHealth} / ${state.maxCoreHealth}`], ['漏过敌人', state.leaks]] : []),
+    ...(state.mode !== 'loop' ? [['核心耐久', `${state.coreHealth} / ${state.maxCoreHealth}`], ['漏过敌人', state.leaks]] : []),
+    ...(state.mode === 'harvest' ? [['采集灵能', `${state.harvested} / ${HARVEST_TARGET}`]] : []),
     ['抵御波次', state.wave], ['击杀敌人', state.kills], ['守卫时间', `${Math.floor(state.elapsed / 60)}:${String(Math.floor(state.elapsed % 60)).padStart(2, '0')}`],
   ].map(([label, value]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
-  element('endless-button').hidden = !success;
+  const endlessAvailable = success && state.mode !== 'harvest';
+  element('endless-button').hidden = !endlessAvailable;
   showView('end');
-  element(success ? 'endless-button' : 'restart-button').focus();
+  element(endlessAvailable ? 'endless-button' : 'restart-button').focus();
 }
 
 function clearTransient() {
@@ -305,12 +369,8 @@ function clearTransient() {
 }
 
 function updateMenu() {
-  const defense = game === sessions.defense;
-  element('mode-loop-button').setAttribute('aria-pressed', String(!defense));
-  element('mode-defense-button').setAttribute('aria-pressed', String(defense));
-  element('mode-description').textContent = defense
-    ? '四路轮番来袭，守住 20 点核心耐久。清场获得补给，再准备下一波。'
-    : '敌人在环路中持续游走，积怪达到上限即失败。下一波按时到来。';
+  for (const mode of modeNames) element(`mode-${mode}-button`).setAttribute('aria-pressed', String(game === sessions[mode]));
+  element('mode-description').textContent = MODE_DETAILS[game.state.mode].description;
   element('start-button').textContent = game.state.phase === 'menu' ? '开始布防 →'
     : game.state.phase === 'playing' ? '继续布防 →' : '查看战报 →';
 }
@@ -347,7 +407,7 @@ function enterGame(restart = false) {
   else if (game.state.paused) game.togglePause();
   if (freshSession) setBuildDock(false);
   showView('game');
-  if (freshSession) notice('点击顶部“建造”选择工事；“科技”打开研究。', 5);
+  if (freshSession) notice(`点击顶部“建造”选择工事；“科技”打开研究。${['harvest', 'storm'].includes(game.state.mode) ? '“任务”查看目标与主动指令。' : ''}`, 5);
   lastPhase = game.state.phase;
   updateUI();
   canvas.focus({ preventScroll: true });
@@ -379,8 +439,17 @@ function bindControls() {
   element('mute-button').addEventListener('click', () => { void audio.unlock(); audio.setMuted(!audio.muted); updateUI(); });
   element('menu-button').addEventListener('click', returnToMenu);
   element('choose-mode-button').addEventListener('click', returnToMenu);
-  element('mode-loop-button').addEventListener('click', () => selectMode('loop'));
-  element('mode-defense-button').addEventListener('click', () => selectMode('defense'));
+  for (const mode of modeNames) element(`mode-${mode}-button`).addEventListener('click', () => selectMode(mode));
+  element('mission-button').addEventListener('click', () => {
+    const open = element('mission-button').getAttribute('aria-expanded') === 'true';
+    setDrawer(open ? null : 'mission', element('mission-button'));
+  });
+  HARVEST_SITES.forEach((site, index) => element(`harvest-site-${index}`).addEventListener('click', () => {
+    void audio.unlock(); resultMessage(game.startHarvest(index));
+  }));
+  element('stop-harvest-button').addEventListener('click', () => resultMessage(game.stopHarvest()));
+  element('evacuate-button').addEventListener('click', () => { void audio.unlock(); resultMessage(game.evacuate()); });
+  element('pulse-button').addEventListener('click', () => { void audio.unlock(); resultMessage(game.pulse()); });
   for (const kind of /** @type {const} */ (['deployment', 'reinforcement'])) {
     element(`${kind}-research-button`).addEventListener('click', () => {
       void audio.unlock();

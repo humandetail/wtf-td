@@ -1,0 +1,32 @@
+{
+  "harvest": {
+    "mode": "harvest",
+    "elapsed": 120.4999999999953,
+    "coreHealth": 20,
+    "enemies": 5,
+    "harvested": 160,
+    "extractionRemaining": null,
+    "stormActive": false,
+    "pulseRemaining": 0
+  },
+  "evacuation": {
+    "mode": "harvest",
+    "elapsed": 185.00000000000782,
+    "coreHealth": 15,
+    "enemies": 24,
+    "harvested": 240,
+    "extractionRemaining": 14.999999999999929,
+    "stormActive": false,
+    "pulseRemaining": 0
+  },
+  "storm": {
+    "mode": "storm",
+    "elapsed": 112.49999999999575,
+    "coreHealth": 20,
+    "enemies": 15,
+    "harvested": 0,
+    "extractionRemaining": null,
+    "stormActive": true,
+    "pulseRemaining": 29.499999999999993
+  }
+}

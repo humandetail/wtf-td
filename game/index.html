@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#17241f">
-  <title>环界 · 双模式塔防</title>
+  <title>环界 · 四模式塔防</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -17,20 +17,22 @@
 
     <section id="menu-screen" class="menu-screen" aria-labelledby="menu-title" hidden>
       <div class="menu-copy">
-        <p class="eyebrow">单人策略 · 双模式塔防</p>
+        <p class="eyebrow">单人策略 · 四模式塔防</p>
         <h1 id="menu-title">环<span>界</span></h1>
         <p class="menu-subtitle">守住一圈，迎战万象。</p>
         <p class="menu-description">用科技构筑防线，阻击玄幻异兽。选择你的战场。</p>
         <div class="mode-selector" role="group" aria-label="选择玩法">
           <button id="mode-loop-button" class="mode-card" type="button" aria-pressed="true"><strong>循环圈</strong><span>循环游走 · 控制积怪</span></button>
           <button id="mode-defense-button" class="mode-card" type="button" aria-pressed="false"><strong>核心保卫战</strong><span>四路轮攻 · 守住耐久</span></button>
+          <button id="mode-harvest-button" class="mode-card" type="button" aria-pressed="false"><strong>灵脉采集</strong><span>选择灵脉 · 带回灵能</span></button>
+          <button id="mode-storm-button" class="mode-card" type="button" aria-pressed="false"><strong>裂隙风暴</strong><span>双路入侵 · 脉冲求生</span></button>
         </div>
         <p id="mode-description" class="mode-description" aria-live="polite">敌人在环路中持续游走，积怪达到上限即失败。下一波按时到来。</p>
         <div class="menu-actions">
           <button id="start-button" class="button primary large" type="button">开始布防 <span aria-hidden="true">→</span></button>
           <button id="help-button" class="button quiet" type="button">玩法说明</button>
         </div>
-        <div class="campaign-facts"><span>20 波常规关卡</span><span>阶段首领</span><span>通关解锁无尽</span></div>
+        <div class="campaign-facts"><span>四种作战目标</span><span>阶段首领</span><span>科技构筑防线</span></div>
       </div>
       <div class="menu-art" aria-hidden="true">
         <div class="art-orbit orbit-outer"></div><div class="art-orbit orbit-inner"></div>
@@ -38,7 +40,7 @@
         <img class="hero-tower" src="../outputs/units/tech-heavy-howitzer/master.png" alt="">
         <span class="art-caption">科技防线 / 东方异兽</span>
       </div>
-      <p class="menu-footer">两种玩法独立保留本页对局 · 刷新后重置</p>
+      <p class="menu-footer">四种玩法独立保留本页对局 · 刷新后重置</p>
     </section>
 
     <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
@@ -54,6 +56,7 @@
         <div class="resource next-wave"><span id="next-wave-label" class="status-label">下一波</span><strong id="next-wave-value">—</strong></div>
         <div class="resource kills"><span class="status-label">已击杀</span><strong id="kill-value">—</strong></div>
         <nav class="game-controls" aria-label="对局控制">
+          <button id="mission-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" hidden>任务</button>
           <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
           <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="展开建造浮层，选择防御工事">建造</button>
           <button id="pause-button" class="button compact" type="button">暂停</button>
@@ -79,6 +82,31 @@
                 <div id="tower-stats" class="tower-stats"></div>
                 <div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="sell-button" class="button" type="button">出售</button></div>
               </div>
+            </div>
+          </section>
+          <section id="mission-panel" class="mission-panel" aria-label="当前任务" hidden>
+            <p id="mission-objective"></p>
+            <div id="harvest-mission" hidden>
+              <h3 id="harvest-total">灵能 0 / 240</h3>
+              <p>每份获得 40 灵能、60 金币。切换或停止会丢弃本份进度，已收取产出保留。</p>
+              <div class="harvest-sites" role="group" aria-label="选择采集点">
+                <button id="harvest-site-0" class="button" type="button" aria-pressed="false">青玉</button>
+                <button id="harvest-site-1" class="button" type="button" aria-pressed="false">赤铜</button>
+                <button id="harvest-site-2" class="button" type="button" aria-pressed="false">紫晶</button>
+              </div>
+              <p id="harvest-status" role="status">尚未采集</p>
+              <progress id="harvest-progress" aria-label="本份采集进度" max="30" value="0"></progress>
+              <button id="stop-harvest-button" class="button" type="button">停止采集</button>
+              <button id="evacuate-button" class="button primary" type="button">启动撤离</button>
+              <progress id="extraction-progress" aria-label="撤离进度" max="20" value="0" hidden></progress>
+              <p>撤离不可取消：立即出现四路伏击，停止后续常规波次；核心存活至倒计时结束即可成功。</p>
+            </div>
+            <div id="storm-mission" hidden>
+              <h3 id="survival-status">生存剩余 360 秒</h3>
+              <p id="storm-status" role="status"></p>
+              <p>每分钟最后 20 秒为风暴；北南与东西交替来袭，每 30 秒补给 45 金币。</p>
+              <button id="pulse-button" class="button primary" type="button">释放过载脉冲</button>
+              <p id="pulse-description"></p>
             </div>
           </section>
           <section id="research-panel" class="research-panel" aria-label="科技研究">
@@ -127,9 +155,11 @@
       <li><strong>选择工事，自由布防</strong><p>先点顶部“建造”展开底部工事带，选择工事后在绿色区域任意放置，可连续建造。道路、中心枢纽及重叠区域不可放置，红色预览显示原因。右键、Esc 或“取消建造”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
       <li><strong>没有终点，只有积压</strong><p>循环圈中，普通怪物和 Boss 都从地图中心出生，每只独立等概率选择上、下、左、右。外环、内环与中心通道彼此连通，敌人在交叉点随机选择前进方向，不原地掉头，绕行也不会消失。新波次按时到来，场上怪物达到容怪上限即失败。</p></li>
       <li><strong>核心保卫战：守住终点</strong><p>每波按北、东、南、西轮换入口，敌人沿单向道路抵达中央后消失。核心共 20 点耐久，普通怪漏过扣 1，Boss 扣 5，漏怪不获得击杀奖励。核心归零即失败。首波准备 18 秒；每波清场获得 40 + 波次 × 5 金币，随后准备 12 秒。清场前不会开启下一波。</p></li>
+      <li><strong>灵脉采集：带回灵能</strong><p>点击“任务”选择青玉、赤铜、紫晶灵脉，分别关联北、东、南入口。每点三份储量，每 30 游戏秒收取 40 灵能和 60 金币，连续开采直到耗尽。切换或停止丢弃未完成的本份进度。首波准备 18 秒，随后每 20 秒来袭，采集中敌人从关联入口进攻；停止时轮换入口，不发清场补给。采够 240 灵能后主动启动撤离，立即投入四路共 24 只普通敌人，停止采集与常规波次，核心再存活 20 游戏秒即成功，无需清场。本任务不能进入无尽。</p></li>
+      <li><strong>裂隙风暴：坚守六分钟</strong><p>核心存活 360 游戏秒即胜利，无需清场。首波准备 18 秒，随后每 18 秒北南、东西交替双路入侵，每 30 秒获得 45 金币补给。每分钟最后 20 秒为风暴，敌人移速提升 25%，任务面板显示状态和变化倒计时。“过载脉冲”对普通敌人造成最大生命 35%、Boss 12% 伤害并定身 2 秒，冷却 30 游戏秒；空场不能施放且不消耗冷却。暂停仍可施放，冷却和定身随游戏时间冻结。</p></li>
       <li><strong>研究科技，扩展防线</strong><p>部署科技提高全场塔容量并逐级解锁种类；出售立即释放容量。强化科技开放更高塔等级，仍需单独付费升级已有塔。点击顶部“科技”打开研究抽屉；“建造”展开工事带，选定工事后自动收起，也可点击“收起建造”手动关闭。两项科技各自逐级研究，共用一个研究位，开始时扣金币，完成后才生效。取消未完成研究全额退款，进度清零。</p></li>
       <li><strong>搭配火力，迎战首领</strong><p>防御单位会自动攻击或提供辅助。观察射程，组合输出与控制，调整防线来迎战阶段首领。</p></li>
-      <li><strong>清空常规关卡，继续挑战</strong><p>完成 20 波并消灭剩余敌人即可通关，通关时未完成研究冻结，进入无尽后保留防线、金币、科技与研究剩余时间继续挑战。暂停及返回菜单冻结研究，倍速同步加快研究。失败后停止推进，重新开始将科技和任务重置。核心保卫战进入无尽时保留剩余耐久，不会自动修复。返回菜单可切换玩法，两种对局各自保留在本页内，刷新后重置；结算后可选择另一玩法或重新布防。随时使用静音调整体验。</p></li>
+      <li><strong>暂停、战报与无尽挑战</strong><p>循环圈与核心保卫战清空 20 波后通关，裂隙风暴坚守六分钟后通关；这三种玩法可保留防线、金币、核心耐久、科技和研究继续无尽，风暴同时保留累计时间与脉冲冷却。灵脉采集以主动撤离成功为终点。暂停、返回菜单和结算冻结全部计时，倍速同步推进。四种对局分别保留在本页内，切换不会清零；结束的对局可随时返回战报，只有重新开始才重置，刷新页面会丢失本页对局。随时使用静音调整体验。</p></li>
     </ol>
     <p class="help-footer">方向键移动光标 · Shift + 方向键微调 · Enter 放置 / 选择 · 空格暂停 / 恢复 · 右键 / Esc 取消建造</p>
   </dialog>
