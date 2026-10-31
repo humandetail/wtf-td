@@ -34,3 +34,4 @@ CLEARANCE: Except the central objective, all non-road land inside x110..1170,y10
 
 No UI, HUD, labels, text, letters, numbers, logos, watermark, towers, characters, enemies, multiple views or diagram colors. One finished cohesive NON-CYCLIC battlefield, roads clearly read as four inward approaches, no closed roads.
 ```
+
