@@ -1,5 +1,6 @@
 import { WORLD, FOOTPRINT, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ENTRY } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
+import { DEFENSE_CORE, DEFENSE_LANES, DEFENSE_BUILD_EXCLUSIONS } from './defense-geometry.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
@@ -22,7 +23,7 @@ export async function loadArtwork(onProgress) {
   const units = new Map();
   const effects = new Map();
   const tasks = [];
-  const result = { units, effects, ground: null };
+  const result = { units, effects, ground: null, defenseGround: null };
   for (const entry of manifest.units) {
     const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
@@ -32,12 +33,13 @@ export async function loadArtwork(onProgress) {
     tasks.push(async () => { effects.set(entry.code, await loadImage(new URL(entry.path, ORIGINALS))); });
   }
   tasks.push(async () => { result.ground = await loadImage(new URL('scene.png', MAPS)); });
+  tasks.push(async () => { result.defenseGround = await loadImage(new URL('./assets/maps/core-defense/scene.png', import.meta.url)); });
   let complete = 0;
   // ponytail: six concurrent image decodes keep the initial menu responsive.
   const worker = async () => {
     while (tasks.length) {
       await tasks.shift()();
-      onProgress(++complete, manifest.units.length + manifest.effects.length + 1);
+      onProgress(++complete, manifest.units.length + manifest.effects.length + 2);
     }
   };
   await Promise.all(Array.from({ length: 6 }, worker));
@@ -73,21 +75,26 @@ export function createRenderer(canvas, artwork) {
   canvas.height = WORLD.height * ratio;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-  const background = document.createElement('canvas');
-  background.width = WORLD.width;
-  background.height = WORLD.height;
-  const backdrop = background.getContext('2d');
-  backdrop.drawImage(artwork.ground, 0, 0, WORLD.width, WORLD.height);
-  // One scene-wide stone tint calms texture without creating patch boundaries.
-  backdrop.fillStyle = '#7580671f';
-  backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
-
-  const buildMask = document.createElement('canvas');
-  buildMask.width = WORLD.width; buildMask.height = WORLD.height;
-  const mask = buildMask.getContext('2d');
-  mask.fillStyle = '#9ae6ad45';
-  mask.fillRect(BUILD_CENTER_BOUNDS.x, BUILD_CENTER_BOUNDS.y, BUILD_CENTER_BOUNDS.width, BUILD_CENTER_BOUNDS.height);
-  for (const area of BUILD_EXCLUSIONS) mask.clearRect(area.x, area.y, area.width, area.height);
+  const backgrounds = {}, buildMasks = {};
+  for (const {mode, ground, exclusions} of [
+    {mode:'loop', ground:artwork.ground, exclusions:BUILD_EXCLUSIONS},
+    {mode:'defense', ground:artwork.defenseGround, exclusions:DEFENSE_BUILD_EXCLUSIONS},
+  ]) {
+    const background = document.createElement('canvas');
+    background.width = WORLD.width; background.height = WORLD.height;
+    const backdrop = background.getContext('2d');
+    backdrop.drawImage(ground, 0, 0, WORLD.width, WORLD.height);
+    backdrop.fillStyle = '#7580671f';
+    backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
+    backgrounds[mode] = background;
+    const buildMask = document.createElement('canvas');
+    buildMask.width = WORLD.width; buildMask.height = WORLD.height;
+    const mask = buildMask.getContext('2d');
+    mask.fillStyle = '#9ae6ad45';
+    mask.fillRect(BUILD_CENTER_BOUNDS.x, BUILD_CENTER_BOUNDS.y, BUILD_CENTER_BOUNDS.width, BUILD_CENTER_BOUNDS.height);
+    for (const area of exclusions) mask.clearRect(area.x, area.y, area.width, area.height);
+    buildMasks[mode] = buildMask;
+  }
   const freeMask = document.createElement('canvas');
   freeMask.width = WORLD.width; freeMask.height = WORLD.height;
   const free = freeMask.getContext('2d');
@@ -147,7 +154,7 @@ export function createRenderer(canvas, artwork) {
   }
 
   function event(event) {
-    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8 };
+    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65 };
     if (!(event.type in lifetimes)) return;
     particles.push({ ...event, age: 0, life: lifetimes[event.type] });
     if (particles.length > 240) particles = particles.slice(-240);
@@ -188,6 +195,9 @@ export function createRenderer(canvas, artwork) {
           const effect = artwork.effects.get('F06');
           if (effect) ctx.drawImage(effect, item.x - 35, item.y - 50, 70, 70);
         }
+      } else if (item.type === 'core-hit') {
+        ring(item.x, item.y, 32 + progress * 36, '#ff947e', 1, 3);
+        text(`核心 -${item.amount}`, item.x, item.y - 60 - progress * 18, '#ffd0b8', 16);
       } else {
         ring(item.x, item.y, 30 + progress * 25, item.type === 'upgrade' ? '#b2f4d5' : '#f3d177', 1, 3);
         text(item.type === 'upgrade' ? '升级' : '部署', item.x, item.y - 65 - progress * 10, '#fff0b5', 16);
@@ -198,11 +208,12 @@ export function createRenderer(canvas, artwork) {
   }
 
   function draw(state, selectedTowerId, placement, dt = 0, cursor = null) {
+    const mode = state.mode === 'defense' ? 'defense' : 'loop';
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
-    ctx.drawImage(background, 0, 0);
+    ctx.drawImage(backgrounds[mode], 0, 0);
     if (placement) {
       free.clearRect(0, 0, WORLD.width, WORLD.height);
-      free.drawImage(buildMask, 0, 0);
+      free.drawImage(buildMasks[mode], 0, 0);
       for (const tower of state.towers) {
         free.clearRect(tower.x - FOOTPRINT.width - FOOTPRINT.gap, tower.y - FOOTPRINT.height - FOOTPRINT.gap, (FOOTPRINT.width + FOOTPRINT.gap) * 2, (FOOTPRINT.height + FOOTPRINT.gap) * 2);
       }
@@ -211,9 +222,16 @@ export function createRenderer(canvas, artwork) {
     ctx.save();
     ctx.globalAlpha = reduceMotion ? .16 : .16 + Math.sin(state.elapsed * 2) * .05;
     ctx.strokeStyle = '#d0c39c'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.ellipse(ENTRY.x, ENTRY.y, 29, 20, 0, 0, Math.PI * 2); ctx.stroke();
+    const core = mode === 'defense' ? DEFENSE_CORE : ENTRY;
+    ctx.beginPath(); ctx.ellipse(core.x, core.y, 29, 20, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
-    text('出怪核心', ENTRY.x, ENTRY.y + 73, '#ded8b8', 14);
+    text(mode === 'defense' ? '防守核心' : '出怪核心', core.x, core.y + 73, '#ded8b8', 14);
+    if (mode === 'defense') {
+      const lane = DEFENSE_LANES[state.waveActive ? state.attackLane : state.wave % 4];
+      const [x,y] = lane.points[0];
+      ring(x,y,27,state.waveActive ? '#ffb68a' : '#bddbd0',.8);
+      text(`${lane.name}路${state.waveActive ? '来袭' : '预告'}`, x, y + 46, '#ffe1b5', 13);
+    }
     const selected = state.towers.find(tower => tower.id === selectedTowerId);
     if (selected) ring(selected.x, selected.y, 45, '#ffe39b', 1, 2.5);
     const position = placement || selected;

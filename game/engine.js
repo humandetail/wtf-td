@@ -1,23 +1,26 @@
 import {TOWERS, ENEMIES, MAX_LEVEL, towerStats, effectiveTowerStats} from './catalog.js';
 import {TECHNOLOGIES, deploymentStats, towerUnlockLevel} from './research.js';
 import {placementStatus, createRoadPosition, advanceOnRoad} from './geometry.js';
+import {defensePlacementStatus, pointOnDefenseRoute} from './defense-geometry.js';
 /**
- * @param {{startingGold?:number,limit?:number,waveInterval?:number,spawnInterval?:number,initialDelay?:number,waveCount?:number,waveSize?:(wave:number)=>number,enemyHealthScale?:number,enemySpeedScale?:number,rewardScale?:number,random?:()=>number}} options
+ * @param {{mode?:'loop'|'defense',coreHealth?:number,startingGold?:number,limit?:number,waveInterval?:number,spawnInterval?:number,initialDelay?:number,waveCount?:number,waveSize?:(wave:number)=>number,enemyHealthScale?:number,enemySpeedScale?:number,rewardScale?:number,random?:()=>number}} options
  */
 export function createGame(options={}) {
+ const defense=options.mode==='defense';
+ const coreHealth=options.coreHealth??20;
  const startingGold=options.startingGold??400;
- /** @type {{phase:string,paused:boolean,speed:number,gold:number,wave:number,nextWaveIn:number,elapsed:number,kills:number,endless:boolean,limit:number,towers:any[],enemies:any[],tech:{deployment:number,reinforcement:number},research:null|{kind:string,level:number,cost:number,duration:number,remaining:number}}} */
- const state={phase:'menu',paused:false,speed:1,gold:startingGold,wave:0,nextWaveIn:options.initialDelay??18,elapsed:0,kills:0,endless:false,limit:options.limit??80,towers:[],enemies:[],tech:{deployment:0,reinforcement:0},research:null};
+ /** @type {{mode:string,coreHealth:number,maxCoreHealth:number,leaks:number,waveActive:boolean,attackLane:number,phase:string,paused:boolean,speed:number,gold:number,wave:number,nextWaveIn:number,elapsed:number,kills:number,endless:boolean,limit:number,towers:any[],enemies:any[],tech:{deployment:number,reinforcement:number},research:null|{kind:string,level:number,cost:number,duration:number,remaining:number}}} */
+ const state={mode:defense?'defense':'loop',coreHealth,maxCoreHealth:coreHealth,leaks:0,waveActive:false,attackLane:0,phase:'menu',paused:false,speed:1,gold:startingGold,wave:0,nextWaveIn:options.initialDelay??18,elapsed:0,kills:0,endless:false,limit:options.limit??80,towers:[],enemies:[],tech:{deployment:0,reinforcement:0},research:null};
  /** @type {any[]} */
  let events=[];
  /** @type {{code:string,boss:boolean,wave:number}[]} */
  let queue=[];
  let spawnIn=0, nextEnemyId=1, nextTowerId=1;
- const waveInterval=Math.max(.1,options.waveInterval??26);
+ const waveInterval=Math.max(.1,options.waveInterval??(defense?12:26));
  const spawnInterval=Math.max(.02,options.spawnInterval??.65);
  const waveCount=options.waveCount??20;
  function beginWave(){
-  state.wave++;state.nextWaveIn=waveInterval;
+  state.wave++;state.nextWaveIn=defense?0:waveInterval;state.waveActive=true;state.attackLane=(state.wave-1)%4;
   const count=Math.max(1,Math.floor(options.waveSize?.(state.wave)??(10+state.wave*2)));
   for(let i=0;i<count;i++) queue.push({code:ENEMIES[(state.wave-1+Math.floor(i/3))%12].code,boss:false,wave:state.wave});
   if(state.wave%5===0)queue.push({code:'X12',boss:true,wave:state.wave});
@@ -27,8 +30,8 @@ export function createGame(options={}) {
   const entry=queue.shift(),def=ENEMIES.find(e=>e.code===entry.code);
   const scale=1+(entry.wave-1)*.16;
   const maxHp=def.hp*scale*(entry.boss?10:1)*(options.enemyHealthScale??1);
-  state.enemies.push({id:nextEnemyId++,code:entry.code,hp:maxHp,maxHp,...createRoadPosition(options.random),progress:0,boss:entry.boss,speed:def.speed*(entry.boss ? .72 : 1)*(options.enemySpeedScale??1),reward:Math.max(1,Math.round(def.reward*(entry.boss?8:1)*(options.rewardScale??1))),slowUntil:0,slowFactor:1,rootUntil:0});
-  if(state.enemies.length>=state.limit){state.phase='defeat';events.push({type:'defeat',message:'环路积怪已达上限'});}
+  state.enemies.push({id:nextEnemyId++,code:entry.code,hp:maxHp,maxHp,...(defense?{lane:state.attackLane,...pointOnDefenseRoute(state.attackLane,0)}:createRoadPosition(options.random)),progress:0,boss:entry.boss,speed:def.speed*(entry.boss ? .72 : 1)*(options.enemySpeedScale??1),reward:Math.max(1,Math.round(def.reward*(entry.boss?8:1)*(options.rewardScale??1))),slowUntil:0,slowFactor:1,rootUntil:0});
+  if(!defense&&state.enemies.length>=state.limit){state.phase='defeat';events.push({type:'defeat',message:'环路积怪已达上限'});}
  }
  const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  function damage(enemy,amount,color){
@@ -48,7 +51,7 @@ export function createGame(options={}) {
    if(stats.damage<=0)continue;
    tower.cooldown=Math.max(0,(tower.cooldown??0)-dt);
    if(tower.cooldown>0)continue;
-   const target=state.enemies.filter(e=>e.hp>0&&distance(tower,e)<=stats.range).sort((a,b)=>b.progress-a.progress)[0];
+   const target=state.enemies.filter(e=>e.hp>0&&distance(tower,e)<=stats.range).sort((a,b)=>defense?a.remaining-b.remaining:b.progress-a.progress)[0];
    if(!target)continue;
    tower.angle=Math.atan2(target.y-tower.y,target.x-tower.x);tower.cooldown=stats.interval;
    events.push({type:'shot',x:tower.x,y:tower.y,tx:target.x,ty:target.y,code:tower.code,color:stats.color});
@@ -83,7 +86,7 @@ export function createGame(options={}) {
     events.push({type:'research-complete',kind,message:`${TECHNOLOGIES[kind].name} ${level} 级研究完成`});
    }
   }
-  if(state.endless||state.wave<waveCount){state.nextWaveIn-=dt;if(state.nextWaveIn<=1e-9)beginWave();}
+  if((!defense||!state.waveActive)&&(state.endless||state.wave<waveCount)){state.nextWaveIn-=dt;if(state.nextWaveIn<=1e-9)beginWave();}
   else state.nextWaveIn=0;
   spawnIn-=dt;
   while(queue.length&&spawnIn<=0&&playable()){spawn();spawnIn+=spawnInterval;}
@@ -98,23 +101,40 @@ export function createGame(options={}) {
    if(enemy.rootUntil>state.elapsed)factor=0;
    const travel=enemy.speed*factor*dt;
    enemy.progress+=travel;
-   advanceOnRoad(enemy,travel,options.random);
+   if(defense){
+    Object.assign(enemy,pointOnDefenseRoute(enemy.lane,enemy.progress));
+    if(enemy.arrived){
+     const amount=enemy.boss?5:1;
+     state.leaks++;state.coreHealth=Math.max(0,state.coreHealth-amount);
+     events.push({type:'core-hit',x:enemy.x,y:enemy.y,amount,message:`核心受到 ${amount} 点伤害`});
+     if(state.coreHealth===0){
+      state.enemies=state.enemies.filter(e=>!e.arrived);
+      state.phase='defeat';events.push({type:'defeat',message:'核心耐久归零，防线失守'});return;
+     }
+    }
+   }else advanceOnRoad(enemy,travel,options.random);
   }
+  if(defense)state.enemies=state.enemies.filter(e=>!e.arrived);
   combat(dt);
-  if(!state.endless&&state.wave>=waveCount&&!queue.length&&!state.enemies.length){state.phase='victory';events.push({type:'victory',message:'二十波已清场，环路守卫成功！'});}
+  if(defense&&state.waveActive&&!queue.length&&!state.enemies.length){
+   const amount=40+5*state.wave;state.gold+=amount;
+   state.waveActive=false;state.nextWaveIn=waveInterval;
+   events.push({type:'wave-clear',amount,message:`第 ${state.wave} 波清场，补给 ${amount} 金币`});
+  }
+  if(!state.endless&&state.wave>=waveCount&&!queue.length&&!state.enemies.length){state.phase='victory';events.push({type:'victory',message:defense?'二十波已清场，核心守卫成功！':'二十波已清场，环路守卫成功！'});}
  }
  const result=(ok,message)=>({ok,message});
  const playable=()=>state.phase==='playing';
  const game={state,
  start(){if(state.phase==='menu') state.phase='playing';},
- restart(){Object.assign(state,{phase:'playing',paused:false,speed:1,gold:startingGold,wave:0,nextWaveIn:options.initialDelay??18,elapsed:0,kills:0,endless:false,towers:[],enemies:[],tech:{deployment:0,reinforcement:0},research:null});events=[];queue=[];spawnIn=0;nextEnemyId=1;nextTowerId=1;},
+ restart(){Object.assign(state,{coreHealth,maxCoreHealth:coreHealth,leaks:0,waveActive:false,attackLane:0,phase:'playing',paused:false,speed:1,gold:startingGold,wave:0,nextWaveIn:options.initialDelay??18,elapsed:0,kills:0,endless:false,towers:[],enemies:[],tech:{deployment:0,reinforcement:0},research:null});events=[];queue=[];spawnIn=0;nextEnemyId=1;nextTowerId=1;},
  tick(seconds){
   if(!Number.isFinite(seconds)||seconds<=0||!playable()||state.paused)return;
   let remaining=seconds*state.speed;
   while(remaining>1e-9&&playable()) {const dt=Math.min(.05,remaining);step(dt);remaining-=dt;}
  },
  launchWave(){
-  if(!playable()||state.paused||queue.length||(!state.endless&&state.wave>=waveCount))return result(false,'当前不能提前出怪');
+  if(!playable()||state.paused||queue.length||(defense&&state.waveActive)||(!state.endless&&state.wave>=waveCount))return result(false,'当前不能提前出怪');
   beginWave();return result(true,'下一波开始');
  },
  canResearch(kind){
@@ -154,7 +174,7 @@ export function createGame(options={}) {
  /** @param {number} x @param {number} y @param {string} code */
  canBuild(x,y,code){
   const status=game.canBuildType(code);if(!status.ok)return status;
-  return placementStatus(x,y,state.towers);
+  return (defense?defensePlacementStatus:placementStatus)(x,y,state.towers);
  },
  /** @param {number} x @param {number} y @param {string} code @returns {{ok:boolean,message:string,towerId?:number}} */
  build(x,y,code){

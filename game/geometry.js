@@ -75,9 +75,9 @@ export const BUILD_EXCLUSIONS = ROAD_SEGMENTS.map(road=>({
 }));
 BUILD_EXCLUSIONS.push({x:PLAZA.x-halfX-margin,y:PLAZA.y-halfY-margin,width:PLAZA.width+FOOTPRINT.width+margin*2,height:PLAZA.height+FOOTPRINT.height+margin*2,reason:'中心枢纽不可建造'});
 const contains=(rect,x,y)=>x>=rect.x&&x<=rect.x+rect.width&&y>=rect.y&&y<=rect.y+rect.height;
-export function placementStatus(x,y,towers=[]) {
+export function placementStatus(x,y,towers=[],exclusions=BUILD_EXCLUSIONS) {
   if(!Number.isFinite(x)||!Number.isFinite(y)||!contains(BUILD_CENTER_BOUNDS,x,y))return {ok:false,message:'超出可建造区域'};
-  const blocked=BUILD_EXCLUSIONS.find(rect=>contains(rect,x,y));
+  const blocked=exclusions.find(rect=>contains(rect,x,y));
   if(blocked)return {ok:false,message:blocked.reason};
   if(towers.some(tower=>Math.abs(tower.x-x)<FOOTPRINT.width+FOOTPRINT.gap&&Math.abs(tower.y-y)<FOOTPRINT.height+FOOTPRINT.gap))return {ok:false,message:'与现有防御单位占地重叠'};
   return {ok:true,message:'可以建造'};

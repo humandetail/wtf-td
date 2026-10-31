@@ -2,6 +2,7 @@ import { createGame } from './engine.js';
 import { TOWERS, effectiveTowerStats } from './catalog.js';
 import { TECHNOLOGIES, deploymentStats, towerUnlockLevel } from './research.js';
 import { WORLD } from './geometry.js';
+import { DEFENSE_LANES } from './defense-geometry.js';
 import { createAudio } from './audio.js';
 import { loadArtwork, createRenderer } from './render.js';
 
@@ -14,7 +15,8 @@ function element(id) {
 
 const canvas = /** @type {HTMLCanvasElement} */ (element('game-canvas'));
 const help = /** @type {HTMLDialogElement} */ (element('help-dialog'));
-const game = createGame();
+const sessions = { loop: createGame(), defense: createGame({ mode: 'defense' }) };
+let game = sessions.loop;
 const audio = createAudio();
 const roles = {
   direct: '单体输出', splash: '范围输出', chain: '连锁输出', slow: '减速控制',
@@ -78,6 +80,7 @@ function fitBattlefield() {
 
 function showView(name) {
   if (name !== 'game') setDrawer();
+  if (name === 'menu') updateMenu();
   view = name;
   document.body.classList.toggle('in-game', name === 'game');
   for (const screen of ['menu', 'game', 'end']) element(`${screen}-screen`).hidden = name !== screen;
@@ -93,7 +96,7 @@ function syncEvents() {
   for (const event of game.drainEvents()) {
     renderer.event(event);
     audio.play(event);
-    if (event.type === 'wave') notice(event.message, 2.5);
+    if (['wave', 'core-hit', 'wave-clear'].includes(event.type)) notice(event.message, event.type === 'core-hit' ? 4 : 2.5);
     if (event.type === 'research-complete') {
       notice(event.message, 4);
       selectedSignature = '';
@@ -223,11 +226,24 @@ function updateUI() {
   element('enemy-value').textContent = String(state.enemies.length);
   element('enemy-limit').textContent = String(state.limit);
   element('kill-value').textContent = String(state.kills);
-  element('next-wave-value').textContent = state.wave >= 20 && !state.endless
-    ? '清理剩余敌人' : `${Math.max(0, Math.ceil(state.nextWaveIn))} 秒`;
-  const pressure = state.enemies.length / state.limit;
+  const defense = state.mode === 'defense';
+  element('current-mode').textContent = defense ? '核心保卫战' : '循环圈';
+  canvas.setAttribute('aria-label', `${defense ? '核心保卫战' : '循环圈'}战场。先点顶部“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。`);
+  element('pressure-label').textContent = defense ? '核心耐久' : '环路积怪';
+  element('loop-pressure-value').hidden = defense;
+  element('core-pressure-value').hidden = !defense;
+  element('defense-enemy-status').hidden = !defense;
+  element('core-health-value').textContent = String(state.coreHealth);
+  element('core-health-limit').textContent = String(state.maxCoreHealth);
+  element('defense-enemy-value').textContent = String(state.enemies.length);
+  element('next-wave-label').textContent = defense && state.waveActive ? '本波进攻' : '下一波';
+  element('next-wave-value').textContent = defense
+    ? state.waveActive ? `${DEFENSE_LANES[state.attackLane]?.name || '作战中'}`
+      : `${Math.max(0, Math.ceil(state.nextWaveIn))} 秒 · ${DEFENSE_LANES[state.wave % DEFENSE_LANES.length].name}`
+    : state.wave >= 20 && !state.endless ? '清理剩余敌人' : `${Math.max(0, Math.ceil(state.nextWaveIn))} 秒`;
+  const pressure = defense ? 1 - state.coreHealth / state.maxCoreHealth : state.enemies.length / state.limit;
   const fill = element('pressure-fill');
-  fill.style.width = `${Math.min(1, pressure) * 100}%`;
+  fill.style.width = `${Math.max(0, Math.min(1, defense ? 1 - pressure : pressure)) * 100}%`;
   fill.classList.toggle('warning', pressure >= .55 && pressure < .8);
   fill.classList.toggle('danger', pressure >= .8);
   element('pause-button').textContent = state.paused ? '继续' : '暂停';
@@ -257,11 +273,14 @@ function updateUI() {
 function showEnd() {
   const state = game.state;
   const success = state.phase === 'victory';
-  element('end-title').textContent = success ? '环路守卫成功' : '防线失守';
-  element('end-description').textContent = success
-    ? '常规二十波已清场。你可以保留防线，迎接无尽挑战。'
-    : `场上怪物达到 ${state.limit} 只。调整火力覆盖与升级节奏，再守一局。`;
+  const defense = state.mode === 'defense';
+  element('end-title').textContent = defense ? success ? '核心守卫成功' : '核心已被击破' : success ? '环路守卫成功' : '防线失守';
+  element('end-description').textContent = defense
+    ? success ? '二十波进攻已全部清场，核心仍然屹立。进入无尽将保留剩余耐久与研究进度。' : '漏过的敌人耗尽了核心耐久。调整入口布防与升级节奏，再守一局。'
+    : success ? '常规二十波已清场。你可以保留防线，迎接无尽挑战。'
+      : `场上怪物达到 ${state.limit} 只。调整火力覆盖与升级节奏，再守一局。`;
   element('end-stats').innerHTML = [
+    ...(defense ? [['核心耐久', `${state.coreHealth} / ${state.maxCoreHealth}`], ['漏过敌人', state.leaks]] : []),
     ['抵御波次', state.wave], ['击杀敌人', state.kills], ['守卫时间', `${Math.floor(state.elapsed / 60)}:${String(Math.floor(state.elapsed % 60)).padStart(2, '0')}`],
   ].map(([label, value]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
   element('endless-button').hidden = !success;
@@ -269,19 +288,61 @@ function showEnd() {
   element(success ? 'endless-button' : 'restart-button').focus();
 }
 
+function clearTransient() {
+  selectedTowerId = null;
+  armedCode = null;
+  placement = null;
+  pointerPosition = null;
+  keyboardMode = false;
+  keyboardPointer.x = 190;
+  keyboardPointer.y = 140;
+  selectedSignature = '';
+  element('notice').hidden = true;
+  noticeUntil = 0;
+  setBuildDock(false);
+  setDrawer();
+  renderer.reset();
+}
+
+function updateMenu() {
+  const defense = game === sessions.defense;
+  element('mode-loop-button').setAttribute('aria-pressed', String(!defense));
+  element('mode-defense-button').setAttribute('aria-pressed', String(defense));
+  element('mode-description').textContent = defense
+    ? '四路轮番来袭，守住 20 点核心耐久。清场获得补给，再准备下一波。'
+    : '敌人在环路中持续游走，积怪达到上限即失败。下一波按时到来。';
+  element('start-button').textContent = game.state.phase === 'menu' ? '开始布防 →'
+    : game.state.phase === 'playing' ? '继续布防 →' : '查看战报 →';
+}
+
+function returnToMenu() {
+  if (game.state.phase === 'playing' && !game.state.paused) game.togglePause();
+  clearTransient();
+  showView('menu');
+  element('start-button').focus();
+}
+
+function selectMode(mode) {
+  if (view !== 'menu' || game === sessions[mode]) return;
+  if (game.state.phase === 'playing' && !game.state.paused) game.togglePause();
+  clearTransient();
+  game = sessions[mode];
+  lastPhase = game.state.phase;
+  updateMenu();
+  updateUI();
+}
+
 function enterGame(restart = false) {
-  const freshSession = restart || game.state.phase === 'menu';
   void audio.unlock();
+  if (!restart && (game.state.phase === 'victory' || game.state.phase === 'defeat')) {
+    lastPhase = game.state.phase;
+    showEnd();
+    return;
+  }
+  const freshSession = restart || game.state.phase === 'menu';
   if (restart) {
     game.restart();
-    selectedTowerId = null;
-    armedCode = null;
-    placement = null;
-    pointerPosition = null;
-    keyboardMode = false;
-    keyboardPointer.x = 190;
-    keyboardPointer.y = 140;
-    renderer.reset();
+    clearTransient();
   } else if (game.state.phase === 'menu') game.start();
   else if (game.state.paused) game.togglePause();
   if (freshSession) setBuildDock(false);
@@ -316,12 +377,10 @@ function bindControls() {
   element('pause-button').addEventListener('click', () => { game.togglePause(); updateUI(); });
   element('speed-button').addEventListener('click', () => { game.setSpeed(game.state.speed % 3 + 1); updateUI(); });
   element('mute-button').addEventListener('click', () => { void audio.unlock(); audio.setMuted(!audio.muted); updateUI(); });
-  element('menu-button').addEventListener('click', () => {
-    if (!game.state.paused) game.togglePause();
-    element('start-button').textContent = '继续布防 →';
-    showView('menu');
-    element('start-button').focus();
-  });
+  element('menu-button').addEventListener('click', returnToMenu);
+  element('choose-mode-button').addEventListener('click', returnToMenu);
+  element('mode-loop-button').addEventListener('click', () => selectMode('loop'));
+  element('mode-defense-button').addEventListener('click', () => selectMode('defense'));
   for (const kind of /** @type {const} */ (['deployment', 'reinforcement'])) {
     element(`${kind}-research-button`).addEventListener('click', () => {
       void audio.unlock();

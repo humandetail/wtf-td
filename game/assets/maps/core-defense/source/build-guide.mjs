@@ -1,0 +1,12 @@
+import{writeFile}from'node:fs/promises';
+import{createRequire}from'node:module';
+import{WORLD}from'../../../../geometry.js';
+import{DEFENSE_LANES,DEFENSE_ROAD_PATH,DEFENSE_PLAZA}from'../../../../defense-geometry.js';
+const sharp=createRequire(import.meta.url)('/Users/laihanbin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp');
+const mouths=DEFENSE_LANES.map(lane=>`<circle cx="${lane.points[0][0]}" cy="${lane.points[0][1]}" r="18" fill="#ddd6bc"/>`).join('');
+const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${WORLD.width}" height="${WORLD.height}"><rect width="1280" height="800" fill="#244638"/><rect x="35" y="15" width="1210" height="770" fill="#658363"/><path d="${DEFENSE_ROAD_PATH}" fill="none" stroke="#a8ad99" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/><path d="${DEFENSE_ROAD_PATH}" fill="none" stroke="#e1d9bc" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="${DEFENSE_PLAZA.x+DEFENSE_PLAZA.width/2}" cy="${DEFENSE_PLAZA.y+DEFENSE_PLAZA.height/2}" rx="72" ry="52" fill="#e1d9bc"/>${mouths}</svg>`;
+await writeFile(new URL('./layout-guide.svg',import.meta.url),svg);
+await sharp(Buffer.from(svg)).png().toFile(new URL('./layout-guide.png',import.meta.url).pathname);
+const route=`<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800"><path d="${DEFENSE_ROAD_PATH}" fill="none" stroke="#d53b52" stroke-width="1.5" opacity=".8" stroke-dasharray="4 3"/></svg>`;
+await writeFile(new URL('./route-inspection.svg',import.meta.url),route);
+console.log('Built non-looping four-lane geometry guide.');

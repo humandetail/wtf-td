@@ -6,6 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import {FOOTPRINT, BUILD_CENTER_BOUNDS, PLAZA, ROAD_SEGMENTS, ROAD_NODES, placementStatus} from '../game/geometry.js';
+import {DEFENSE_LANES, DEFENSE_ROAD_SEGMENTS, DEFENSE_PLAZA, defensePlacementStatus} from '../game/defense-geometry.js';
 import {SLOTS as V2_SLOTS, LOOP_LENGTH as V2_LENGTH, pointOnLoop as v2Point} from '../game/assets/maps/v2/source/layout-geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFile(resolve(root, file));
@@ -146,42 +147,46 @@ for(const version of ['v3','v4']){
  assert(freePoints>100,'自由建造区域不足或退化成固定放置点');
  console.log(`✓ ${version} 路网像素、禁止压路与 ${freePoints} 个非固定建造采样点有效`);
 }
-// v5 is painted as one scene. Inspect its actual colors, not a synthetic lane alpha mask.
-const sceneBytes=await read('game/assets/maps/v5/scene.png');
-assert(sceneBytes.equals(await read('game/assets/maps/v5/source/scene-imagegen-original.png')),'v5 场景与保留生成原图不一致');
+// Both maps are painted as whole scenes. Inspect actual colors, not a synthetic lane alpha mask.
+async function checkPaintedScene(directory,segments,nodes,plaza,canPlace,minimumSamples) {
+const sceneBytes=await read(`${directory}/scene.png`);
+assert(sceneBytes.equals(await read(`${directory}/source/scene-imagegen-original.png`)),`${directory} 场景与保留生成原图不一致`);
 const sceneWidth=sceneBytes.readUInt32BE(16),sceneHeight=sceneBytes.readUInt32BE(20);
-assert(Math.abs(sceneWidth/sceneHeight-1.6)<.025&&sceneWidth>=1280&&sceneHeight>=800,'v5 场景比例或尺寸错误');
-const scene=await checkPng('game/assets/maps/v5/scene.png',sceneWidth,sceneHeight,false,true);
+assert(Math.abs(sceneWidth/sceneHeight-1.6)<.025&&sceneWidth>=1280&&sceneHeight>=800,`${directory} 场景比例或尺寸错误`);
+const scene=await checkPng(`${directory}/scene.png`,sceneWidth,sceneHeight,false,true);
 const pavingAt=(x,y)=>{
  const index=(Math.round(y*sceneHeight/800)*sceneWidth+Math.round(x*sceneWidth/1280))*3;
  const [r,g,b]=scene.rgb.subarray(index,index+3);
  return r>160&&g>150&&r-g>7&&b/g>.68;
 };
 let paintedSamples=0;
-for(const [index,node] of ROAD_NODES.entries())for(const neighbor of node.neighbors){
- if(neighbor<index)continue;
- const end=ROAD_NODES[neighbor],length=Math.hypot(end.x-node.x,end.y-node.y);
+for(const {x1,y1,x2,y2} of segments){
+ const node={x:x1,y:y1},end={x:x2,y:y2},length=Math.hypot(x2-x1,y2-y1);
  for(let d=0;d<=length;d+=8){
   const x=node.x+(end.x-node.x)*d/length,y=node.y+(end.y-node.y)*d/length;
   // Junction medallions and the jade core have their own colors; inspect them in the route overlay.
-  if((x>=PLAZA.x&&x<=PLAZA.x+PLAZA.width&&y>=PLAZA.y&&y<=PLAZA.y+PLAZA.height)||ROAD_NODES.some(n=>Math.hypot(n.x-x,n.y-y)<18))continue;
+  if((x>=plaza.x&&x<=plaza.x+plaza.width&&y>=plaza.y&&y<=plaza.y+plaza.height)||nodes.some(n=>Math.hypot(n.x-x,n.y-y)<18))continue;
   let found=false;
   for(let dy=-12;dy<=12&&!found;dy+=3)for(let dx=-12;dx<=12;dx+=3)if(pavingAt(x+dx,y+dy)){found=true;break;}
-  assert(found,`v5 实际铺路偏离行走线：${x},${y}`);paintedSamples++;
+  assert(found,`${directory} 实际铺路偏离行走线：${x},${y}`);paintedSamples++;
  }
 }
-assert(paintedSamples>700,'v5 实际铺路采样不足');
+assert(paintedSamples>minimumSamples,`${directory} 实际铺路采样不足`);
 let paintedFootprints=0;
 for(let y=BUILD_CENTER_BOUNDS.y;y<=BUILD_CENTER_BOUNDS.y+BUILD_CENTER_BOUNDS.height;y+=13)for(let x=BUILD_CENTER_BOUNDS.x;x<=BUILD_CENTER_BOUNDS.x+BUILD_CENTER_BOUNDS.width;x+=19){
- if(!placementStatus(x,y).ok)continue;
+ if(!canPlace(x,y).ok)continue;
  paintedFootprints++;
  for(const dx of [-FOOTPRINT.width/2,0,FOOTPRINT.width/2])for(const dy of [-FOOTPRINT.height/2,0,FOOTPRINT.height/2]){
   let paved=0;
   for(let py=-3;py<=3;py++)for(let px=-3;px<=3;px++)paved+=Number(pavingAt(x+dx+px,y+dy+py));
-  assert(paved/49<.45,`v5 可建占地落在实际铺路上：${x},${y}`);
+  assert(paved/49<.45,`${directory} 可建占地落在实际铺路上：${x},${y}`);
  }
 }
-console.log(`✓ v5 实际场景 ${paintedSamples} 个路面色彩采样与 ${paintedFootprints} 处建筑占地采样有效（节点装饰另行看图）`);
+console.log(`✓ ${directory} 实际场景 ${paintedSamples} 个路面色彩采样与 ${paintedFootprints} 处建筑占地采样有效（节点装饰另行看图）`);
+}
+const loopSegments=ROAD_NODES.flatMap((node,index)=>node.neighbors.filter(n=>n>index).map(n=>({x1:node.x,y1:node.y,x2:ROAD_NODES[n].x,y2:ROAD_NODES[n].y})));
+await checkPaintedScene('game/assets/maps/v5',loopSegments,ROAD_NODES,PLAZA,placementStatus,700);
+await checkPaintedScene('game/assets/maps/core-defense',DEFENSE_ROAD_SEGMENTS,DEFENSE_LANES.flatMap(lane=>lane.points.map(([x,y])=>({x,y}))),DEFENSE_PLAZA,defensePlacementStatus,300);
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());
 assert(required?.length, 'UI 契约缺少 ID 清单');
