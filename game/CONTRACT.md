@@ -34,6 +34,8 @@ Required DOM IDs: game-canvas, loading-screen, loading-progress, menu-screen, st
 
 Renderer draw(state,selectedTowerId,placement,dt,cursor?) accepts placement `{x,y,code,ok,message}` or null; an optional keyboard cursor `{x,y}` is visible while unarmed. hitTest(x,y,towers) returns a tower ID or null. Build-area masks use the same geometry and dynamic footprint clearances as the authoritative check. The UI keeps the selected type armed after a successful build, with right-click/Esc/cancel to exit.
 
+hitTest is also exported as the public pointer-selection boundary. It prioritizes actual building footprints, then uses extended sprite hits as fallback; the same function is used by runtime interactions and adjacent-building selection regression checks.
+
 ## Verification boundary
 
 One public session boundary verifies player commands and visible outcomes via a runnable session check, plus independent read-only asset hashing. Real-browser full playthrough, audible verification and subjective map/balance acceptance are reserved for the user after implementation. Do not run a full real-browser suite now. Never mark human acceptance complete on behalf of the user.

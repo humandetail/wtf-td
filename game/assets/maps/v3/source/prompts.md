@@ -32,4 +32,3 @@ Boundary decoration: tiny cropped dense dark stylized forest canopies/fern folia
 
 No towers, enemies, figures, props, text, UI, labels, letters, logos, watermark, colored markers, huge patterns or preset building spots. Output full canvas at 8:5 aspect, finished production game background.
 ```
-

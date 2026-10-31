@@ -58,6 +58,14 @@ function spriteFor(unit, angle) {
   return unit.masterImage;
 }
 
+// The canvas and non-browser interaction checks use the same picking boundary.
+export function hitTest(x, y, towers) {
+  const ordered = [...towers].sort((a,b)=>b.y-a.y);
+  const base = ordered.find(tower => Math.abs(tower.x-x) <= FOOTPRINT.width/2 && Math.abs(tower.y-y) <= FOOTPRINT.height/2);
+  const sprite = base || ordered.find(tower => Math.abs(tower.x-x) <= FOOTPRINT.width/2 && y >= tower.y-65 && y <= tower.y+FOOTPRINT.height/2);
+  return sprite?.id ?? null;
+}
+
 /** @param {HTMLCanvasElement} canvas */
 export function createRenderer(canvas, artwork) {
   const ctx = canvas.getContext('2d');
@@ -257,8 +265,6 @@ export function createRenderer(canvas, artwork) {
   return {
     draw, event,
     reset() { particles = []; },
-    hitTest(x, y, towers) {
-      return [...towers].sort((a,b)=>b.y-a.y).find(tower => Math.abs(tower.x - x) <= FOOTPRINT.width / 2 && y >= tower.y - 65 && y <= tower.y + FOOTPRINT.height / 2)?.id ?? null;
-    },
+    hitTest,
   };
 }

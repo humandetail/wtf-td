@@ -2,6 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame} from '../engine.js';
 import {TOWERS, ENEMIES, towerStats, effectiveTowerStats} from '../catalog.js';
+import {hitTest} from '../render.js';
+
+test('adjacent free-placed tower bases select and operate on the intended building', () => {
+ const game=createGame({startingGold:10000});game.start();
+ const upper=game.build(190,140,'T01'),lower=game.build(190,200,'T03');
+ assert.equal(upper.ok,true);assert.equal(lower.ok,true);
+ const selected=hitTest(190,140,game.state.towers);
+ assert.equal(selected,upper.towerId);
+ assert.equal(game.upgrade(selected).ok,true);
+ assert.equal(game.state.towers.find(t=>t.id===upper.towerId).level,2);
+ assert.equal(game.state.towers.find(t=>t.id===lower.towerId).level,1);
+ assert.equal(game.sell(selected).ok,true);
+ assert.deepEqual(game.state.towers.map(t=>t.id),[lower.towerId]);
+ assert.equal(hitTest(190,200,game.state.towers),lower.towerId);
+ assert.equal(hitTest(190,160,game.state.towers),lower.towerId);
+});
 
 test('arbitrary coordinates build exact positions with an allocated tower ID', () => {
  const game=createGame();
