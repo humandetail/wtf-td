@@ -1,0 +1,22 @@
+{
+  "id": "tech-engineering-roadblock",
+  "sourceBounds": {
+    "left": 103,
+    "top": 130,
+    "right": 409,
+    "bottom": 319,
+    "width": 307,
+    "height": 190
+  },
+  "scale": 1,
+  "placement": {
+    "left": 103,
+    "top": 130,
+    "width": 307,
+    "height": 190
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

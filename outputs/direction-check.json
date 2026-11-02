@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-30",
+  "units": 24,
+  "completeDirectionSets": 24,
+  "directionFiles": 192,
+  "newDirectionFiles": 96,
+  "errors": [],
+  "duplicateDirections": [],
+  "newUnits": [
+    {
+      "id": "tech-high-voltage-arc",
+      "code": "T05",
+      "knownIssues": "NE 已重绘后盖朝向；不同视图的电极间距、后盖和底座局部比例仍有差异。"
+    },
+    {
+      "id": "tech-net-cannon",
+      "code": "T07",
+      "knownIssues": "方向和网口前后区分可读；后盖、支撑臂和侧铰链细节有少量漂移。"
+    },
+    {
+      "id": "tech-cooling-spray",
+      "code": "T08",
+      "knownIssues": "S 已纠正为两根保温管；独立重绘的 S 与其余方向在罐体/底座比例上仍需精修。"
+    },
+    {
+      "id": "tech-radar-outpost",
+      "code": "T09",
+      "knownIssues": "侧视面板接近边缘，96px 下天线面只表现为细轮廓；底座细节有轻微变化。"
+    },
+    {
+      "id": "tech-drone-supply",
+      "code": "T11",
+      "knownIssues": "E/W 已单独重绘，N 改为后视；NE/NW 斜向仍存在充电柱/箱体的遮挡位置偏差，侧视机头投影略偏斜，需要人工校正。"
+    },
+    {
+      "id": "tech-engineering-roadblock",
+      "code": "T12",
+      "knownIssues": "SE 已重绘为右下方正面法线；端柱灯具和背部加强筋的细节仍有变化，E/W 窄视图需结合足部判断。"
+    },
+    {
+      "id": "fantasy-bronze-bell",
+      "code": "X05",
+      "knownIssues": "背面无脸、侧面单眼；丝带结和铜铃纹样仍有局部变化。"
+    },
+    {
+      "id": "fantasy-bamboo-scroll",
+      "code": "X06",
+      "knownIssues": "SW 已单独重绘；斜向投影和卷轴端盖/竹叶位置仍有少量漂移。"
+    },
+    {
+      "id": "fantasy-jade-turtle",
+      "code": "X08",
+      "knownIssues": "头尾和四足的前后关系清楚；玉甲分块、云纹与远侧足部遮挡仍需精修。"
+    },
+    {
+      "id": "fantasy-flying-sword-pack",
+      "code": "X10",
+      "knownIssues": "保留主图的三剑三纸符骑手；E/W 名称按剑尖校正，SE 已重绘；NE/NW 编队纵深与纸片细节有变化。"
+    },
+    {
+      "id": "fantasy-lotus-spirit",
+      "code": "X11",
+      "knownIssues": "已重绘使莲台珠饰随身体转动，N/NE/NW 隐藏前珠；莲瓣轮廓及帽侧流苏位置仍有轻微漂移。"
+    },
+    {
+      "id": "fantasy-mountain-ape",
+      "code": "X12",
+      "knownIssues": "两臂两腿、中立支撑姿势保留；鬃毛云纹、肩甲和远侧手部有装饰性变化。"
+    }
+  ]
+}

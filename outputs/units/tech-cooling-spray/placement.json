@@ -1,0 +1,22 @@
+{
+  "id": "tech-cooling-spray",
+  "sourceBounds": {
+    "left": 120,
+    "top": 70,
+    "right": 391,
+    "bottom": 319,
+    "width": 272,
+    "height": 250
+  },
+  "scale": 1,
+  "placement": {
+    "left": 120,
+    "top": 70,
+    "width": 272,
+    "height": 250
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

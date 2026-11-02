@@ -1,0 +1,264 @@
+{
+  "id": "tech-engineering-roadblock",
+  "source": "/Volumes/personal/www/td/work/sources/tech-engineering-roadblock/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceRect": [
+        0,
+        0,
+        487,
+        444
+      ],
+      "sourceBounds": {
+        "left": 47,
+        "top": 118,
+        "right": 458,
+        "bottom": 324,
+        "width": 412,
+        "height": 207
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 127,
+        "top": 190,
+        "width": 259,
+        "height": 130
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceRect": [
+        487,
+        0,
+        430,
+        444
+      ],
+      "sourceBounds": {
+        "left": 29,
+        "top": 72,
+        "right": 362,
+        "bottom": 361,
+        "width": 334,
+        "height": 290
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 151,
+        "top": 138,
+        "width": 210,
+        "height": 182
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceRect": [
+        917,
+        0,
+        380,
+        444
+      ],
+      "sourceBounds": {
+        "left": 99,
+        "top": 70,
+        "right": 222,
+        "bottom": 391,
+        "width": 124,
+        "height": 322
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 217,
+        "top": 118,
+        "width": 78,
+        "height": 202
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceRect": [
+        1297,
+        0,
+        477,
+        444
+      ],
+      "sourceBounds": {
+        "left": 64,
+        "top": 96,
+        "right": 463,
+        "bottom": 395,
+        "width": 400,
+        "height": 300
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 131,
+        "top": 132,
+        "width": 251,
+        "height": 188
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceRect": [
+        0,
+        444,
+        486,
+        443
+      ],
+      "sourceBounds": {
+        "left": 45,
+        "top": 91,
+        "right": 464,
+        "bottom": 301,
+        "width": 420,
+        "height": 211
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 124,
+        "top": 187,
+        "width": 264,
+        "height": 133
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceRect": [
+        486,
+        444,
+        461,
+        443
+      ],
+      "sourceBounds": {
+        "left": 21,
+        "top": 58,
+        "right": 422,
+        "bottom": 380,
+        "width": 402,
+        "height": 323
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 130,
+        "top": 117,
+        "width": 252,
+        "height": 203
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceRect": [
+        947,
+        444,
+        349,
+        443
+      ],
+      "sourceBounds": {
+        "left": 73,
+        "top": 59,
+        "right": 196,
+        "bottom": 368,
+        "width": 124,
+        "height": 310
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 217,
+        "top": 125,
+        "width": 78,
+        "height": 195
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceRect": [
+        1296,
+        444,
+        478,
+        443
+      ],
+      "sourceBounds": {
+        "left": 63,
+        "top": 56,
+        "right": 438,
+        "bottom": 360,
+        "width": 376,
+        "height": 305
+      },
+      "scale": 0.628099173553719,
+      "placement": {
+        "left": 138,
+        "top": 128,
+        "width": 236,
+        "height": 192
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    }
+  ],
+  "corrections": {
+    "SE": {
+      "source": "/Volumes/personal/www/td/work/sources/tech-engineering-roadblock/SE-corrected.png",
+      "scale": 0.25066666666666665,
+      "registration": "body",
+      "placement": {
+        "left": 126,
+        "top": 132,
+        "width": 261,
+        "height": 188
+      },
+      "anchor": [
+        256,
+        320
+      ]
+    }
+  }
+}

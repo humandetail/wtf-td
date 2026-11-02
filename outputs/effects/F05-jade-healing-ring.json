@@ -1,0 +1,25 @@
+{
+  "id": "F05-jade-healing-ring",
+  "kind": "effects",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    256
+  ],
+  "sourceBounds": {
+    "left": 87,
+    "top": 164,
+    "width": 1113,
+    "height": 865
+  },
+  "scale": 0.21965317919075145,
+  "placement": {
+    "left": 134,
+    "top": 66,
+    "width": 244,
+    "height": 190
+  }
+}

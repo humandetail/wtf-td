@@ -1,0 +1,25 @@
+{
+  "id": "P05-rune-stone-platform",
+  "kind": "props",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    320
+  ],
+  "sourceBounds": {
+    "left": 206,
+    "top": 215,
+    "width": 841,
+    "height": 767
+  },
+  "scale": 0.28683181225554105,
+  "placement": {
+    "left": 136,
+    "top": 100,
+    "width": 241,
+    "height": 220
+  }
+}

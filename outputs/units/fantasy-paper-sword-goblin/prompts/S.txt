@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: 2.5D game sprite master reference, 512 square transparent PNG.
+Input images: roster overview for chosen silhouette; confirmed interceptor master for shared rendering style only. This is a new unit, do not copy the interceptor's weapons.
+Shared rendering: same 2.5D toy cartoon, orthographic camera looking down about 30 degrees, bold charcoal hand-ink outer contour, thinner clean internal lines, broad rounded bevels, matte plastic/painted surfaces, flat 2-3 tone cel shading, fixed soft light from screen upper-left, no floor or cast shadow, no text or watermark. Whole object centered with generous transparent margins, true alpha.
+Sprite rules: object shown in a neutral SE three-quarter orientation, rotating about vertical axis. Entire object is one rigid unit unless a fixed base and upper rotating layer is explicitly requested. Ground/anchor projection at (256,320) on a 512x512 canvas. Match the confirmed interceptor's visual scale family but preserve each unit's own silhouette and relative size.
+
+Chosen unit: PAPER-TALISMAN SWORD GOBLIN. Fantasy faction.
+One tiny mischievous creature folded from layered warm ivory paper talismans, with angular folded-paper ears/shoulders, a simple sly amber eye-and-mouth face, and several vermilion red seal stamps and tassel strips. It rides a short broad jade-celadon flying sword; sword and paper body are a single rigid hovering silhouette aimed screen lower-right. No legs, no walking, no separate ground base, no smoke or magic effect. Add a small dark purple belt fold and one short red tassel. Fixed hover height; leave transparent space below for ground projection anchor. Lightweight sharp silhouette.
+Avoid: detailed scene, enemies, text, labels, watermarks, ground shadows, perspective, photorealism.
+Direction requirement: S / 90 degrees.
+Aim toward screen BOTTOM (90 degrees), frontal facing view with forward-facing face/equipment visible.
+This is the SAME paper-sword goblin, not a redesign. Whole hovering body and short broad jade sword rotate rigidly around vertical axis at the same hover height. Keep same paper folds, sly face, vermilion stamps, red tassel and sword proportions. Do not add legs or attack motion. Transparent sprite with ground projection anchor.
+Use the master image as the only identity reference; do not follow a previous direction image. Preserve all component counts, colors, proportions, silhouette language, fixed camera/scale and upper-left light. Do not rotate a 2D image, mirror, stretch, or fake perspective. True transparent alpha PNG, no checkerboard drawn, no ground shadow, no text, no watermark. Whole unit visible on 512x512 canvas with generous margins.

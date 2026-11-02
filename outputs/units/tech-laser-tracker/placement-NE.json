@@ -1,0 +1,20 @@
+{
+  "source": "NE",
+  "sourceBounds": {
+    "left": 340,
+    "top": 249,
+    "width": 693,
+    "height": 655
+  },
+  "scale": 0.4122137404580153,
+  "placement": {
+    "left": 113,
+    "top": 50,
+    "width": 286,
+    "height": 270
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

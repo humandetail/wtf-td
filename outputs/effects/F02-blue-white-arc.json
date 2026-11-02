@@ -1,0 +1,25 @@
+{
+  "id": "F02-blue-white-arc",
+  "kind": "effects",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    256
+  ],
+  "sourceBounds": {
+    "left": 17,
+    "top": 181,
+    "width": 1237,
+    "height": 944
+  },
+  "scale": 0.2330508474576271,
+  "placement": {
+    "left": 112,
+    "top": 36,
+    "width": 288,
+    "height": 220
+  }
+}

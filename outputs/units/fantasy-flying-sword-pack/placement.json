@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-flying-sword-pack",
+  "sourceBounds": {
+    "left": 99,
+    "top": 75,
+    "right": 412,
+    "bottom": 284,
+    "width": 314,
+    "height": 210
+  },
+  "scale": 1,
+  "placement": {
+    "left": 99,
+    "top": 75,
+    "width": 314,
+    "height": 210
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

@@ -1,0 +1,279 @@
+{
+  "id": "tech-drone-supply",
+  "source": "/Volumes/personal/www/td/work/sources/tech-drone-supply/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceRect": [
+        0,
+        0,
+        431,
+        444
+      ],
+      "sourceBounds": {
+        "left": 72,
+        "top": 117,
+        "right": 390,
+        "bottom": 368,
+        "width": 319,
+        "height": 252
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 141,
+        "top": 139,
+        "width": 230,
+        "height": 181
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceRect": [
+        431,
+        0,
+        478,
+        444
+      ],
+      "sourceBounds": {
+        "left": 41,
+        "top": 61,
+        "right": 433,
+        "bottom": 400,
+        "width": 393,
+        "height": 340
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 115,
+        "top": 75,
+        "width": 283,
+        "height": 245
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceRect": [
+        909,
+        0,
+        410,
+        444
+      ],
+      "sourceBounds": {
+        "left": 44,
+        "top": 111,
+        "right": 380,
+        "bottom": 364,
+        "width": 337,
+        "height": 254
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 135,
+        "top": 137,
+        "width": 243,
+        "height": 183
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceRect": [
+        1319,
+        0,
+        455,
+        444
+      ],
+      "sourceBounds": {
+        "left": 29,
+        "top": 61,
+        "right": 419,
+        "bottom": 398,
+        "width": 391,
+        "height": 338
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 116,
+        "top": 77,
+        "width": 281,
+        "height": 243
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceRect": [
+        0,
+        444,
+        420,
+        443
+      ],
+      "sourceBounds": {
+        "left": 68,
+        "top": 27,
+        "right": 383,
+        "bottom": 358,
+        "width": 316,
+        "height": 332
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 143,
+        "top": 81,
+        "width": 227,
+        "height": 239
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceRect": [
+        420,
+        444,
+        471,
+        443
+      ],
+      "sourceBounds": {
+        "left": 36,
+        "top": 22,
+        "right": 434,
+        "bottom": 372,
+        "width": 399,
+        "height": 351
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 113,
+        "top": 67,
+        "width": 287,
+        "height": 253
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceRect": [
+        891,
+        444,
+        408,
+        443
+      ],
+      "sourceBounds": {
+        "left": 36,
+        "top": 90,
+        "right": 371,
+        "bottom": 344,
+        "width": 336,
+        "height": 255
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 135,
+        "top": 136,
+        "width": 242,
+        "height": 184
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceRect": [
+        1299,
+        444,
+        475,
+        443
+      ],
+      "sourceBounds": {
+        "left": 37,
+        "top": 56,
+        "right": 426,
+        "bottom": 376,
+        "width": 390,
+        "height": 321
+      },
+      "scale": 0.7197549770290965,
+      "placement": {
+        "left": 116,
+        "top": 89,
+        "width": 281,
+        "height": 231
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    }
+  ],
+  "corrections": {
+    "E": {
+      "source": "/Volumes/personal/www/td/work/sources/tech-drone-supply/E-corrected.png",
+      "scale": 0.2995090016366612,
+      "registration": "body",
+      "placement": {
+        "left": 146,
+        "top": 137,
+        "width": 221,
+        "height": 183
+      },
+      "anchor": [
+        256,
+        320
+      ]
+    },
+    "W": {
+      "source": "/Volumes/personal/www/td/work/sources/tech-drone-supply/W-corrected.png",
+      "scale": 0.32451499118165783,
+      "registration": "body",
+      "placement": {
+        "left": 135,
+        "top": 136,
+        "width": 242,
+        "height": 184
+      },
+      "anchor": [
+        256,
+        320
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "P06-sealed-wooden-chest",
+  "kind": "props",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    320
+  ],
+  "sourceBounds": {
+    "left": 241,
+    "top": 226,
+    "width": 808,
+    "height": 779
+  },
+  "scale": 0.28241335044929394,
+  "placement": {
+    "left": 142,
+    "top": 100,
+    "width": 228,
+    "height": 220
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "F06-ink-purple-dissipation",
+  "kind": "effects",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    256
+  ],
+  "sourceBounds": {
+    "left": 61,
+    "top": 63,
+    "width": 1167,
+    "height": 1191
+  },
+  "scale": 0.1847187237615449,
+  "placement": {
+    "left": 148,
+    "top": 36,
+    "width": 216,
+    "height": 220
+  }
+}

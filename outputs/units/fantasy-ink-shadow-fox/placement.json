@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-ink-shadow-fox",
+  "sourceBounds": {
+    "left": 127,
+    "top": 60,
+    "right": 384,
+    "bottom": 319,
+    "width": 258,
+    "height": 260
+  },
+  "scale": 1,
+  "placement": {
+    "left": 127,
+    "top": 60,
+    "width": 258,
+    "height": 260
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

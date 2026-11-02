@@ -1,0 +1,247 @@
+{
+  "id": "fantasy-lotus-spirit",
+  "source": "/Volumes/personal/www/td/work/sources/fantasy-lotus-spirit/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceRect": [
+        0,
+        0,
+        462,
+        444
+      ],
+      "sourceBounds": {
+        "left": 71,
+        "top": 52,
+        "right": 409,
+        "bottom": 402,
+        "width": 339,
+        "height": 351
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 140,
+        "top": 45,
+        "width": 232,
+        "height": 240
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceRect": [
+        462,
+        0,
+        440,
+        444
+      ],
+      "sourceBounds": {
+        "left": 52,
+        "top": 51,
+        "right": 390,
+        "bottom": 401,
+        "width": 339,
+        "height": 351
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 140,
+        "top": 45,
+        "width": 232,
+        "height": 240
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceRect": [
+        902,
+        0,
+        427,
+        444
+      ],
+      "sourceBounds": {
+        "left": 49,
+        "top": 61,
+        "right": 372,
+        "bottom": 405,
+        "width": 324,
+        "height": 345
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 145,
+        "top": 49,
+        "width": 222,
+        "height": 236
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceRect": [
+        1329,
+        0,
+        445,
+        444
+      ],
+      "sourceBounds": {
+        "left": 55,
+        "top": 54,
+        "right": 382,
+        "bottom": 421,
+        "width": 328,
+        "height": 368
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 144,
+        "top": 33,
+        "width": 224,
+        "height": 252
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceRect": [
+        0,
+        444,
+        461,
+        443
+      ],
+      "sourceBounds": {
+        "left": 68,
+        "top": 24,
+        "right": 412,
+        "bottom": 396,
+        "width": 345,
+        "height": 373
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 138,
+        "top": 30,
+        "width": 236,
+        "height": 255
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceRect": [
+        461,
+        444,
+        430,
+        443
+      ],
+      "sourceBounds": {
+        "left": 48,
+        "top": 31,
+        "right": 374,
+        "bottom": 392,
+        "width": 327,
+        "height": 362
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 144,
+        "top": 37,
+        "width": 224,
+        "height": 248
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceRect": [
+        891,
+        444,
+        427,
+        443
+      ],
+      "sourceBounds": {
+        "left": 55,
+        "top": 34,
+        "right": 374,
+        "bottom": 379,
+        "width": 320,
+        "height": 346
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 147,
+        "top": 48,
+        "width": 219,
+        "height": 237
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceRect": [
+        1318,
+        444,
+        456,
+        443
+      ],
+      "sourceBounds": {
+        "left": 53,
+        "top": 31,
+        "right": 392,
+        "bottom": 379,
+        "width": 340,
+        "height": 349
+      },
+      "scale": 0.6837606837606838,
+      "placement": {
+        "left": 140,
+        "top": 46,
+        "width": 232,
+        "height": 239
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    }
+  ]
+}

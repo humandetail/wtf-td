@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-mountain-ape",
+  "sourceBounds": {
+    "left": 97,
+    "top": 20,
+    "right": 414,
+    "bottom": 319,
+    "width": 318,
+    "height": 300
+  },
+  "scale": 1,
+  "placement": {
+    "left": 97,
+    "top": 20,
+    "width": 318,
+    "height": 300
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

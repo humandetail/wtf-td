@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-lotus-spirit",
+  "sourceBounds": {
+    "left": 326,
+    "top": 321,
+    "right": 938,
+    "bottom": 995,
+    "width": 613,
+    "height": 675
+  },
+  "scale": 0.35555555555555557,
+  "placement": {
+    "left": 147,
+    "top": 45,
+    "width": 218,
+    "height": 240
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

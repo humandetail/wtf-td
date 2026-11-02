@@ -1,0 +1,199 @@
+{
+  "id": "tech-radar-outpost",
+  "source": "/Volumes/personal/www/td/work/sources/tech-radar-outpost/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceBounds": {
+        "left": 113,
+        "top": 59,
+        "right": 412,
+        "bottom": 417,
+        "width": 300,
+        "height": 359
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 141,
+        "top": 43,
+        "width": 231,
+        "height": 277
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceBounds": {
+        "left": 106,
+        "top": 39,
+        "right": 384,
+        "bottom": 416,
+        "width": 279,
+        "height": 378
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 149,
+        "top": 28,
+        "width": 215,
+        "height": 292
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceBounds": {
+        "left": 77,
+        "top": 24,
+        "right": 359,
+        "bottom": 418,
+        "width": 283,
+        "height": 395
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 147,
+        "top": 15,
+        "width": 218,
+        "height": 305
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceBounds": {
+        "left": 60,
+        "top": 38,
+        "right": 343,
+        "bottom": 417,
+        "width": 284,
+        "height": 380
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 147,
+        "top": 27,
+        "width": 219,
+        "height": 293
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceBounds": {
+        "left": 100,
+        "top": 47,
+        "right": 417,
+        "bottom": 406,
+        "width": 318,
+        "height": 360
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 134,
+        "top": 42,
+        "width": 245,
+        "height": 278
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceBounds": {
+        "left": 104,
+        "top": 23,
+        "right": 383,
+        "bottom": 406,
+        "width": 280,
+        "height": 384
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 148,
+        "top": 24,
+        "width": 216,
+        "height": 296
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceBounds": {
+        "left": 81,
+        "top": 9,
+        "right": 364,
+        "bottom": 406,
+        "width": 284,
+        "height": 398
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 147,
+        "top": 13,
+        "width": 219,
+        "height": 307
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceBounds": {
+        "left": 58,
+        "top": 19,
+        "right": 339,
+        "bottom": 406,
+        "width": 282,
+        "height": 388
+      },
+      "scale": 0.7713567839195979,
+      "placement": {
+        "left": 147,
+        "top": 21,
+        "width": 218,
+        "height": 299
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    }
+  ]
+}

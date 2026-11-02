@@ -1,0 +1,1 @@
+本单位八方向已于 2026-10-30 补齐。实际使用的主提示词见 turnaround-8.txt；针对性修正见同目录 *correction.txt。全部持续引用 master.png，按固定相机生成独立视图。

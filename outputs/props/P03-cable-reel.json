@@ -1,0 +1,25 @@
+{
+  "id": "P03-cable-reel",
+  "kind": "props",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    320
+  ],
+  "sourceBounds": {
+    "left": 116,
+    "top": 119,
+    "width": 994,
+    "height": 934
+  },
+  "scale": 0.23554603854389722,
+  "placement": {
+    "left": 139,
+    "top": 100,
+    "width": 234,
+    "height": 220
+  }
+}

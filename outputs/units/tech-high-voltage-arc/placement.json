@@ -1,0 +1,22 @@
+{
+  "id": "tech-high-voltage-arc",
+  "sourceBounds": {
+    "left": 143,
+    "top": 40,
+    "right": 368,
+    "bottom": 319,
+    "width": 226,
+    "height": 280
+  },
+  "scale": 1,
+  "placement": {
+    "left": 143,
+    "top": 40,
+    "width": 226,
+    "height": 280
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "F04-cinnabar-talisman-hit",
+  "kind": "effects",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    256
+  ],
+  "sourceBounds": {
+    "left": 65,
+    "top": 63,
+    "width": 1149,
+    "height": 1127
+  },
+  "scale": 0.19520851818988466,
+  "placement": {
+    "left": 144,
+    "top": 36,
+    "width": 224,
+    "height": 220
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "tech-radar-outpost",
+  "sourceBounds": {
+    "left": 145,
+    "top": 20,
+    "right": 366,
+    "bottom": 319,
+    "width": 222,
+    "height": 300
+  },
+  "scale": 1,
+  "placement": {
+    "left": 145,
+    "top": 20,
+    "width": 222,
+    "height": 300
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

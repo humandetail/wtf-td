@@ -1,0 +1,25 @@
+{
+  "id": "F03-pale-blue-cooling-spray",
+  "kind": "effects",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    256
+  ],
+  "sourceBounds": {
+    "left": 39,
+    "top": 312,
+    "width": 1183,
+    "height": 719
+  },
+  "scale": 0.2364394993045897,
+  "placement": {
+    "left": 116,
+    "top": 86,
+    "width": 280,
+    "height": 170
+  }
+}

@@ -1,0 +1,265 @@
+{
+  "id": "fantasy-flying-sword-pack",
+  "source": "/Volumes/personal/www/td/work/sources/fantasy-flying-sword-pack/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceRect": [
+        0,
+        0,
+        455,
+        444
+      ],
+      "sourceBounds": {
+        "left": 68,
+        "top": 131,
+        "right": 390,
+        "bottom": 386,
+        "width": 323,
+        "height": 256
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 131,
+        "top": 86,
+        "width": 251,
+        "height": 199
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceRect": [
+        455,
+        0,
+        417,
+        444
+      ],
+      "sourceBounds": {
+        "left": 64,
+        "top": 94,
+        "right": 352,
+        "bottom": 385,
+        "width": 289,
+        "height": 292
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 144,
+        "top": 58,
+        "width": 224,
+        "height": 227
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "W",
+      "sourceCell": 2,
+      "sourceRect": [
+        872,
+        0,
+        472,
+        444
+      ],
+      "sourceBounds": {
+        "left": 65,
+        "top": 99,
+        "right": 436,
+        "bottom": 364,
+        "width": 372,
+        "height": 266
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 112,
+        "top": 78,
+        "width": 289,
+        "height": 207
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceRect": [
+        1344,
+        0,
+        430,
+        444
+      ],
+      "sourceBounds": {
+        "left": 35,
+        "top": 99,
+        "right": 401,
+        "bottom": 379,
+        "width": 367,
+        "height": 281
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 114,
+        "top": 67,
+        "width": 285,
+        "height": 218
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceRect": [
+        0,
+        444,
+        445,
+        443
+      ],
+      "sourceBounds": {
+        "left": 66,
+        "top": 86,
+        "right": 394,
+        "bottom": 354,
+        "width": 329,
+        "height": 269
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 129,
+        "top": 76,
+        "width": 255,
+        "height": 209
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceRect": [
+        445,
+        444,
+        432,
+        443
+      ],
+      "sourceBounds": {
+        "left": 50,
+        "top": 83,
+        "right": 392,
+        "bottom": 354,
+        "width": 343,
+        "height": 272
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 123,
+        "top": 74,
+        "width": 266,
+        "height": 211
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "E",
+      "sourceCell": 6,
+      "sourceRect": [
+        877,
+        444,
+        459,
+        443
+      ],
+      "sourceBounds": {
+        "left": 39,
+        "top": 74,
+        "right": 382,
+        "bottom": 332,
+        "width": 344,
+        "height": 259
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 123,
+        "top": 84,
+        "width": 267,
+        "height": 201
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceRect": [
+        1336,
+        444,
+        438,
+        443
+      ],
+      "sourceBounds": {
+        "left": 77,
+        "top": 80,
+        "right": 349,
+        "bottom": 370,
+        "width": 273,
+        "height": 291
+      },
+      "scale": 0.7763401109057301,
+      "placement": {
+        "left": 150,
+        "top": 59,
+        "width": 212,
+        "height": 226
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 284
+    }
+  ],
+  "mappingCorrection": "E/W filenames reassigned after visual inspection of actual sword tips; no image mirroring or rotation",
+  "corrections": {
+    "SE": {
+      "source": "/Volumes/personal/www/td/work/sources/fantasy-flying-sword-pack/SE-corrected.png",
+      "scale": 0.3154848046309696,
+      "registration": "body",
+      "placement": {
+        "left": 122,
+        "top": 67,
+        "width": 269,
+        "height": 218
+      },
+      "anchor": [
+        256,
+        320
+      ]
+    }
+  }
+}

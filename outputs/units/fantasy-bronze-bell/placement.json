@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-bronze-bell",
+  "sourceBounds": {
+    "left": 140,
+    "top": 60,
+    "right": 371,
+    "bottom": 319,
+    "width": 232,
+    "height": 260
+  },
+  "scale": 1,
+  "placement": {
+    "left": 140,
+    "top": 60,
+    "width": 232,
+    "height": 260
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

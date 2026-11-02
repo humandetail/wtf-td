@@ -1,0 +1,216 @@
+{
+  "id": "tech-high-voltage-arc",
+  "source": "/Volumes/personal/www/td/work/sources/tech-high-voltage-arc/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceBounds": {
+        "left": 67,
+        "top": 49,
+        "right": 397,
+        "bottom": 402,
+        "width": 331,
+        "height": 354
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 133,
+        "top": 57,
+        "width": 246,
+        "height": 263
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceBounds": {
+        "left": 53,
+        "top": 21,
+        "right": 374,
+        "bottom": 400,
+        "width": 322,
+        "height": 380
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 137,
+        "top": 38,
+        "width": 239,
+        "height": 282
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceBounds": {
+        "left": 58,
+        "top": 28,
+        "right": 367,
+        "bottom": 403,
+        "width": 310,
+        "height": 376
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 141,
+        "top": 41,
+        "width": 230,
+        "height": 279
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceBounds": {
+        "left": 69,
+        "top": 22,
+        "right": 396,
+        "bottom": 401,
+        "width": 328,
+        "height": 380
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 135,
+        "top": 38,
+        "width": 243,
+        "height": 282
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceBounds": {
+        "left": 68,
+        "top": 34,
+        "right": 400,
+        "bottom": 398,
+        "width": 333,
+        "height": 365
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 133,
+        "top": 49,
+        "width": 247,
+        "height": 271
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceBounds": {
+        "left": 57,
+        "top": 22,
+        "right": 399,
+        "bottom": 398,
+        "width": 343,
+        "height": 377
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 129,
+        "top": 40,
+        "width": 254,
+        "height": 280
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceBounds": {
+        "left": 58,
+        "top": 21,
+        "right": 375,
+        "bottom": 398,
+        "width": 318,
+        "height": 378
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 138,
+        "top": 40,
+        "width": 236,
+        "height": 280
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceBounds": {
+        "left": 56,
+        "top": 14,
+        "right": 386,
+        "bottom": 398,
+        "width": 331,
+        "height": 385
+      },
+      "scale": 0.7417218543046358,
+      "placement": {
+        "left": 133,
+        "top": 34,
+        "width": 246,
+        "height": 286
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    }
+  ],
+  "corrections": {
+    "NE": {
+      "source": "/Volumes/personal/www/td/work/sources/tech-high-voltage-arc/NE-corrected.png",
+      "scale": 0.37816455696202533,
+      "registration": "base",
+      "placement": {
+        "left": 137,
+        "top": 19,
+        "width": 239,
+        "height": 301
+      },
+      "anchor": [
+        256,
+        320
+      ]
+    }
+  }
+}

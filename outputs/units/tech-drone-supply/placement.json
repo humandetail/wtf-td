@@ -1,0 +1,22 @@
+{
+  "id": "tech-drone-supply",
+  "sourceBounds": {
+    "left": 120,
+    "top": 85,
+    "right": 391,
+    "bottom": 319,
+    "width": 272,
+    "height": 235
+  },
+  "scale": 1,
+  "placement": {
+    "left": 120,
+    "top": 85,
+    "width": 272,
+    "height": 235
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

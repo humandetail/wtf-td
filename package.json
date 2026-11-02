@@ -6,7 +6,8 @@
     "dev": "node scripts/serve.mjs",
     "check": "npm run typecheck && node scripts/check.mjs",
     "test": "node --test game/tests/*.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:pages": "node scripts/build-pages.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

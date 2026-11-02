@@ -1,0 +1,264 @@
+{
+  "id": "fantasy-bamboo-scroll",
+  "source": "/Volumes/personal/www/td/work/sources/fantasy-bamboo-scroll/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceRect": [
+        0,
+        0,
+        484,
+        444
+      ],
+      "sourceBounds": {
+        "left": 22,
+        "top": 69,
+        "right": 460,
+        "bottom": 360,
+        "width": 439,
+        "height": 292
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 112,
+        "top": 128,
+        "width": 289,
+        "height": 192
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceRect": [
+        484,
+        0,
+        452,
+        444
+      ],
+      "sourceBounds": {
+        "left": 23,
+        "top": 49,
+        "right": 402,
+        "bottom": 413,
+        "width": 380,
+        "height": 365
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 131,
+        "top": 80,
+        "width": 250,
+        "height": 240
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceRect": [
+        936,
+        0,
+        365,
+        444
+      ],
+      "sourceBounds": {
+        "left": 120,
+        "top": 37,
+        "right": 302,
+        "bottom": 422,
+        "width": 183,
+        "height": 386
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 196,
+        "top": 66,
+        "width": 120,
+        "height": 254
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceRect": [
+        1301,
+        0,
+        473,
+        444
+      ],
+      "sourceBounds": {
+        "left": 62,
+        "top": 51,
+        "right": 456,
+        "bottom": 419,
+        "width": 395,
+        "height": 369
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 126,
+        "top": 77,
+        "width": 260,
+        "height": 243
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceRect": [
+        0,
+        444,
+        470,
+        443
+      ],
+      "sourceBounds": {
+        "left": 34,
+        "top": 44,
+        "right": 448,
+        "bottom": 356,
+        "width": 415,
+        "height": 313
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 120,
+        "top": 114,
+        "width": 273,
+        "height": 206
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceRect": [
+        470,
+        444,
+        475,
+        443
+      ],
+      "sourceBounds": {
+        "left": 22,
+        "top": 34,
+        "right": 435,
+        "bottom": 398,
+        "width": 414,
+        "height": 365
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 120,
+        "top": 80,
+        "width": 272,
+        "height": 240
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceRect": [
+        945,
+        444,
+        342,
+        443
+      ],
+      "sourceBounds": {
+        "left": 39,
+        "top": 25,
+        "right": 224,
+        "bottom": 413,
+        "width": 186,
+        "height": 389
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 195,
+        "top": 64,
+        "width": 122,
+        "height": 256
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceRect": [
+        1287,
+        444,
+        487,
+        443
+      ],
+      "sourceBounds": {
+        "left": 55,
+        "top": 38,
+        "right": 446,
+        "bottom": 398,
+        "width": 392,
+        "height": 361
+      },
+      "scale": 0.6575342465753424,
+      "placement": {
+        "left": 127,
+        "top": 83,
+        "width": 258,
+        "height": 237
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    }
+  ],
+  "corrections": {
+    "SW": {
+      "source": "/Volumes/personal/www/td/work/sources/fantasy-bamboo-scroll/SW-corrected.png",
+      "scale": 0.26696329254727474,
+      "registration": "body",
+      "placement": {
+        "left": 119,
+        "top": 80,
+        "width": 274,
+        "height": 240
+      },
+      "anchor": [
+        256,
+        320
+      ]
+    }
+  }
+}

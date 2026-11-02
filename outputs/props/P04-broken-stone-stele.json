@@ -1,0 +1,25 @@
+{
+  "id": "P04-broken-stone-stele",
+  "kind": "props",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    320
+  ],
+  "sourceBounds": {
+    "left": 275,
+    "top": 176,
+    "width": 720,
+    "height": 904
+  },
+  "scale": 0.24336283185840707,
+  "placement": {
+    "left": 169,
+    "top": 100,
+    "width": 175,
+    "height": 220
+  }
+}

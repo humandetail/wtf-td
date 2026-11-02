@@ -1,0 +1,20 @@
+{
+  "source": "S",
+  "sourceBounds": {
+    "left": 260,
+    "top": 235,
+    "width": 736,
+    "height": 706
+  },
+  "scale": 0.311614730878187,
+  "placement": {
+    "left": 142,
+    "top": 65,
+    "width": 229,
+    "height": 220
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

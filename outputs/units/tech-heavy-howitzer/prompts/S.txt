@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: 2.5D game sprite master reference, 512 square transparent PNG.
+Input images: roster overview for chosen silhouette; confirmed interceptor master for shared rendering style only. This is a new unit, do not copy the interceptor's weapons.
+Shared rendering: same 2.5D toy cartoon, orthographic camera looking down about 30 degrees, bold charcoal hand-ink outer contour, thinner clean internal lines, broad rounded bevels, matte plastic/painted surfaces, flat 2-3 tone cel shading, fixed soft light from screen upper-left, no floor or cast shadow, no text or watermark. Whole object centered with generous transparent margins, true alpha.
+Sprite rules: object shown in a neutral SE three-quarter orientation, rotating about vertical axis. Entire object is one rigid unit unless a fixed base and upper rotating layer is explicitly requested. Ground/anchor projection at (256,320) on a 512x512 canvas. Match the confirmed interceptor's visual scale family but preserve each unit's own silhouette and relative size.
+
+Chosen unit: HEAVY HOWITZER TOWER. Technology faction only.
+A thick broad industrial yellow/cool-gray fixed octagonal base and central black turntable. Upper rotating armored box cradle carries EXACTLY ONE short extremely thick large-caliber graphite barrel aimed screen lower-right. Barrel has a wide dark muzzle opening and one yellow band. Clearly visible dark parallel recoil rails under barrel and a chunky rear recoil block extending backward, with two stout pivot trunnions. No second gun, no radar, no ammo side box. Slow heavy area-attack read. Keep barrel short relative to body, body wide and low.
+Avoid: detailed scene, enemies, text, labels, watermarks, ground shadows, perspective, photorealism.
+Direction requirement: S / 90 degrees.
+Aim toward screen BOTTOM (90 degrees), frontal facing view with forward-facing face/equipment visible.
+This is the SAME heavy howitzer, not a redesign. Fixed base stays fixed; only upper armored cradle, one barrel, recoil rails and rear recoil block rotate around the central vertical axis. Keep EXACTLY ONE short thick barrel and the same two recoil rails. No radar or second barrel. Transparent complete sprite.
+Use the master image as the only identity reference; do not follow a previous direction image. Preserve all component counts, colors, proportions, silhouette language, fixed camera/scale and upper-left light. Do not rotate a 2D image, mirror, stretch, or fake perspective. True transparent alpha PNG, no checkerboard drawn, no ground shadow, no text, no watermark. Whole unit visible on 512x512 canvas with generous margins.

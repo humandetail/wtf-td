@@ -1,0 +1,22 @@
+{
+  "id": "tech-laser-tracker",
+  "sourceBounds": {
+    "left": 130,
+    "top": 50,
+    "right": 381,
+    "bottom": 319,
+    "width": 252,
+    "height": 270
+  },
+  "scale": 1,
+  "placement": {
+    "left": 130,
+    "top": 50,
+    "width": 252,
+    "height": 270
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

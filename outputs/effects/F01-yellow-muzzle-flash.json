@@ -1,0 +1,25 @@
+{
+  "id": "F01-yellow-muzzle-flash",
+  "kind": "effects",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    256
+  ],
+  "sourceBounds": {
+    "left": 306,
+    "top": 328,
+    "width": 730,
+    "height": 529
+  },
+  "scale": 0.32136105860113423,
+  "placement": {
+    "left": 139,
+    "top": 86,
+    "width": 235,
+    "height": 170
+  }
+}

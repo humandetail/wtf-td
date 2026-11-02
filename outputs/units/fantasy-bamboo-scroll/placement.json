@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-bamboo-scroll",
+  "sourceBounds": {
+    "left": 118,
+    "top": 80,
+    "right": 394,
+    "bottom": 319,
+    "width": 277,
+    "height": 240
+  },
+  "scale": 1,
+  "placement": {
+    "left": 118,
+    "top": 80,
+    "width": 277,
+    "height": 240
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

@@ -1,0 +1,199 @@
+{
+  "id": "fantasy-bronze-bell",
+  "source": "/Volumes/personal/www/td/work/sources/fantasy-bronze-bell/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceBounds": {
+        "left": 59,
+        "top": 47,
+        "right": 417,
+        "bottom": 402,
+        "width": 359,
+        "height": 356
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 130,
+        "top": 69,
+        "width": 253,
+        "height": 251
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceBounds": {
+        "left": 62,
+        "top": 42,
+        "right": 404,
+        "bottom": 408,
+        "width": 343,
+        "height": 367
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 136,
+        "top": 62,
+        "width": 241,
+        "height": 258
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceBounds": {
+        "left": 89,
+        "top": 45,
+        "right": 383,
+        "bottom": 404,
+        "width": 295,
+        "height": 360
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 152,
+        "top": 67,
+        "width": 208,
+        "height": 253
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceBounds": {
+        "left": 36,
+        "top": 38,
+        "right": 385,
+        "bottom": 412,
+        "width": 350,
+        "height": 375
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 133,
+        "top": 56,
+        "width": 246,
+        "height": 264
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceBounds": {
+        "left": 45,
+        "top": 18,
+        "right": 389,
+        "bottom": 387,
+        "width": 345,
+        "height": 370
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 135,
+        "top": 60,
+        "width": 243,
+        "height": 260
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceBounds": {
+        "left": 66,
+        "top": 18,
+        "right": 422,
+        "bottom": 392,
+        "width": 357,
+        "height": 375
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 131,
+        "top": 56,
+        "width": 251,
+        "height": 264
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceBounds": {
+        "left": 55,
+        "top": 18,
+        "right": 376,
+        "bottom": 387,
+        "width": 322,
+        "height": 370
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 143,
+        "top": 60,
+        "width": 227,
+        "height": 260
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceBounds": {
+        "left": 32,
+        "top": 18,
+        "right": 385,
+        "bottom": 386,
+        "width": 354,
+        "height": 369
+      },
+      "scale": 0.7036535859269283,
+      "placement": {
+        "left": 132,
+        "top": 60,
+        "width": 249,
+        "height": 260
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    }
+  ]
+}

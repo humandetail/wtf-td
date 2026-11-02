@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-red-lantern",
+  "sourceBounds": {
+    "left": 145,
+    "top": 65,
+    "right": 367,
+    "bottom": 284,
+    "width": 223,
+    "height": 220
+  },
+  "scale": 1,
+  "placement": {
+    "left": 145,
+    "top": 65,
+    "width": 223,
+    "height": 220
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

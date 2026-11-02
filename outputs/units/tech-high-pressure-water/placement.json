@@ -1,0 +1,22 @@
+{
+  "id": "tech-high-pressure-water",
+  "sourceBounds": {
+    "left": 126,
+    "top": 60,
+    "right": 386,
+    "bottom": 319,
+    "width": 261,
+    "height": 260
+  },
+  "scale": 1,
+  "placement": {
+    "left": 126,
+    "top": 60,
+    "width": 261,
+    "height": 260
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

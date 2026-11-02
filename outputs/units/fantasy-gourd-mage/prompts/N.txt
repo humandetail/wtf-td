@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: 2.5D game sprite master reference, 512 square transparent PNG.
+Input images: roster overview for chosen silhouette; confirmed interceptor master for shared rendering style only. This is a new unit, do not copy the interceptor's weapons.
+Shared rendering: same 2.5D toy cartoon, orthographic camera looking down about 30 degrees, bold charcoal hand-ink outer contour, thinner clean internal lines, broad rounded bevels, matte plastic/painted surfaces, flat 2-3 tone cel shading, fixed soft light from screen upper-left, no floor or cast shadow, no text or watermark. Whole object centered with generous transparent margins, true alpha.
+Sprite rules: object shown in a neutral SE three-quarter orientation, rotating about vertical axis. Entire object is one rigid unit unless a fixed base and upper rotating layer is explicitly requested. Ground/anchor projection at (256,320) on a 512x512 canvas. Match the confirmed interceptor's visual scale family but preserve each unit's own silhouette and relative size.
+
+Chosen unit: GOURD MAGE. Fantasy faction.
+A small cute greenish-olive goblin spirit in a cream/off-white simplified Taoist cap and robe with warm vermilion red sash and ink-purple trim. A very large orange-red gourd with warm gold stopper is strapped to its back, clearly larger than body; jade-celadon bead and cloth tassel on strap. Small sly face, no staff, no spell effect, no flying. Body plus robe, hat and gourd are one rigid unit facing screen lower-right, neutral stance. The gourd is the dominant asymmetric silhouette.
+Avoid: detailed scene, enemies, text, labels, watermarks, ground shadows, perspective, photorealism.
+Direction requirement: N / 270 degrees.
+Aim toward screen TOP (270 degrees), projected facing vector (0,-1). Show more rear/back structure and fewer forward-facing details. The unit remains upright and complete; do not hide or delete parts.
+This is the SAME gourd mage, not a redesign. Whole neutral standing body, robe, cap, large red-orange gourd, jade beads and tassels rotate rigidly around vertical axis. Keep gourd on its same body-back side, never mirror it or move it to show it. No staff or spell effects. Transparent sprite with feet-ground anchor.
+Use the master image as the only identity reference; do not follow a previous direction image. Preserve all component counts, colors, proportions, silhouette language, fixed camera/scale and upper-left light. Do not rotate a 2D image, mirror, stretch, or fake perspective. True transparent alpha PNG, no checkerboard drawn, no ground shadow, no text, no watermark. Whole unit visible on 512x512 canvas with generous margins.

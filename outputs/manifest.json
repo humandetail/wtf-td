@@ -1,0 +1,1683 @@
+{
+  "schemaVersion": 4,
+  "generatedAt": "2026-10-30",
+  "directions": {
+    "order": [
+      "N",
+      "NE",
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW"
+    ],
+    "angles": {
+      "E": 0,
+      "SE": 45,
+      "S": 90,
+      "SW": 135,
+      "W": 180,
+      "NW": 225,
+      "N": 270,
+      "NE": 315
+    },
+    "screenCoordinates": "X right, Y down; angle clockwise; direction is projected facing vector"
+  },
+  "camera": {
+    "projection": "orthographic",
+    "pitchDegrees": 30,
+    "light": "fixed screen upper-left"
+  },
+  "canvas": {
+    "width": 512,
+    "height": 512
+  },
+  "units": [
+    {
+      "id": "tech-interceptor-01",
+      "type": "technology",
+      "master": "master.png",
+      "directions": {
+        "N": "assembled/N.png",
+        "NE": "assembled/NE.png",
+        "E": "assembled/E.png",
+        "SE": "assembled/SE.png",
+        "S": "assembled/S.png",
+        "SW": "assembled/SW.png",
+        "W": "assembled/W.png",
+        "NW": "assembled/NW.png"
+      },
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": "existing confirmed asset scale from the previous completed sample",
+      "layering": {
+        "supported": true,
+        "base": "base.png",
+        "upper": "directions/*.png"
+      },
+      "knownIssues": "Existing confirmed unit; minor generated cross-view proportion drift documented in original README.",
+      "contactSheet": "contact-sheet.png",
+      "designSpec": "design-spec.md",
+      "prompts": "prompts/upper-*.txt",
+      "completeDirections": true,
+      "code": "T01",
+      "name": "自动拦截炮塔",
+      "status": "complete"
+    },
+    {
+      "id": "tech-microwave-jammer",
+      "type": "technology",
+      "master": "units/tech-microwave-jammer/master.png",
+      "directions": {
+        "N": "units/tech-microwave-jammer/directions/N.png",
+        "NE": "units/tech-microwave-jammer/directions/NE.png",
+        "E": "units/tech-microwave-jammer/directions/E.png",
+        "SE": "units/tech-microwave-jammer/directions/SE.png",
+        "S": "units/tech-microwave-jammer/directions/S.png",
+        "SW": "units/tech-microwave-jammer/directions/SW.png",
+        "W": "units/tech-microwave-jammer/directions/W.png",
+        "NW": "units/tech-microwave-jammer/directions/NW.png"
+      },
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 0.26,
+        "method": "same uniform scale for master and all eight original full-resolution direction images"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "Generated directions are independent raster views; small cross-view shape/occlusion drift remains and needs artist cleanup for production.",
+      "contactSheet": "units/tech-microwave-jammer/contact-sheet.png",
+      "designSpec": "units/tech-microwave-jammer/design-spec.md",
+      "prompts": "units/tech-microwave-jammer/prompts/*.txt",
+      "completeDirections": true,
+      "exportIntegrity": {
+        "source": "work/sources/tech-microwave-jammer",
+        "fullSourcePreserved": true,
+        "noClipping": true
+      },
+      "code": "T02",
+      "name": "微波干扰塔",
+      "status": "complete"
+    },
+    {
+      "id": "tech-heavy-howitzer",
+      "type": "technology",
+      "master": "units/tech-heavy-howitzer/master.png",
+      "directions": {
+        "N": "units/tech-heavy-howitzer/directions/N.png",
+        "NE": "units/tech-heavy-howitzer/directions/NE.png",
+        "E": "units/tech-heavy-howitzer/directions/E.png",
+        "SE": "units/tech-heavy-howitzer/directions/SE.png",
+        "S": "units/tech-heavy-howitzer/directions/S.png",
+        "SW": "units/tech-heavy-howitzer/directions/SW.png",
+        "W": "units/tech-heavy-howitzer/directions/W.png",
+        "NW": "units/tech-heavy-howitzer/directions/NW.png"
+      },
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 0.29,
+        "method": "same uniform scale for master and all eight original full-resolution direction images"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "Generated directions are independent raster views; small cross-view shape/occlusion drift remains and needs artist cleanup for production.",
+      "contactSheet": "units/tech-heavy-howitzer/contact-sheet.png",
+      "designSpec": "units/tech-heavy-howitzer/design-spec.md",
+      "prompts": "units/tech-heavy-howitzer/prompts/*.txt",
+      "completeDirections": true,
+      "exportIntegrity": {
+        "source": "work/sources/tech-heavy-howitzer",
+        "fullSourcePreserved": true,
+        "noClipping": true
+      },
+      "code": "T03",
+      "name": "重型榴弹炮塔",
+      "status": "master+8-directions"
+    },
+    {
+      "id": "fantasy-paper-sword-goblin",
+      "type": "fantasy",
+      "master": "units/fantasy-paper-sword-goblin/master.png",
+      "directions": {
+        "N": "units/fantasy-paper-sword-goblin/directions/N.png",
+        "NE": "units/fantasy-paper-sword-goblin/directions/NE.png",
+        "E": "units/fantasy-paper-sword-goblin/directions/E.png",
+        "SE": "units/fantasy-paper-sword-goblin/directions/SE.png",
+        "S": "units/fantasy-paper-sword-goblin/directions/S.png",
+        "SW": "units/fantasy-paper-sword-goblin/directions/SW.png",
+        "W": "units/fantasy-paper-sword-goblin/directions/W.png",
+        "NW": "units/fantasy-paper-sword-goblin/directions/NW.png"
+      },
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 0.22,
+        "method": "same uniform scale for master and all eight original full-resolution direction images"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "Generated directions are independent raster views; small cross-view shape/occlusion drift remains and needs artist cleanup for production.",
+      "contactSheet": "units/fantasy-paper-sword-goblin/contact-sheet.png",
+      "designSpec": "units/fantasy-paper-sword-goblin/design-spec.md",
+      "prompts": "units/fantasy-paper-sword-goblin/prompts/*.txt",
+      "completeDirections": true,
+      "exportIntegrity": {
+        "source": "work/sources/fantasy-paper-sword-goblin",
+        "fullSourcePreserved": true,
+        "noClipping": true
+      },
+      "code": "X01",
+      "name": "御剑纸符小妖",
+      "status": "complete"
+    },
+    {
+      "id": "fantasy-bronze-stone-lion",
+      "type": "fantasy",
+      "master": "units/fantasy-bronze-stone-lion/master.png",
+      "directions": {
+        "N": "units/fantasy-bronze-stone-lion/directions/N.png",
+        "NE": "units/fantasy-bronze-stone-lion/directions/NE.png",
+        "E": "units/fantasy-bronze-stone-lion/directions/E.png",
+        "SE": "units/fantasy-bronze-stone-lion/directions/SE.png",
+        "S": "units/fantasy-bronze-stone-lion/directions/S.png",
+        "SW": "units/fantasy-bronze-stone-lion/directions/SW.png",
+        "W": "units/fantasy-bronze-stone-lion/directions/W.png",
+        "NW": "units/fantasy-bronze-stone-lion/directions/NW.png"
+      },
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 0.27,
+        "method": "same uniform scale for master and all eight original full-resolution direction images"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "Generated directions are independent raster views; small cross-view shape/occlusion drift remains and needs artist cleanup for production.",
+      "contactSheet": "units/fantasy-bronze-stone-lion/contact-sheet.png",
+      "designSpec": "units/fantasy-bronze-stone-lion/design-spec.md",
+      "prompts": "units/fantasy-bronze-stone-lion/prompts/*.txt",
+      "completeDirections": true,
+      "exportIntegrity": {
+        "source": "work/sources/fantasy-bronze-stone-lion",
+        "fullSourcePreserved": true,
+        "noClipping": true
+      },
+      "code": "X02",
+      "name": "青铜石狮",
+      "status": "master+8-directions"
+    },
+    {
+      "id": "fantasy-gourd-mage",
+      "type": "fantasy",
+      "master": "units/fantasy-gourd-mage/master.png",
+      "directions": {
+        "N": "units/fantasy-gourd-mage/directions/N.png",
+        "NE": "units/fantasy-gourd-mage/directions/NE.png",
+        "E": "units/fantasy-gourd-mage/directions/E.png",
+        "SE": "units/fantasy-gourd-mage/directions/SE.png",
+        "S": "units/fantasy-gourd-mage/directions/S.png",
+        "SW": "units/fantasy-gourd-mage/directions/SW.png",
+        "W": "units/fantasy-gourd-mage/directions/W.png",
+        "NW": "units/fantasy-gourd-mage/directions/NW.png"
+      },
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 0.26,
+        "method": "same uniform scale for master and all eight original full-resolution direction images"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "Generated directions are independent raster views; small cross-view shape/occlusion drift remains and needs artist cleanup for production.",
+      "contactSheet": "units/fantasy-gourd-mage/contact-sheet.png",
+      "designSpec": "units/fantasy-gourd-mage/design-spec.md",
+      "prompts": "units/fantasy-gourd-mage/prompts/*.txt",
+      "completeDirections": true,
+      "exportIntegrity": {
+        "source": "work/sources/fantasy-gourd-mage",
+        "fullSourcePreserved": true,
+        "noClipping": true
+      },
+      "code": "X03",
+      "name": "葫芦法师",
+      "status": "complete"
+    },
+    {
+      "id": "tech-laser-tracker",
+      "code": "T04",
+      "name": "激光跟踪塔",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-laser-tracker/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "独立生成的栅格视图；需生产化时锁定三维转轴并人工校正遮挡。",
+      "contactSheet": "units/tech-laser-tracker/contact-sheet.png",
+      "designSpec": "units/tech-laser-tracker/design-spec.md",
+      "prompts": "units/tech-laser-tracker/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-laser-tracker/directions/N.png",
+        "NE": "units/tech-laser-tracker/directions/NE.png",
+        "E": "units/tech-laser-tracker/directions/E.png",
+        "SE": "units/tech-laser-tracker/directions/SE.png",
+        "S": "units/tech-laser-tracker/directions/S.png",
+        "SW": "units/tech-laser-tracker/directions/SW.png",
+        "W": "units/tech-laser-tracker/directions/W.png",
+        "NW": "units/tech-laser-tracker/directions/NW.png"
+      }
+    },
+    {
+      "id": "tech-high-voltage-arc",
+      "code": "T05",
+      "name": "高压电弧塔",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-high-voltage-arc/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7417218543046358
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "NE 已重绘后盖朝向；不同视图的电极间距、后盖和底座局部比例仍有差异。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/tech-high-voltage-arc/contact-sheet.png",
+      "designSpec": "units/tech-high-voltage-arc/design-spec.md",
+      "prompts": "units/tech-high-voltage-arc/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-high-voltage-arc/directions/N.png",
+        "NE": "units/tech-high-voltage-arc/directions/NE.png",
+        "E": "units/tech-high-voltage-arc/directions/E.png",
+        "SE": "units/tech-high-voltage-arc/directions/SE.png",
+        "S": "units/tech-high-voltage-arc/directions/S.png",
+        "SW": "units/tech-high-voltage-arc/directions/SW.png",
+        "W": "units/tech-high-voltage-arc/directions/W.png",
+        "NW": "units/tech-high-voltage-arc/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/tech-high-voltage-arc/turnaround-8.png",
+        "fixedScale": 0.7417218543046358,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/tech-high-voltage-arc/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "tech-high-pressure-water",
+      "code": "T06",
+      "name": "高压水炮塔",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-high-pressure-water/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "独立生成的栅格视图；需生产化时锁定三维转轴并人工校正遮挡。",
+      "contactSheet": "units/tech-high-pressure-water/contact-sheet.png",
+      "designSpec": "units/tech-high-pressure-water/design-spec.md",
+      "prompts": "units/tech-high-pressure-water/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-high-pressure-water/directions/N.png",
+        "NE": "units/tech-high-pressure-water/directions/NE.png",
+        "E": "units/tech-high-pressure-water/directions/E.png",
+        "SE": "units/tech-high-pressure-water/directions/SE.png",
+        "S": "units/tech-high-pressure-water/directions/S.png",
+        "SW": "units/tech-high-pressure-water/directions/SW.png",
+        "W": "units/tech-high-pressure-water/directions/W.png",
+        "NW": "units/tech-high-pressure-water/directions/NW.png"
+      }
+    },
+    {
+      "id": "tech-net-cannon",
+      "code": "T07",
+      "name": "捕获网发射器",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-net-cannon/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7078313253012049
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "方向和网口前后区分可读；后盖、支撑臂和侧铰链细节有少量漂移。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/tech-net-cannon/contact-sheet.png",
+      "designSpec": "units/tech-net-cannon/design-spec.md",
+      "prompts": "units/tech-net-cannon/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-net-cannon/directions/N.png",
+        "NE": "units/tech-net-cannon/directions/NE.png",
+        "E": "units/tech-net-cannon/directions/E.png",
+        "SE": "units/tech-net-cannon/directions/SE.png",
+        "S": "units/tech-net-cannon/directions/S.png",
+        "SW": "units/tech-net-cannon/directions/SW.png",
+        "W": "units/tech-net-cannon/directions/W.png",
+        "NW": "units/tech-net-cannon/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/tech-net-cannon/turnaround-8.png",
+        "fixedScale": 0.7078313253012049,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/tech-net-cannon/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "tech-cooling-spray",
+      "code": "T08",
+      "name": "冷却喷射塔",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-cooling-spray/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7692307692307693
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "S 已纠正为两根保温管；独立重绘的 S 与其余方向在罐体/底座比例上仍需精修。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/tech-cooling-spray/contact-sheet.png",
+      "designSpec": "units/tech-cooling-spray/design-spec.md",
+      "prompts": "units/tech-cooling-spray/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-cooling-spray/directions/N.png",
+        "NE": "units/tech-cooling-spray/directions/NE.png",
+        "E": "units/tech-cooling-spray/directions/E.png",
+        "SE": "units/tech-cooling-spray/directions/SE.png",
+        "S": "units/tech-cooling-spray/directions/S.png",
+        "SW": "units/tech-cooling-spray/directions/SW.png",
+        "W": "units/tech-cooling-spray/directions/W.png",
+        "NW": "units/tech-cooling-spray/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/tech-cooling-spray/turnaround-8.png",
+        "fixedScale": 0.7692307692307693,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/tech-cooling-spray/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "tech-radar-outpost",
+      "code": "T09",
+      "name": "雷达哨站",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-radar-outpost/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7713567839195979
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "侧视面板接近边缘，96px 下天线面只表现为细轮廓；底座细节有轻微变化。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/tech-radar-outpost/contact-sheet.png",
+      "designSpec": "units/tech-radar-outpost/design-spec.md",
+      "prompts": "units/tech-radar-outpost/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-radar-outpost/directions/N.png",
+        "NE": "units/tech-radar-outpost/directions/NE.png",
+        "E": "units/tech-radar-outpost/directions/E.png",
+        "SE": "units/tech-radar-outpost/directions/SE.png",
+        "S": "units/tech-radar-outpost/directions/S.png",
+        "SW": "units/tech-radar-outpost/directions/SW.png",
+        "W": "units/tech-radar-outpost/directions/W.png",
+        "NW": "units/tech-radar-outpost/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/tech-radar-outpost/turnaround-8.png",
+        "fixedScale": 0.7713567839195979,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/tech-radar-outpost/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "tech-repair-arm",
+      "code": "T10",
+      "name": "维修机械臂",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-repair-arm/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "独立生成的栅格视图；需生产化时锁定三维转轴并人工校正遮挡。",
+      "contactSheet": "units/tech-repair-arm/contact-sheet.png",
+      "designSpec": "units/tech-repair-arm/design-spec.md",
+      "prompts": "units/tech-repair-arm/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-repair-arm/directions/N.png",
+        "NE": "units/tech-repair-arm/directions/NE.png",
+        "E": "units/tech-repair-arm/directions/E.png",
+        "SE": "units/tech-repair-arm/directions/SE.png",
+        "S": "units/tech-repair-arm/directions/S.png",
+        "SW": "units/tech-repair-arm/directions/SW.png",
+        "W": "units/tech-repair-arm/directions/W.png",
+        "NW": "units/tech-repair-arm/directions/NW.png"
+      }
+    },
+    {
+      "id": "tech-drone-supply",
+      "code": "T11",
+      "name": "无人机补给站",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-drone-supply/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7197549770290965
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "E/W 已单独重绘，N 改为后视；NE/NW 斜向仍存在充电柱/箱体的遮挡位置偏差，侧视机头投影略偏斜，需要人工校正。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/tech-drone-supply/contact-sheet.png",
+      "designSpec": "units/tech-drone-supply/design-spec.md",
+      "prompts": "units/tech-drone-supply/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-drone-supply/directions/N.png",
+        "NE": "units/tech-drone-supply/directions/NE.png",
+        "E": "units/tech-drone-supply/directions/E.png",
+        "SE": "units/tech-drone-supply/directions/SE.png",
+        "S": "units/tech-drone-supply/directions/S.png",
+        "SW": "units/tech-drone-supply/directions/SW.png",
+        "W": "units/tech-drone-supply/directions/W.png",
+        "NW": "units/tech-drone-supply/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/tech-drone-supply/turnaround-8.png",
+        "fixedScale": 0.7197549770290965,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/tech-drone-supply/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "tech-engineering-roadblock",
+      "code": "T12",
+      "name": "工程路障",
+      "type": "technology",
+      "status": "master+8-directions",
+      "master": "units/tech-engineering-roadblock/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.628099173553719
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "SE 已重绘为右下方正面法线；端柱灯具和背部加强筋的细节仍有变化，E/W 窄视图需结合足部判断。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/tech-engineering-roadblock/contact-sheet.png",
+      "designSpec": "units/tech-engineering-roadblock/design-spec.md",
+      "prompts": "units/tech-engineering-roadblock/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/tech-engineering-roadblock/directions/N.png",
+        "NE": "units/tech-engineering-roadblock/directions/NE.png",
+        "E": "units/tech-engineering-roadblock/directions/E.png",
+        "SE": "units/tech-engineering-roadblock/directions/SE.png",
+        "S": "units/tech-engineering-roadblock/directions/S.png",
+        "SW": "units/tech-engineering-roadblock/directions/SW.png",
+        "W": "units/tech-engineering-roadblock/directions/W.png",
+        "NW": "units/tech-engineering-roadblock/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/tech-engineering-roadblock/turnaround-8.png",
+        "fixedScale": 0.628099173553719,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/tech-engineering-roadblock/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "fantasy-ink-shadow-fox",
+      "code": "X04",
+      "name": "墨影狐妖",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-ink-shadow-fox/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "独立生成的栅格视图；需生产化时锁定三维转轴并人工校正遮挡。",
+      "contactSheet": "units/fantasy-ink-shadow-fox/contact-sheet.png",
+      "designSpec": "units/fantasy-ink-shadow-fox/design-spec.md",
+      "prompts": "units/fantasy-ink-shadow-fox/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-ink-shadow-fox/directions/N.png",
+        "NE": "units/fantasy-ink-shadow-fox/directions/NE.png",
+        "E": "units/fantasy-ink-shadow-fox/directions/E.png",
+        "SE": "units/fantasy-ink-shadow-fox/directions/SE.png",
+        "S": "units/fantasy-ink-shadow-fox/directions/S.png",
+        "SW": "units/fantasy-ink-shadow-fox/directions/SW.png",
+        "W": "units/fantasy-ink-shadow-fox/directions/W.png",
+        "NW": "units/fantasy-ink-shadow-fox/directions/NW.png"
+      }
+    },
+    {
+      "id": "fantasy-bronze-bell",
+      "code": "X05",
+      "name": "铜铃精",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-bronze-bell/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7036535859269283
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "背面无脸、侧面单眼；丝带结和铜铃纹样仍有局部变化。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/fantasy-bronze-bell/contact-sheet.png",
+      "designSpec": "units/fantasy-bronze-bell/design-spec.md",
+      "prompts": "units/fantasy-bronze-bell/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-bronze-bell/directions/N.png",
+        "NE": "units/fantasy-bronze-bell/directions/NE.png",
+        "E": "units/fantasy-bronze-bell/directions/E.png",
+        "SE": "units/fantasy-bronze-bell/directions/SE.png",
+        "S": "units/fantasy-bronze-bell/directions/S.png",
+        "SW": "units/fantasy-bronze-bell/directions/SW.png",
+        "W": "units/fantasy-bronze-bell/directions/W.png",
+        "NW": "units/fantasy-bronze-bell/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/fantasy-bronze-bell/turnaround-8.png",
+        "fixedScale": 0.7036535859269283,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/fantasy-bronze-bell/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "fantasy-bamboo-scroll",
+      "code": "X06",
+      "name": "竹卷书灵",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-bamboo-scroll/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.6575342465753424
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "SW 已单独重绘；斜向投影和卷轴端盖/竹叶位置仍有少量漂移。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/fantasy-bamboo-scroll/contact-sheet.png",
+      "designSpec": "units/fantasy-bamboo-scroll/design-spec.md",
+      "prompts": "units/fantasy-bamboo-scroll/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-bamboo-scroll/directions/N.png",
+        "NE": "units/fantasy-bamboo-scroll/directions/NE.png",
+        "E": "units/fantasy-bamboo-scroll/directions/E.png",
+        "SE": "units/fantasy-bamboo-scroll/directions/SE.png",
+        "S": "units/fantasy-bamboo-scroll/directions/S.png",
+        "SW": "units/fantasy-bamboo-scroll/directions/SW.png",
+        "W": "units/fantasy-bamboo-scroll/directions/W.png",
+        "NW": "units/fantasy-bamboo-scroll/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/fantasy-bamboo-scroll/turnaround-8.png",
+        "fixedScale": 0.6575342465753424,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/fantasy-bamboo-scroll/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "fantasy-red-lantern",
+      "code": "X07",
+      "name": "赤焰灯笼怪",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-red-lantern/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "独立生成的栅格视图；需生产化时锁定三维转轴并人工校正遮挡。",
+      "contactSheet": "units/fantasy-red-lantern/contact-sheet.png",
+      "designSpec": "units/fantasy-red-lantern/design-spec.md",
+      "prompts": "units/fantasy-red-lantern/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-red-lantern/directions/N.png",
+        "NE": "units/fantasy-red-lantern/directions/NE.png",
+        "E": "units/fantasy-red-lantern/directions/E.png",
+        "SE": "units/fantasy-red-lantern/directions/SE.png",
+        "S": "units/fantasy-red-lantern/directions/S.png",
+        "SW": "units/fantasy-red-lantern/directions/SW.png",
+        "W": "units/fantasy-red-lantern/directions/W.png",
+        "NW": "units/fantasy-red-lantern/directions/NW.png"
+      }
+    },
+    {
+      "id": "fantasy-jade-turtle",
+      "code": "X08",
+      "name": "玉甲龟",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-jade-turtle/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.8237232289950577
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "头尾和四足的前后关系清楚；玉甲分块、云纹与远侧足部遮挡仍需精修。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/fantasy-jade-turtle/contact-sheet.png",
+      "designSpec": "units/fantasy-jade-turtle/design-spec.md",
+      "prompts": "units/fantasy-jade-turtle/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-jade-turtle/directions/N.png",
+        "NE": "units/fantasy-jade-turtle/directions/NE.png",
+        "E": "units/fantasy-jade-turtle/directions/E.png",
+        "SE": "units/fantasy-jade-turtle/directions/SE.png",
+        "S": "units/fantasy-jade-turtle/directions/S.png",
+        "SW": "units/fantasy-jade-turtle/directions/SW.png",
+        "W": "units/fantasy-jade-turtle/directions/W.png",
+        "NW": "units/fantasy-jade-turtle/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/fantasy-jade-turtle/turnaround-8.png",
+        "fixedScale": 0.8237232289950577,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/fantasy-jade-turtle/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "fantasy-wine-jar",
+      "code": "X09",
+      "name": "酒坛力士",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-wine-jar/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export"
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "独立生成的栅格视图；需生产化时锁定三维转轴并人工校正遮挡。",
+      "contactSheet": "units/fantasy-wine-jar/contact-sheet.png",
+      "designSpec": "units/fantasy-wine-jar/design-spec.md",
+      "prompts": "units/fantasy-wine-jar/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-wine-jar/directions/N.png",
+        "NE": "units/fantasy-wine-jar/directions/NE.png",
+        "E": "units/fantasy-wine-jar/directions/E.png",
+        "SE": "units/fantasy-wine-jar/directions/SE.png",
+        "S": "units/fantasy-wine-jar/directions/S.png",
+        "SW": "units/fantasy-wine-jar/directions/SW.png",
+        "W": "units/fantasy-wine-jar/directions/W.png",
+        "NW": "units/fantasy-wine-jar/directions/NW.png"
+      }
+    },
+    {
+      "id": "fantasy-flying-sword-pack",
+      "code": "X10",
+      "name": "飞剑群",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-flying-sword-pack/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7763401109057301
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "保留主图的三剑三纸符骑手；E/W 名称按剑尖校正，SE 已重绘；NE/NW 编队纵深与纸片细节有变化。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/fantasy-flying-sword-pack/contact-sheet.png",
+      "designSpec": "units/fantasy-flying-sword-pack/design-spec.md",
+      "prompts": "units/fantasy-flying-sword-pack/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-flying-sword-pack/directions/N.png",
+        "NE": "units/fantasy-flying-sword-pack/directions/NE.png",
+        "E": "units/fantasy-flying-sword-pack/directions/E.png",
+        "SE": "units/fantasy-flying-sword-pack/directions/SE.png",
+        "S": "units/fantasy-flying-sword-pack/directions/S.png",
+        "SW": "units/fantasy-flying-sword-pack/directions/SW.png",
+        "W": "units/fantasy-flying-sword-pack/directions/W.png",
+        "NW": "units/fantasy-flying-sword-pack/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/fantasy-flying-sword-pack/turnaround-8.png",
+        "fixedScale": 0.7763401109057301,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/fantasy-flying-sword-pack/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "fantasy-lotus-spirit",
+      "code": "X11",
+      "name": "莲台灵童",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-lotus-spirit/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 0.35555555555555557,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.6837606837606838
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "已重绘使莲台珠饰随身体转动，N/NE/NW 隐藏前珠；莲瓣轮廓及帽侧流苏位置仍有轻微漂移。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/fantasy-lotus-spirit/contact-sheet.png",
+      "designSpec": "units/fantasy-lotus-spirit/design-spec.md",
+      "prompts": "units/fantasy-lotus-spirit/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-lotus-spirit/directions/N.png",
+        "NE": "units/fantasy-lotus-spirit/directions/NE.png",
+        "E": "units/fantasy-lotus-spirit/directions/E.png",
+        "SE": "units/fantasy-lotus-spirit/directions/SE.png",
+        "S": "units/fantasy-lotus-spirit/directions/S.png",
+        "SW": "units/fantasy-lotus-spirit/directions/SW.png",
+        "W": "units/fantasy-lotus-spirit/directions/W.png",
+        "NW": "units/fantasy-lotus-spirit/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/fantasy-lotus-spirit/turnaround-8.png",
+        "fixedScale": 0.6837606837606838,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/fantasy-lotus-spirit/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    },
+    {
+      "id": "fantasy-mountain-ape",
+      "code": "X12",
+      "name": "山魈头目",
+      "type": "fantasy",
+      "status": "master+8-directions",
+      "master": "units/fantasy-mountain-ape/master.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "directionOrder": [
+        "N",
+        "NE",
+        "E",
+        "SE",
+        "S",
+        "SW",
+        "W",
+        "NW"
+      ],
+      "relativeDisplayScale": {
+        "sourcePixelScale": 1,
+        "method": "same uniform scale per unit; full source raster preserved before export",
+        "directionPixelScale": 0.7791878172588832
+      },
+      "layering": {
+        "supported": false,
+        "base": null,
+        "upper": null
+      },
+      "knownIssues": "两臂两腿、中立支撑姿势保留；鬃毛云纹、肩甲和远侧手部有装饰性变化。 均为独立栅格视图，不代表精确三维转台。",
+      "contactSheet": "units/fantasy-mountain-ape/contact-sheet.png",
+      "designSpec": "units/fantasy-mountain-ape/design-spec.md",
+      "prompts": "units/fantasy-mountain-ape/prompts/",
+      "completeDirections": true,
+      "directions": {
+        "N": "units/fantasy-mountain-ape/directions/N.png",
+        "NE": "units/fantasy-mountain-ape/directions/NE.png",
+        "E": "units/fantasy-mountain-ape/directions/E.png",
+        "SE": "units/fantasy-mountain-ape/directions/SE.png",
+        "S": "units/fantasy-mountain-ape/directions/S.png",
+        "SW": "units/fantasy-mountain-ape/directions/SW.png",
+        "W": "units/fantasy-mountain-ape/directions/W.png",
+        "NW": "units/fantasy-mountain-ape/directions/NW.png"
+      },
+      "directionReview": {
+        "date": "2026-10-30",
+        "source": "work/sources/fantasy-mountain-ape/turnaround-8.png",
+        "fixedScale": 0.7791878172588832,
+        "canvas": [
+          512,
+          512
+        ],
+        "alpha": true,
+        "registration": "units/fantasy-mountain-ape/direction-registration.json",
+        "qualityStatus": "files-complete; visually-reviewed-with-known-issues",
+        "artistCleanupRequired": true
+      }
+    }
+  ],
+  "props": [
+    {
+      "id": "P01-tech-supply-crate",
+      "code": "P01",
+      "name": "科技补给箱",
+      "type": "prop",
+      "path": "props/P01-tech-supply-crate.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "status": "complete"
+    },
+    {
+      "id": "P02-portable-generator",
+      "code": "P02",
+      "name": "便携式发电机",
+      "type": "prop",
+      "path": "props/P02-portable-generator.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "status": "complete"
+    },
+    {
+      "id": "P03-cable-reel",
+      "code": "P03",
+      "name": "电缆卷盘",
+      "type": "prop",
+      "path": "props/P03-cable-reel.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "status": "complete"
+    },
+    {
+      "id": "P04-broken-stone-stele",
+      "code": "P04",
+      "name": "残破石碑",
+      "type": "prop",
+      "path": "props/P04-broken-stone-stele.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "status": "complete"
+    },
+    {
+      "id": "P05-rune-stone-platform",
+      "code": "P05",
+      "name": "小型符阵石台",
+      "type": "prop",
+      "path": "props/P05-rune-stone-platform.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "status": "complete"
+    },
+    {
+      "id": "P06-sealed-wooden-chest",
+      "code": "P06",
+      "name": "封印木匣",
+      "type": "prop",
+      "path": "props/P06-sealed-wooden-chest.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        320
+      ],
+      "status": "complete"
+    }
+  ],
+  "effects": [
+    {
+      "id": "F01-yellow-muzzle-flash",
+      "code": "F01",
+      "name": "黄色短促枪口火焰",
+      "type": "effect",
+      "path": "effects/F01-yellow-muzzle-flash.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        256
+      ],
+      "status": "static-keyframe",
+      "knownIssues": "独立静帧概念素材，不是已完成动画。"
+    },
+    {
+      "id": "F02-blue-white-arc",
+      "code": "F02",
+      "name": "蓝白色电弧",
+      "type": "effect",
+      "path": "effects/F02-blue-white-arc.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        256
+      ],
+      "status": "static-keyframe",
+      "knownIssues": "独立静帧概念素材，不是已完成动画。"
+    },
+    {
+      "id": "F03-pale-blue-cooling-spray",
+      "code": "F03",
+      "name": "淡蓝色冷却喷雾",
+      "type": "effect",
+      "path": "effects/F03-pale-blue-cooling-spray.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        256
+      ],
+      "status": "static-keyframe",
+      "knownIssues": "独立静帧概念素材，不是已完成动画。"
+    },
+    {
+      "id": "F04-cinnabar-talisman-hit",
+      "code": "F04",
+      "name": "朱砂红符箓命中爆闪",
+      "type": "effect",
+      "path": "effects/F04-cinnabar-talisman-hit.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        256
+      ],
+      "status": "static-keyframe",
+      "knownIssues": "独立静帧概念素材，不是已完成动画。"
+    },
+    {
+      "id": "F05-jade-healing-ring",
+      "code": "F05",
+      "name": "玉青色治疗光环",
+      "type": "effect",
+      "path": "effects/F05-jade-healing-ring.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        256
+      ],
+      "status": "static-keyframe",
+      "knownIssues": "独立静帧概念素材，不是已完成动画。"
+    },
+    {
+      "id": "F06-ink-purple-dissipation",
+      "code": "F06",
+      "name": "墨紫色妖气消散",
+      "type": "effect",
+      "path": "effects/F06-ink-purple-dissipation.png",
+      "canvas": [
+        512,
+        512
+      ],
+      "anchor": [
+        256,
+        256
+      ],
+      "status": "static-keyframe",
+      "knownIssues": "独立静帧概念素材，不是已完成动画。"
+    }
+  ],
+  "catalogSummary": {
+    "technologyUnits": 12,
+    "fantasyUnits": 12,
+    "totalUnits": 24,
+    "props": 6,
+    "effects": 6,
+    "completedUnitDirections": [
+      "tech-interceptor-01",
+      "tech-microwave-jammer",
+      "tech-heavy-howitzer",
+      "fantasy-paper-sword-goblin",
+      "fantasy-bronze-stone-lion",
+      "fantasy-gourd-mage",
+      "tech-laser-tracker",
+      "tech-high-voltage-arc",
+      "tech-high-pressure-water",
+      "tech-net-cannon",
+      "tech-cooling-spray",
+      "tech-radar-outpost",
+      "tech-repair-arm",
+      "tech-drone-supply",
+      "tech-engineering-roadblock",
+      "fantasy-ink-shadow-fox",
+      "fantasy-bronze-bell",
+      "fantasy-bamboo-scroll",
+      "fantasy-red-lantern",
+      "fantasy-jade-turtle",
+      "fantasy-wine-jar",
+      "fantasy-flying-sword-pack",
+      "fantasy-lotus-spirit",
+      "fantasy-mountain-ape"
+    ],
+    "directionFiles": 192
+  },
+  "directionCompletion": {
+    "date": "2026-10-30",
+    "addedUnits": [
+      "tech-high-voltage-arc",
+      "tech-net-cannon",
+      "tech-cooling-spray",
+      "tech-radar-outpost",
+      "tech-drone-supply",
+      "tech-engineering-roadblock",
+      "fantasy-bronze-bell",
+      "fantasy-bamboo-scroll",
+      "fantasy-jade-turtle",
+      "fantasy-flying-sword-pack",
+      "fantasy-lotus-spirit",
+      "fantasy-mountain-ape"
+    ],
+    "addedFiles": 96,
+    "report": "direction-check.md"
+  }
+}

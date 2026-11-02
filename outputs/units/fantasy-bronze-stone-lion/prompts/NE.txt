@@ -1,0 +1,13 @@
+Use case: stylized-concept
+Asset type: 2.5D game sprite master reference, 512 square transparent PNG.
+Input images: roster overview for chosen silhouette; confirmed interceptor master for shared rendering style only. This is a new unit, do not copy the interceptor's weapons.
+Shared rendering: same 2.5D toy cartoon, orthographic camera looking down about 30 degrees, bold charcoal hand-ink outer contour, thinner clean internal lines, broad rounded bevels, matte plastic/painted surfaces, flat 2-3 tone cel shading, fixed soft light from screen upper-left, no floor or cast shadow, no text or watermark. Whole object centered with generous transparent margins, true alpha.
+Sprite rules: object shown in a neutral SE three-quarter orientation, rotating about vertical axis. Entire object is one rigid unit unless a fixed base and upper rotating layer is explicitly requested. Ground/anchor projection at (256,320) on a 512x512 canvas. Match the confirmed interceptor's visual scale family but preserve each unit's own silhouette and relative size.
+
+Chosen unit: BRONZE STONE LION. Fantasy faction.
+A squat stylized stone lion in neutral four-foot standing pose, body and feet thick and planted, oversized head, short legs, huge rounded teal jade-green stone mane, broad muzzle, stern but cute face. Stone is warm off-white/gray; a few warm bronze protective plates on shoulder/chest and bronze collar with simple cloud curl; small jade green cabochon. Entire body one rigid unit facing screen lower-right and rotating as a whole. No weapon, no extra limbs, no walking or attack pose, no ground base. Thick high-defense silhouette with chunky paws and readable mane.
+Avoid: detailed scene, enemies, text, labels, watermarks, ground shadows, perspective, photorealism.
+Direction requirement: NE / 315 degrees.
+Aim toward screen UPPER-RIGHT (315 degrees), exact diagonal projected vector (+1,-1).
+This is the SAME bronze stone lion, not a redesign. Whole four-foot neutral standing body rotates around vertical axis. Keep four paws, oversized head, rounded jade mane, bronze collar/plates and same planted height. No walking or attack pose. Transparent sprite with feet-ground anchor.
+Use the master image as the only identity reference; do not follow a previous direction image. Preserve all component counts, colors, proportions, silhouette language, fixed camera/scale and upper-left light. Do not rotate a 2D image, mirror, stretch, or fake perspective. True transparent alpha PNG, no checkerboard drawn, no ground shadow, no text, no watermark. Whole unit visible on 512x512 canvas with generous margins.

@@ -1,7 +1,9 @@
-outputs/
 work/
 node_modules/
 .DS_Store
 .oil-ui/
 game/qa/screenshots/
 *.log
+
+# Generated GitHub Pages artifact
+_site/

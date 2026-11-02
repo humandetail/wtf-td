@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-jade-turtle",
+  "sourceBounds": {
+    "left": 96,
+    "top": 70,
+    "right": 415,
+    "bottom": 319,
+    "width": 320,
+    "height": 250
+  },
+  "scale": 1,
+  "placement": {
+    "left": 96,
+    "top": 70,
+    "width": 320,
+    "height": 250
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

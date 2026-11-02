@@ -1,0 +1,25 @@
+{
+  "id": "P02-portable-generator",
+  "kind": "props",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    320
+  ],
+  "sourceBounds": {
+    "left": 226,
+    "top": 221,
+    "width": 818,
+    "height": 815
+  },
+  "scale": 0.26993865030674846,
+  "placement": {
+    "left": 146,
+    "top": 100,
+    "width": 221,
+    "height": 220
+  }
+}

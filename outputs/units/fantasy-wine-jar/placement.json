@@ -1,0 +1,22 @@
+{
+  "id": "fantasy-wine-jar",
+  "sourceBounds": {
+    "left": 107,
+    "top": 55,
+    "right": 404,
+    "bottom": 319,
+    "width": 298,
+    "height": 265
+  },
+  "scale": 1,
+  "placement": {
+    "left": 107,
+    "top": 55,
+    "width": 298,
+    "height": 265
+  },
+  "anchor": [
+    256,
+    320
+  ]
+}

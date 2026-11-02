@@ -1,0 +1,25 @@
+{
+  "id": "P01-tech-supply-crate",
+  "kind": "props",
+  "canvas": [
+    512,
+    512
+  ],
+  "anchor": [
+    256,
+    320
+  ],
+  "sourceBounds": {
+    "left": 186,
+    "top": 216,
+    "width": 908,
+    "height": 801
+  },
+  "scale": 0.2746566791510612,
+  "placement": {
+    "left": 132,
+    "top": 100,
+    "width": 249,
+    "height": 220
+  }
+}

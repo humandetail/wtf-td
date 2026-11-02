@@ -1,0 +1,247 @@
+{
+  "id": "fantasy-jade-turtle",
+  "source": "/Volumes/personal/www/td/work/sources/fantasy-jade-turtle/turnaround-8.png",
+  "method": "one shared scale across eight cells; ground/hover bottom registered to approved master; no silhouette warping",
+  "records": [
+    {
+      "direction": "N",
+      "sourceCell": 0,
+      "sourceRect": [
+        0,
+        0,
+        439,
+        444
+      ],
+      "sourceBounds": {
+        "left": 60,
+        "top": 82,
+        "right": 389,
+        "bottom": 383,
+        "width": 330,
+        "height": 302
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 120,
+        "top": 71,
+        "width": 272,
+        "height": 249
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NE",
+      "sourceCell": 1,
+      "sourceRect": [
+        439,
+        0,
+        438,
+        444
+      ],
+      "sourceBounds": {
+        "left": 50,
+        "top": 83,
+        "right": 414,
+        "bottom": 402,
+        "width": 365,
+        "height": 320
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 106,
+        "top": 56,
+        "width": 301,
+        "height": 264
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "E",
+      "sourceCell": 2,
+      "sourceRect": [
+        877,
+        0,
+        475,
+        444
+      ],
+      "sourceBounds": {
+        "left": 24,
+        "top": 122,
+        "right": 452,
+        "bottom": 391,
+        "width": 429,
+        "height": 270
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 80,
+        "top": 98,
+        "width": 353,
+        "height": 222
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SE",
+      "sourceCell": 3,
+      "sourceRect": [
+        1352,
+        0,
+        422,
+        444
+      ],
+      "sourceBounds": {
+        "left": 23,
+        "top": 94,
+        "right": 408,
+        "bottom": 401,
+        "width": 386,
+        "height": 308
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 97,
+        "top": 66,
+        "width": 318,
+        "height": 254
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "S",
+      "sourceCell": 4,
+      "sourceRect": [
+        0,
+        444,
+        423,
+        443
+      ],
+      "sourceBounds": {
+        "left": 50,
+        "top": 83,
+        "right": 399,
+        "bottom": 383,
+        "width": 350,
+        "height": 301
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 112,
+        "top": 72,
+        "width": 288,
+        "height": 248
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "SW",
+      "sourceCell": 5,
+      "sourceRect": [
+        423,
+        444,
+        446,
+        443
+      ],
+      "sourceBounds": {
+        "left": 24,
+        "top": 84,
+        "right": 426,
+        "bottom": 388,
+        "width": 403,
+        "height": 305
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 90,
+        "top": 69,
+        "width": 332,
+        "height": 251
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "W",
+      "sourceCell": 6,
+      "sourceRect": [
+        869,
+        444,
+        464,
+        443
+      ],
+      "sourceBounds": {
+        "left": 19,
+        "top": 116,
+        "right": 432,
+        "bottom": 376,
+        "width": 414,
+        "height": 261
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 86,
+        "top": 105,
+        "width": 341,
+        "height": 215
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    },
+    {
+      "direction": "NW",
+      "sourceCell": 7,
+      "sourceRect": [
+        1333,
+        444,
+        441,
+        443
+      ],
+      "sourceBounds": {
+        "left": 31,
+        "top": 80,
+        "right": 394,
+        "bottom": 388,
+        "width": 364,
+        "height": 309
+      },
+      "scale": 0.8237232289950577,
+      "placement": {
+        "left": 106,
+        "top": 65,
+        "width": 300,
+        "height": 255
+      },
+      "anchor": [
+        256,
+        320
+      ],
+      "bottom": 319
+    }
+  ]
+}

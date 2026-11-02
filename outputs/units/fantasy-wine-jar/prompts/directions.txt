@@ -1,0 +1,2 @@
+Use the same X09 master as exact identity reference. Generate independent N, NE, E, SE, S, SW, W, NW views under fixed orthographic camera and light; do not rotate/mirror the canvas. Keep all parts, proportions, non-asymmetric positions and neutral pose consistent; use complete transparent 512 canvas and anchor (256,320).
+N up-screen; NE upper-right; E right; SE lower-right; S down-screen; SW lower-left; W left; NW upper-left.
