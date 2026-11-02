@@ -18,7 +18,7 @@ test('actual controls preserve four distinct sessions, drive and repair, relocat
   for (const [, id] of html.matchAll(/id="([^"]+)"/g)) nodes.set(id, new Element(id));
   const documentEvents = {};
   const document = { getElementById: id => nodes.get(id), body: { classList: { toggle() {} } }, activeElement: null, addEventListener: (type, fn) => { documentEvents[type] = fn; }, createElement: () => new Element() };
-  const context = vm.createContext({ ...imports, document, console, performance, createAudio: () => ({ unlock: async () => {}, play() {}, muted: false }), loadArtwork() {}, createRenderer() {}, ResizeObserver: class {}, requestAnimationFrame() {} });
+  const context = vm.createContext({ ...imports, document, window: { confirm: () => true }, console, performance, createAudio: () => ({ unlock: async () => {}, play() {}, muted: false }), loadArtwork() {}, createRenderer() {}, ResizeObserver: class {}, requestAnimationFrame() {} });
   let source = fs.readFileSync(base + 'main.js', 'utf8').replace(/^import .*;\n/gm, '').replace('void boot();', '');
   source += '\nrenderer={reset(){},event(){},hitTest(x,y,items){return items.find(item=>Math.hypot(item.x-x,item.y-y)<40)?.id??null}}; globalThis.test={sessions,get game(){return game},get view(){return view},get placement(){return placement},get relocatingId(){return relocatingId},bindControls,updateUI,showEnd,returnToMenu,activatePoint,armBuild};';
   vm.runInContext(source, context);

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 async function harness() {
   const imports = Object.assign({}, ...await Promise.all(['engine','catalog','research','geometry','defense-geometry','modes','gem-catalog','gem-geometry','hero-catalog','legion-catalog'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
   const nodes=new Map(), events={}; let document;
+  const confirmation={answer:true,messages:[]};
   class Element {
     constructor(tag='button') { this.tagName=tag.toUpperCase();this.hidden=true;this.style={};this.dataset={};this.attrs={};this.events={};this.children=[];this.textContent='';this.classes=new Set();this.classList={toggle:(key,on)=>{if(on)this.classes.add(key);else this.classes.delete(key);}};this.isConnected=true;this.value=''; }
     setAttribute(k,v){this.attrs[k]=v;} getAttribute(k){return this.attrs[k];}
@@ -17,7 +18,7 @@ async function harness() {
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const [,tag,id] of html.matchAll(/<(\w+)[^>]*\bid="([^"]+)"/g)){const el=new Element(tag);el.id=id;nodes.set(id,el);}
   document={getElementById:id=>nodes.get(id),body:{classList:{toggle(){}}},activeElement:null,createElement:tag=>new Element(tag),addEventListener:(k,fn)=>events[k]=fn};
-  const context=vm.createContext({...imports,document,window:{addEventListener(){}},console,performance,createAudio:()=>({unlock:async()=>{},play(){},muted:false}),loadArtwork(){},createRenderer(){},ResizeObserver:class{},requestAnimationFrame(){}});
+  const context=vm.createContext({...imports,document,window:{addEventListener(){},confirm(message){confirmation.messages.push(message);return confirmation.answer;}},console,performance,createAudio:()=>({unlock:async()=>{},play(){},muted:false}),loadArtwork(){},createRenderer(){},ResizeObserver:class{},requestAnimationFrame(){}});
   let source=fs.readFileSync(new URL('../main.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace('void boot();','');
   source+='\nrenderer={reset(){},event(){},hitTest(x,y,items){return items.find(t=>Math.hypot(t.x-x,t.y-y)<35)?.id??null}};globalThis.ui={sessions,get game(){return game},get view(){return view},get pendingGem(){return pendingGem},get armedSkill(){return armedSkill},get placement(){return placement},get legionView(){return legionView},bindControls,updateUI,returnToMenu,activatePoint,armBuild,showEnd};';
   vm.runInContext(source,context);const ui=context.ui;ui.bindControls();
@@ -27,7 +28,7 @@ async function harness() {
   const buttons=(id='special-mission')=>descendants(node(id)).filter(el=>el.tagName==='BUTTON');
   const command=label=>{const found=buttons().find(el=>el.textContent.includes(label));assert.ok(found,'missing command '+label);found.click();return found;};
   const key=(type,key)=>events[type]({key,preventDefault(){}});
-  return {ui,node,click,go,command,key,events,buttons,descendants};
+  return {ui,node,click,go,command,key,events,buttons,descendants,confirmation};
 }
 
 test('seven actual sessions preserve isolation and terminal reports including legion draw',async()=>{
@@ -132,5 +133,18 @@ test('home and menu preserve the exact seven sessions, funds and structures on r
   click('home-button');assert.equal(ui.view,'menu');assert.equal(state.paused,true);
   click('start-button');assert.equal(ui.game,game);assert.equal(ui.game.state,state);assert.equal(state.gold,gold);assert.equal(state.wave,wave);assert.equal(state.paused,false);
   click('menu-button');click('start-button');assert.equal(ui.game,game);assert.equal(state.gold,gold);
+ }
+});
+
+ test('in-game menu and home require confirmation; cancelling preserves play and selection',async()=>{
+ const {ui,go,click,confirmation}=await harness();
+ for(const mode of ['loop','defense','escort','maze','gem','hero','legion']){
+  go(mode);const game=ui.game,state=game.state;
+  for(const button of ['menu-button','home-button']){
+   confirmation.answer=false;const count=confirmation.messages.length;click(button);
+   assert.equal(confirmation.messages.length,count+1);assert.equal(ui.view,'game');assert.equal(state.paused,false);assert.equal(ui.game,game);
+   confirmation.answer=true;click(button);assert.equal(ui.view,'menu');assert.equal(state.paused,true);
+   click('start-button');assert.equal(ui.game,game);assert.equal(state.paused,false);
+  }
  }
 });

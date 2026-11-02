@@ -625,6 +625,7 @@ function updateMenu() {
 }
 
 function returnToMenu() {
+  if (view === 'game' && !window.confirm('返回主菜单？本局将暂停并保留，可点“继续游戏”返回。')) return;
   stopHero();
   if (game.state.phase === 'playing' && !game.state.paused) game.togglePause();
   clearTransient();
