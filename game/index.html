@@ -51,7 +51,7 @@
 
     <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
       <header class="status-bar">
-        <a class="wordmark" href="./" aria-label="环界首页">环界<span id="current-mode">循环圈</span></a>
+        <button id="home-button" class="wordmark" type="button" aria-label="返回主菜单，保留当前对局">环界<span id="current-mode">循环圈</span></button>
         <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
         <div class="resource"><span class="status-label">波次</span><strong id="wave-value">—</strong></div>
         <div class="pressure-status">
@@ -68,7 +68,7 @@
           <button id="pause-button" class="button compact" type="button">暂停</button>
           <button id="speed-button" class="button compact" type="button">1× 速度</button>
           <button id="mute-button" class="button compact" type="button" aria-pressed="false">声音开</button>
-          <button id="menu-button" class="button compact quiet" type="button">主菜单</button>
+          <button id="menu-button" class="button compact quiet" type="button" title="自动暂停并保留本局，返回后可继续">主菜单</button>
         </nav>
       </header>
       <div id="battle-stage" class="battle-stage">
@@ -145,7 +145,7 @@
             <p id="build-status" class="build-status" role="status" aria-live="polite">点“建造”选择工事，再在绿色区域放置。</p>
             <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
           </div>
-          <div id="shop-list" class="shop-list" aria-label="十二种防御单位；迷宫额外提供路障，横向滚动查看更多"></div>
+          <div id="shop-list" class="shop-list" aria-label="十四种防御单位；迷宫额外提供路障，横向滚动查看更多"></div>
         </section>
       </div>
     </section>

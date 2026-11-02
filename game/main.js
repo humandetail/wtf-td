@@ -40,7 +40,7 @@ let touchControls = null;
 function stopHero() { touchControls?.stop(); moveKeys.clear(); if (game.state.mode === 'hero') game.setMoveVector(0, 0); }
 function editable() { return game.state.phase === 'playing' && !game.state.paused && (!game.state.turnPhase || game.state.turnPhase === 'planning'); }
 const roles = {
-  wall: '改变行军路线',
+  wall: '改变行军路线', magic: '魔法灼烧', multi: '多重攻击',
   direct: '单体输出', splash: '范围输出', chain: '连锁输出', slow: '减速控制',
   root: '定身控制', frost: '范围减速', radar: '射程增伤', overclock: '攻速辅助',
   supply: '金币补给', barrier: '区域减速', aura: '范围强化', pierce: '首领破甲', boss: '首领克星', matrix: '连锁强化', echo: '协同回响', tank: '近战前排', support: '伤害辅助', healer: '修复友军',
@@ -241,6 +241,8 @@ function updateSelection() {
       : stats.kind === 'echo' ? [`作用半径 ${Math.round(stats.range)}`, `每四次命中回响 ${stats.echoDamage} 伤害`]
       : stats.kind === 'aura' ? [`作用半径 ${Math.round(stats.range)}`, '附近攻击宝石伤害与射程光环']
       : [`作用半径 ${stats.range}`, stats.kind === 'barrier' ? `减速 ${Math.round((1 - stats.slow) * 100)}%` : `强化 ${Math.round(stats.boost * 100)}%`];
+  if(stats.kind==='magic')details.push(`灼烧 ${Math.round(stats.burnDps)}/秒 · ${stats.burnDuration}秒（刷新不叠加）`);
+  if(stats.kind==='multi')details.push(`同时独立攻击 ${stats.targetCount} 个目标`);
   if (game.state.mode === 'legion') details.push(`生命 ${Math.ceil(tower.hp || 0)} / ${Math.ceil(tower.maxHp || stats.maxHp)}`, `移速 ${stats.speed}`);
   element('tower-stats').replaceChildren(...details.map(detail => {
     const span = document.createElement('span');
@@ -708,6 +710,7 @@ function bindControls() {
   element('speed-button').addEventListener('click', () => { game.setSpeed(game.state.speed % 3 + 1); updateUI(); });
   element('mute-button').addEventListener('click', () => { void audio.unlock(); audio.setMuted(!audio.muted); updateUI(); });
   element('menu-button').addEventListener('click', returnToMenu);
+  element('home-button').addEventListener('click', returnToMenu);
   element('choose-mode-button').addEventListener('click', returnToMenu);
   for (const mode of modeNames) element(`mode-${mode}-button`).addEventListener('click', () => selectMode(mode));
   element('mission-button').addEventListener('click', () => {
@@ -842,14 +845,16 @@ function bindControls() {
 
 function renderShop() {
   const shop = element('shop-list');
+  shop.setAttribute('aria-label',`${buildItems.length}种可查看的防御单位`);
     shop.replaceChildren();
     for (const tower of buildItems) {
       const card = document.createElement('button');
       card.type = 'button'; card.className = 'tower-card'; card.dataset.code = tower.code;
       card.setAttribute('aria-pressed', 'false');
       card.title = tower.description;
-      const image = document.createElement(tower.code === 'WALL' ? 'span' : 'img');
-      if (tower.code === 'WALL') { image.className = 'wall-icon'; image.textContent = '▥'; image.setAttribute('aria-hidden', 'true'); }
+      const image = document.createElement(tower.code === 'WALL'||['T13','T14'].includes(tower.code) ? 'span' : 'img');
+      if(['T13','T14'].includes(tower.code)){image.className='gem-portrait';image.style.backgroundPosition=tower.code==='T13'?'66.6667% 0%':'33.3333% 50%';image.style.float='none';image.setAttribute('aria-hidden','true');}
+      else if (tower.code === 'WALL') { image.className = 'wall-icon'; image.textContent = '▥'; image.setAttribute('aria-hidden', 'true'); }
       else { /** @type {HTMLImageElement} */ (image).src = artworkCache.units.get(tower.assetCode || tower.code)?.masterImage.src || ''; /** @type {HTMLImageElement} */ (image).alt = ''; }
       const name = document.createElement('strong'); name.textContent = tower.name;
       const price = document.createElement('span'); price.className = 'price'; price.textContent = `${tower.price} 金币`;

@@ -124,3 +124,13 @@ test('persistent hero skill buttons expose cooldown, mana and level locks, focus
   h.alive=true;state.phase='victory';ui.updateUI();assert.equal(node('hero-q-button').disabled,true);node('hero-q-button').events.click();assert.equal(ui.armedSkill,null);
   go('legion');assert.equal(node('hero-hud').hidden,true);assert.equal(node('build-dock').classes.has('hero-build-dock'),false);go('gem');assert.equal(node('hero-hud').hidden,true);
 });
+
+test('home and menu preserve the exact seven sessions, funds and structures on return',async()=>{
+ const {ui,go,click}=await harness();
+ for(const mode of ['loop','defense','escort','maze','gem','hero','legion']){
+  go(mode);const game=ui.game,state=game.state;const gold=state.gold,wave=state.wave;
+  click('home-button');assert.equal(ui.view,'menu');assert.equal(state.paused,true);
+  click('start-button');assert.equal(ui.game,game);assert.equal(ui.game.state,state);assert.equal(state.gold,gold);assert.equal(state.wave,wave);assert.equal(state.paused,false);
+  click('menu-button');click('start-button');assert.equal(ui.game,game);assert.equal(state.gold,gold);
+ }
+});

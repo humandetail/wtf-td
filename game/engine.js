@@ -1,3 +1,4 @@
+import {ignite,tickBurn} from './tower-effects.js';
 import {TOWERS, ENEMIES, MAX_LEVEL, towerStats, effectiveTowerStats} from './catalog.js';
 import {TECHNOLOGIES, deploymentStats, towerUnlockLevel} from './research.js';
 import {placementStatus, createRoadPosition, advanceOnRoad} from './geometry.js';
@@ -82,6 +83,7 @@ function createBaseGame(options={}) {
    tower.angle=Math.atan2(target.y-tower.y,target.x-tower.x);tower.cooldown=stats.interval;
    events.push({type:'shot',x:tower.x,y:tower.y,tx:target.x,ty:target.y,code:tower.code,color:stats.color});
    let targets=[target];
+   if(stats.kind==='multi'){targets=[target,...state.enemies.filter(e=>e!==target&&e.hp>0&&distance(tower,e)<=stats.range).sort((a,b)=>distance(tower,a)-distance(tower,b))].slice(0,stats.targetCount);for(const e of targets)if(e!==target)events.push({type:'shot',x:tower.x,y:tower.y,tx:e.x,ty:e.y,code:tower.code,color:stats.color});}
    if(['splash','frost'].includes(stats.kind))targets=state.enemies.filter(e=>e.hp>0&&distance(target,e)<=stats.splash);
    if(stats.kind==='chain'){
     while(targets.length<4){
@@ -92,6 +94,7 @@ function createBaseGame(options={}) {
     }
    }
    targets.forEach((enemy,index)=>{
+    if(stats.kind==='magic')ignite(enemy,stats);
     damage(enemy,stats.damage*(stats.kind==='chain'?Math.pow(.8,index):1),stats.color);
     if(['slow','frost','splash'].includes(stats.kind)&&tower.code!=='T03'){
      const factor=stats.kind==='frost'?Math.max(.25,stats.slow-.15):stats.slow;
@@ -129,6 +132,7 @@ function createBaseGame(options={}) {
   let convoyDamage=0;
   hitNoticeIn-=dt;
   for(const enemy of state.enemies){
+   tickBurn(enemy,dt,amount=>damage(enemy,amount,'#d59bff'));if(enemy.hp<=0)continue;
    let factor=enemy.slowUntil>state.elapsed?enemy.slowFactor:1;
    for(const tower of state.towers){
     if(escort&&(tower.readyAt??0)>state.elapsed)continue;

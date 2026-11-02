@@ -217,6 +217,7 @@ export function createRenderer(canvas, artwork) {
     if(special.actor(entity,frameState))return;
     if(entity.code==='WALL'){drawWall(entity.x,entity.y);return;}
     if(entity.convoy){drawConvoy(entity);return;}
+    if(entity.burnRemaining>0)ring(entity.x,entity.y+3,23,'#d59bff',.8,2);
     const unit = artwork.units.get(entity.assetCode||entity.code);
     const size = frameState.mode==='legion'?96:tower ? 128 : entity.boss ? 184 : 126;
     ctx.fillStyle = tower ? '#18271b3d' : '#18271b66';
@@ -378,7 +379,7 @@ export function createRenderer(canvas, artwork) {
       ctx.save();
       ctx.globalAlpha = .52;
       if(placement.code==='WALL')drawWall(placement.x,placement.y);
-      if(mode==='gem')special.actor({...placement,level:placement.level||1},state);
+      if(mode==='gem'||['T13','T14'].includes(placement.code))special.actor({...placement,level:placement.level||1},state);
       if (unit?.masterImage) ctx.drawImage(unit.masterImage, placement.x - 64, placement.y - 80, 128, 128);
       ctx.globalAlpha = 1;
       ctx.fillStyle = placement.ok ? '#71cf8b35' : '#e7786635';

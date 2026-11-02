@@ -12,9 +12,11 @@ const towerRows = [
  ['T09','雷达哨站','tech-radar-outpost',160,0,1,235,'radar','#c6b7ff','提升范围内攻击塔射程与伤害，同类光环不叠加。'],
  ['T10','维修机械臂','tech-repair-arm',165,0,1,225,'overclock','#96f1b8','维护并超频附近武器，提升攻速；无需建筑生命。'],
  ['T11','无人机补给站','tech-drone-supply',150,0,8,0,'supply','#ffe494','每 8 秒补给金币；升级增加收益。'],
+ ['T13','符焰法塔','arcane-rune-tower',165,18,1.2,230,'magic','#d59bff','法术弹附加3秒符焰灼烧，同类灼烧刷新持续时间、不叠加。'],
+ ['T14','三联追击塔','triple-shot-tower',185,16,.95,215,'multi','#f6d085','同时向3个独立目标发射弹体；3级攻击4个、5级攻击5个，不是溅射或连锁。'],
  ['T12','工程路障','tech-engineering-roadblock',105,0,1,180,'barrier','#edbb8a','路旁干扰场令附近敌人减速，不封堵环路。'],
 ];
-export const TOWERS = towerRows.map(([code,name,assetId,price,damage,interval,range,kind,color,description]) => ({code,name,assetId,price:Number(price),damage:Number(damage),interval:Number(interval),range:Number(range),kind,color,description}));
+export const TOWERS = towerRows.map(([code,name,assetId,price,damage,interval,range,kind,color,description]) => ({code,name,assetId,price:Number(price),damage:Number(damage),interval:Number(interval),range:Number(range),kind,color,description,...(code==='T13'?{assetCode:'T05'}:code==='T14'?{assetCode:'T01'}:{})}));
 /** @type {[string,string,string,number,number,number,string][]} */
 const enemyRows = [
  ['X01','御剑纸符小妖','fantasy-paper-sword-goblin',58,86,8,'#f6e8bd'],
@@ -34,7 +36,7 @@ export const ENEMIES = enemyRows.map(([code,name,assetId,hp,speed,reward,color])
 export function towerStats(tower) {
  const base=TOWERS.find(item=>item.code===tower.code);
  const level=tower.level || 1;
- return {...base,damage:base.damage*Math.pow(1.55,level-1),interval:base.kind==='supply'?8:base.interval/Math.pow(1.08,level-1),range:base.range+12*(level-1),upgradeCost:level>=MAX_LEVEL?0:Math.round(base.price*(.7+.45*level)),sellValue:Math.floor((tower.spent ?? base.price)*.7),income:12+8*(level-1),slow:Math.max(.3,.65-.06*(level-1)),duration:1.6+.25*(level-1),splash:75+8*(level-1),boost:.18+.06*(level-1)};
+ return {...base,burnDps:12*Math.pow(1.55,level-1),burnDuration:3,targetCount:3+Math.floor((level-1)/2),damage:base.damage*Math.pow(1.55,level-1),interval:base.kind==='supply'?8:base.interval/Math.pow(1.08,level-1),range:base.range+12*(level-1),upgradeCost:level>=MAX_LEVEL?0:Math.round(base.price*(.7+.45*level)),sellValue:Math.floor((tower.spent ?? base.price)*.7),income:12+8*(level-1),slow:Math.max(.3,.65-.06*(level-1)),duration:1.6+.25*(level-1),splash:75+8*(level-1),boost:.18+.06*(level-1)};
 }
 
 // Same effective values drive combat and the selected tower UI.
@@ -48,5 +50,5 @@ export function effectiveTowerStats(tower, towers) {
   if(aura.kind==='radar')radar=Math.max(radar,aura.boost);
   if(aura.kind==='overclock')overclock=Math.max(overclock,aura.boost);
  }
- return {...stats,damage:stats.damage*(1+radar),range:stats.range*(1+radar),interval:stats.interval/(1+overclock)};
+ return {...stats,damage:stats.damage*(1+radar),burnDps:stats.burnDps*(1+radar),range:stats.range*(1+radar),interval:stats.interval/(1+overclock)};
 }

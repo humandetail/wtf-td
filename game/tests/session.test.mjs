@@ -79,7 +79,7 @@ test('repeated unaffordable commands preserve money and the next successful towe
 
 test('tower IDs select the correct unit through upgrades, sale, rebuilding and restart', () => {
  const game=createGame({startingGold:10000,initialDelay:1000});game.start();unlockAll(game);
- assert.equal(TOWERS.length,12);assert.equal(ENEMIES.length,12);
+ assert.equal(TOWERS.length,14);assert.equal(ENEMIES.length,12);
  const first=game.build(190,140,'T01').towerId;
  const second=game.build(390,140,'T06').towerId;
  const initialDamage=towerStats(game.state.towers[0]).damage;

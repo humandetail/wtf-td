@@ -79,6 +79,7 @@ export function createSpecialPainter(ctx,artwork,{text,ring,traceRoute,reduceMot
   return [];
  }
  function actor(entity,state){
+  if(['T13','T14'].includes(entity.code)){cell(artwork.gemAtlas,entity.code==='T13'?2:5,4,3,entity.x,entity.y,128);if(entity.code==='T14'){ctx.fillStyle='#ffe29b';for(const dx of [-23,0,23]){ctx.beginPath();ctx.arc(entity.x+dx,entity.y-72-Math.abs(dx)*.3,5,0,Math.PI*2);ctx.fill();}}else ring(entity.x,entity.y+2,30,'#d59bff',.8,2);text(`${entity.code==='T13'?'符焰':'三联'} · Lv.${entity.level||1}`,entity.x,entity.y+27,entity.code==='T13'?'#d59bff':'#f6d085',12);return true;}
   if(state.mode==='gem'&&/^[GF]\d\d$/.test(entity.code)){
    const stats=gemStats(entity,state.towers),index=GEM_TOWERS.findIndex(t=>t.code===entity.code);
    ring(entity.x,entity.y+3,30,stats.color,.55,1.5);
