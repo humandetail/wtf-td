@@ -5,6 +5,8 @@ import {resolve, extname, sep} from 'node:path';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const port = Number(process.env.PORT || 4173);
+const host = process.env.HOST || '127.0.0.1';
+if(!['127.0.0.1','0.0.0.0'].includes(host))throw new Error('HOST 必须为127.0.0.1或0.0.0.0');
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT 必须为 1–65535 的整数');
 const mime = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.svg':'image/svg+xml','.ico':'image/x-icon','.txt':'text/plain; charset=utf-8','.md':'text/plain; charset=utf-8'};
 const roots = await Promise.all(['game', 'outputs'].map(name => realpath(resolve(root, name))));
@@ -37,4 +39,4 @@ const server = createServer(async (request, response) => {
   }
 });
 server.on('error', error => { console.error(`启动失败：${error.message}`); process.exitCode = 1; });
-server.listen(port, '127.0.0.1', () => console.log(`环界已启动：http://127.0.0.1:${port}/game/\n按 Ctrl+C 停止服务。`));
+server.listen(port, host, () => console.log(`环界已启动：http://127.0.0.1:${port}/game/\n${host==='0.0.0.0'?'手机可通过本机局域网IP访问相同端口。\n':''}按 Ctrl+C 停止服务。`));

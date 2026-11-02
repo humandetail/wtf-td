@@ -1,3 +1,4 @@
+import { createTouchControls } from './touch-controls.js';
 import { createGame } from './engine.js';
 import { TOWERS, effectiveTowerStats } from './catalog.js';
 import { TECHNOLOGIES, deploymentStats, towerUnlockLevel } from './research.js';
@@ -35,7 +36,8 @@ let legionView = 'player';
 let pendingGem = null;
 let armedSkill = null;
 const moveKeys = new Set();
-function stopHero() { moveKeys.clear(); if (game.state.mode === 'hero') game.setMoveVector(0, 0); }
+let touchControls = null;
+function stopHero() { touchControls?.stop(); moveKeys.clear(); if (game.state.mode === 'hero') game.setMoveVector(0, 0); }
 function editable() { return game.state.phase === 'playing' && !game.state.paused && (!game.state.turnPhase || game.state.turnPhase === 'planning'); }
 const roles = {
   wall: '改变行军路线',
@@ -59,6 +61,7 @@ let selectedSignature = '';
 let drawerTrigger = canvas;
 
 function setBuildDock(open) {
+  if(open)touchControls?.clear();
   const dock = element('build-dock');
   const restoreFocus = !open && dock.contains(document.activeElement);
   if (open) { stopHero(); setDrawer(); }
@@ -72,6 +75,7 @@ function setBuildDock(open) {
 }
 
 function setDrawer(mode = null, trigger = canvas) {
+  if(mode)touchControls?.clear();
   if (mode) { stopHero(); setBuildDock(false); }
   const drawer = element('command-drawer');
   const restoreFocus = drawer.contains(document.activeElement);
@@ -102,6 +106,7 @@ function fitBattlefield() {
 }
 
 function showView(name) {
+  touchControls?.clear();
   if (name !== 'game') { stopHero(); setDrawer(); }
   if (name === 'menu') updateMenu();
   view = name;
@@ -146,7 +151,7 @@ function refreshPlacement() {
   const eligibility = pending ? game.canBuildType(pending.code) : null;
   const message = moving ? `搬迁 ${TOWERS.find(item => item.code === moving.code).name} · 25 金币 · ${placement?.message || '选择新位置，保留等级，停机 3 秒；右键或 Esc 取消'}`
     : pending ? `${pending.name} · ${pending.price} 金币 · ${placement ? placement.message : !eligibility.ok ? eligibility.message : '移动到绿色区域放置，可连续建造'}`
-      : '先点顶部“建造”选择工事，再在绿色区域放置。';
+      : '点“建造”选择工事，再在绿色区域放置。';
   if (pendingGem && pointerPosition) {
     const gem = pendingGem.kind === 'draft' ? game.state.draft?.candidates[pendingGem.id] : game.state.inventory.find(t=>t.id===pendingGem.id);
     if (gem) placement = { ...pointerPosition, code: gem.code, level:gem.level, ...(game.state.towers.length >= technologies().deployment.levels[game.state.tech.deployment].capacity ? {ok:false,message:'部署容量已满'} : gemPlacementStatus(pointerPosition.x,pointerPosition.y,game.state.towers)) };
@@ -161,6 +166,7 @@ function refreshPlacement() {
 }
 
 function cancelBuild() {
+  touchControls?.clear();
   armedCode = null;
   pendingGem = null;
   armedSkill = null;
@@ -189,7 +195,7 @@ function activatePoint(point) {
   } else {
     selectedTowerId = renderer.hitTest(point.x, point.y, [...game.state.towers, ...game.state.walls]);
     if (selectedTowerId) setDrawer('tower', canvas);
-    else { setDrawer(); notice('先点顶部“建造”选择工事，再在绿色区域放置。'); }
+    else { setDrawer(); notice('点“建造”选择工事，再在绿色区域放置。'); }
     updateUI();
   }
 }
@@ -206,7 +212,7 @@ function updateSelection() {
     const pending = buildItems.find(item => item.code === armedCode);
     element('selection-hint').textContent = pending
       ? `已选${pending.name}（${pending.price} 金币），在绿色区域任意放置。右键或 Esc 取消建造。`
-      : '先点顶部“建造”选择工事，再在绿色区域放置；点击已有工事查看属性。';
+      : '点“建造”选择工事，再在绿色区域放置；点击已有工事查看属性。';
     return;
   }
   const wall = tower.code === 'WALL';
@@ -455,7 +461,7 @@ function armHeroSkill(key) {
 }
 function updateModeHud() {
   const state=game.state;
-  element('hero-hud').hidden=state.mode!=='hero'; element('legion-hud').hidden=state.mode!=='legion';
+  element('hero-move-pad').hidden=state.mode!=='hero'; element('hero-hud').hidden=state.mode!=='hero'; element('legion-hud').hidden=state.mode!=='legion';
   if(state.mode==='hero') { const h=state.hero; element('hero-status').textContent=`${h.alive ? `英雄 Lv.${h.level} · HP ${Math.ceil(h.hp)}/${h.maxHp}` : `复活 ${Math.ceil(h.respawnIn)}秒`} · MP ${Math.floor(h.mana)}/${h.maxMana} · XP ${h.xp}${armedSkill?' · 待施放 '+armedSkill:''}`;
     for (const [key, skill] of Object.entries(HERO_SKILLS)) {
       const status = heroSkillStatus(key), button = /** @type {HTMLButtonElement} */ (element(`hero-${key.toLowerCase()}-button`));
@@ -516,7 +522,7 @@ function updateUI() {
   element('kill-value').textContent = String(state.kills);
   const defense = state.mode !== 'loop';
   element('current-mode').textContent = MODE_DETAILS[state.mode].name;
-  canvas.setAttribute('aria-label', `${MODE_DETAILS[state.mode].name}战场。先点顶部“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。`);
+  canvas.setAttribute('aria-label', `${MODE_DETAILS[state.mode].name}战场。点“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。`);
   element('pressure-label').textContent = state.mode === 'escort' ? '载具耐久' : state.mode === 'maze' ? '出口耐久' : defense ? '核心耐久' : '环路积怪';
   element('loop-pressure-value').hidden = defense;
   element('core-pressure-value').hidden = !defense;
@@ -605,6 +611,7 @@ function clearTransient() {
   noticeUntil = 0;
   setBuildDock(false);
   setDrawer();
+  touchControls?.reset();
   renderer.reset();
 }
 
@@ -651,7 +658,7 @@ function enterGame(restart = false) {
   else if (game.state.paused) game.togglePause();
   if (freshSession) setBuildDock(false);
   showView('game');
-  if (freshSession) notice(['gem', 'hero', 'legion'].includes(game.state.mode) ? ({gem:'打开“任务”鉴定五选一、部署宝石；准备完毕主动开战。',hero:'WASD移动，右键移动或指定敌人；Q/E/R后点击目标，“任务”查看装备和营地奖励。',legion:'单人对战AI：建造守军，“任务”管理经济派兵并主动开战；顶部侦察切换战场。'})[game.state.mode] : `点击顶部“建造”选择工事；“科技”打开研究。${['escort', 'maze'].includes(game.state.mode) ? '“任务”查看目标与主动指令。' : ''}`, 5);
+  if (freshSession) notice(['gem', 'hero', 'legion'].includes(game.state.mode) ? ({gem:'打开“任务”鉴定五选一、部署宝石；准备完毕主动开战。',hero:'WASD移动，右键移动或指定敌人；Q/E/R后点击目标，“任务”查看装备和营地奖励。',legion:'单人对战AI：建造守军，“任务”管理经济派兵并主动开战；侦察按钮切换战场。'})[game.state.mode] : `点击“建造”选择工事；“科技”打开研究。${['escort', 'maze'].includes(game.state.mode) ? '“任务”查看目标与主动指令。' : ''}`, 5);
   lastPhase = game.state.phase;
   updateUI();
   canvas.focus({ preventScroll: true });
@@ -690,7 +697,8 @@ function bindControls() {
     void audio.unlock();
     const result = game.continueEndless ? game.continueEndless() : { ok: false, message: '本模式没有无尽挑战。' };
     if (!result.ok) { resultMessage(result); return; }
-    renderer.reset();
+    touchControls?.reset();
+  renderer.reset();
     lastPhase = 'playing';
     showView('game');
     resultMessage(result);
@@ -767,7 +775,8 @@ function bindControls() {
     Object.assign(keyboardPointer, pointerPosition);
     refreshPlacement();
   });
-  canvas.addEventListener('pointerleave', () => {
+  canvas.addEventListener('pointerleave', event => {
+    if(event.pointerType==='touch')return;
     pointerPosition = null;
     refreshPlacement();
   });
@@ -860,6 +869,23 @@ async function boot() {
     renderShop();
     bindControls();
     fitBattlefield();
+    touchControls=createTouchControls(canvas,{
+      canInteract:()=>view==='game'&&game.state.phase==='playing'&&!game.state.paused&&element('command-drawer').hidden&&element('build-dock').hidden,
+      hasAction:()=>!!armedCode||!!pendingGem||!!armedSkill||relocatingId!==null,
+      isHero:()=>game.state.mode==='hero',
+      onMove:(x,y)=>{if(game.state.mode==='hero')game.setMoveVector(x,y);},
+      onCancel:cancelBuild,
+      onPreview:point=>{pointerPosition=point;refreshPlacement();return placement||{ok:false,message:'先选择操作'};},
+      onActivate:point=>{
+        void audio.unlock();
+        if(game.state.mode==='hero'&&!armedCode&&!pendingGem&&!armedSkill&&relocatingId===null){
+          const id=renderer.hitTest(point.x,point.y,game.state.enemies);
+          const tower=renderer.hitTest(point.x,point.y,game.state.towers);
+          if(tower!==null)activatePoint(point);
+          else resultMessage(id!==null?game.targetEnemy(id):game.moveHeroTo(point.x,point.y));
+        }else activatePoint(point);
+      }
+    });
     element('loading-screen').hidden = true;
     showView('menu');
     updateUI();
