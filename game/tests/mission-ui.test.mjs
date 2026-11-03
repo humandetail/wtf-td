@@ -6,11 +6,11 @@ import fs from 'node:fs';
 
 test('actual controls preserve four distinct sessions, drive and repair, relocate, build and sell walls, and reopen reports', async () => {
   const base = fileURLToPath(new URL('../', import.meta.url));
-  const imports = Object.assign({}, ...await Promise.all(['engine', 'catalog', 'research', 'geometry', 'defense-geometry', 'modes'].map(name => import(pathToFileURL(base + name + '.js')))));
+  const imports = Object.assign({}, ...await Promise.all(['tower-upgrades','engine', 'catalog', 'research', 'geometry', 'defense-geometry', 'modes'].map(name => import(pathToFileURL(base + name + '.js')))));
   const html = fs.readFileSync(base + 'index.html', 'utf8');
   const nodes = new Map();
   class Element {
-    constructor(id = '') { this.id = id; this.hidden = true; this.attrs = {}; this.events = {}; this.style = {}; this.dataset = {}; this.classList = { toggle() {} }; this.isConnected = true; this.tagName = 'BUTTON'; this.textContent = ''; }
+    constructor(id = '') { this.id = id; this.hidden = true; this.attrs = {}; this.events = {}; this.style = { setProperty() {} }; this.dataset = {}; this.classList = { toggle() {} }; this.isConnected = true; this.tagName = 'BUTTON'; this.textContent = ''; }
     setAttribute(k, v) { this.attrs[k] = v; } getAttribute(k) { return this.attrs[k]; }
     addEventListener(k, fn) { this.events[k] = fn; } querySelectorAll() { return []; } contains() { return false; } closest() { return null; }
     focus() { document.activeElement = this; } replaceChildren() {} click() { if (!this.disabled) this.events.click?.({ target: this }); }
@@ -55,7 +55,7 @@ test('actual controls preserve four distinct sessions, drive and repair, relocat
   const code = imports.TOWERS[0].code;
   ui.game.state.gold = 1000;
   const point = legal(code); ui.armBuild(code); ui.activatePoint(point); escape(); ui.activatePoint(point);
-  ui.game.state.tech.reinforcement = 1; ui.updateUI(); click('upgrade-button');
+  ui.game.state.tech.reinforcement = 1; ui.updateUI(); click('upgrade-button');ui.game.tick(5);ui.updateUI();
   const tower = ui.game.state.towers[0], id = tower.id, level = tower.level;
   assert.equal(level, 2);
   click('relocate-button'); assert.equal(ui.relocatingId, id);

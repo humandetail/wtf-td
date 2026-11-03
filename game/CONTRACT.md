@@ -105,3 +105,5 @@ createTouchControls(canvas,callbacks) previews touch actions, requires separate 
 The static server defaults to loopback. Explicit HOST=0.0.0.0 opts into LAN hosting, e.g. PORT=4174, exposing only the existing game/outputs allowlist. Real device/browser layout, gestures and audio acceptance remain assigned to the user.
 
 Home and menu controls both pause and return through returnToMenu without navigation. T13 magic burns for 3 seconds (refresh, strongest non-stacking); T14 attacks 3/4/5 independent targets at levels 1/3/5. Deployment levels 1/2 unlock T13/T14 in loop, defense, escort, maze and hero. Gem/Legion keep their independent catalogues.
+
+耗时升级：每座防御单位独立持有 `upgrading:{duration,remaining}`；支付一次费用后才创建任务，等级与战斗属性在任务完成时才改变。重复请求必须失败且不得重复扣款。所有任务随本局暂停／倍速／结算／重开规则执行；军团部署阶段也推进守军升级，研究保持原规则。UI 研究／升塔按钮内显示填充进度、百分比及剩余秒数，旧 research-progress／research-status DOM ID 保留但隐藏以兼容现有界面契约。

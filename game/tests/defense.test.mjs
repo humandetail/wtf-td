@@ -71,7 +71,7 @@ test('preparation, pause, speed, research and endless preserve this mode while r
  game.launchWave();game.tick(1);assert.equal(game.state.phase,'victory');assert.equal(game.state.coreHealth,19);
  const frozen=game.state.research.remaining, gold=game.state.gold;
  game.tick(20);assert.equal(game.state.research.remaining,frozen);assert.equal(game.cancelResearch().ok,false);
- assert.equal(game.continueEndless().ok,true);assert.equal(game.state.coreHealth,19);assert.equal(game.state.leaks,1);assert.equal(game.state.gold,gold);assert.equal(game.state.research.remaining,frozen);assert.equal(game.state.nextWaveIn,12);assert.equal(game.state.towers[0].level,2);
+ assert.equal(game.continueEndless().ok,true);assert.equal(game.state.coreHealth,19);assert.equal(game.state.leaks,1);assert.equal(game.state.gold,gold);assert.equal(game.state.research.remaining,frozen);assert.equal(game.state.nextWaveIn,12);assert.equal(game.state.towers[0].level,1);assert.ok(game.state.towers[0].upgrading);
  game.tick(.1);assert.ok(game.state.research.remaining<frozen);
  game.restart();assert.equal(game.state.mode,'defense');assert.equal(game.state.coreHealth,20);assert.equal(game.state.maxCoreHealth,20);assert.equal(game.state.leaks,0);assert.equal(game.state.waveActive,false);assert.equal(game.state.attackLane,0);assert.equal(game.state.endless,false);assert.equal(game.state.nextWaveIn,18);assert.equal(game.state.gold,1000);assert.equal(game.state.speed,1);assert.deepEqual(game.state.tech,{deployment:0,reinforcement:0});assert.equal(game.state.research,null);assert.deepEqual(game.state.towers,[]);
  assert.equal(game.build(500,280,'T01').towerId,1);

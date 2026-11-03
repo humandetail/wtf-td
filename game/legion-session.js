@@ -1,3 +1,4 @@
+import {beginTowerUpgrade,advanceTowerUpgrades} from './tower-upgrades.js';
 import {LEGION_FIGHTERS,LEGION_MERCENARIES,LEGION_TECHNOLOGIES,LEGION_RULES,legionStats} from './legion-catalog.js';
 import {LEGION_KING,legionPlacement,moveLegionUnit} from './legion-geometry.js';
 import {createResearchControls} from './research-controls.js';
@@ -29,11 +30,13 @@ export function createLegionGame(options={}){
    const base=LEGION_FIGHTERS.find(f=>f.code===code);const fighter={...legionStats({code}),id:nextId++,code,assetCode:base.assetCode,x,y,homeX:x,homeY:y,level:1,spent:base.price,cooldown:0,radius:15};
    side.gold-=base.price;side.fighters.push(fighter);ledger(side,'build',-base.price,0,{code,id:fighter.id});return result(true,'守军已部署',{towerId:fighter.id,fighterId:fighter.id});}
   function canUpgrade(unitId){const f=side.fighters.find(f=>f.id===unitId);if(!planning()||!f)return result(false,'当前不能强化');
+   if(f.upgrading)return result(false,'升级进行中');
    if(f.level>=LEGION_TECHNOLOGIES.reinforcement.levels[side.tech.reinforcement].maxTowerLevel)return result(false,'需要强化科技');
    return side.gold>=legionStats(f).upgradeCost?result(true,'可以强化'):result(false,'金币不足');}
   function upgrade(unitId){const status=canUpgrade(unitId);if(!status.ok)return status;const f=side.fighters.find(f=>f.id===unitId),cost=legionStats(f).upgradeCost;
-   side.gold-=cost;f.spent+=cost;f.level++;Object.assign(f,legionStats(f));ledger(side,'upgrade',-cost,0,{id:unitId});return result(true,'守军已强化');}
+   const started=beginTowerUpgrade(side,f,cost);ledger(side,'upgrade',-cost,0,{id:unitId});return started;}
   function sell(unitId){const index=side.fighters.findIndex(f=>f.id===unitId);if(!planning()||index<0)return result(false,'当前不能出售');
+   if(side.fighters[index].upgrading)return result(false,'升级期间不能出售');
    const gold=legionStats(side.fighters[index]).sellValue;side.gold+=gold;side.fighters.splice(index,1);ledger(side,'sell',gold);return result(true,'已出售');}
   function buyWorker(){if(!planning()||side.gold<LEGION_RULES.workerCost||side.workers>=LEGION_RULES.maxWorkers)return result(false,`工人需${LEGION_RULES.workerCost}金币，最多${LEGION_RULES.maxWorkers}名`);side.gold-=LEGION_RULES.workerCost;side.workers++;ledger(side,'worker',-LEGION_RULES.workerCost);return result(true,'工人已增加');}
   function queueMercenary(code){const merc=LEGION_MERCENARIES.find(m=>m.code===code);if(!planning()||!merc||side.orders.length>=LEGION_RULES.maxOrders||side.mythium<merc.cost)return result(false,'军需不足或订单已满');
@@ -130,7 +133,9 @@ export function createLegionGame(options={}){
   }
   state.reports.push(report);state.battleLog.push(report);state.turnPhase='planning';aiPlan();emit({type:'round-end',message:`第${state.wave}回合结算`,report});
  }
+ function advanceUpgrades(dt){for(const side of Object.values(state.sides))advanceTowerUpgrades(side.fighters,dt,f=>{const ratio=f.hp/f.maxHp;Object.assign(f,legionStats(f));f.hp=f.maxHp*ratio;emit({type:'upgrade',side:side.id,x:f.x,y:f.y,code:f.code});});}
  function step(dt){
+  advanceUpgrades(dt);
   state.elapsed+=dt;for(const id of ['player','ai'])controls[id].advanceResearch(dt);
   const hits=[];for(const side of Object.values(state.sides))battleSide(side,dt,hits);
   // Resolve the entire frame only after both battlefields have produced attacks.
@@ -146,7 +151,7 @@ export function createLegionGame(options={}){
   if(deadPlayer||deadAI){state.phase=deadPlayer&&deadAI?'draw':deadPlayer?'defeat':'victory';emit({type:state.phase,message:state.phase==='draw'?'双方国王同时倒下':deadAI?'击败AI国王':'国王失守'});return;}
   if(Object.values(state.sides).every(s=>s.invaders.length===0&&s.pendingInvaders.length===0))settle();
  }
- function tick(dt){if(state.phase!=='playing'||state.paused||state.turnPhase!=='combat'||!Number.isFinite(dt)||dt<=0)return;
+ function tick(dt){if(state.phase==='playing'&&!state.paused&&state.turnPhase==='planning'&&Number.isFinite(dt)&&dt>0){advanceUpgrades(dt*state.speed);return;}if(state.phase!=='playing'||state.paused||state.turnPhase!=='combat'||!Number.isFinite(dt)||dt<=0)return;
   accumulator+=dt*state.speed;while(accumulator>=.05&&state.phase==='playing'&&state.turnPhase==='combat'){step(.05);accumulator-=.05;}if(state.turnPhase!=='combat'||state.phase!=='playing')accumulator=0;
  }
  function reset(){nextId=1;accumulator=0;state.sides.player=createSide('player');state.sides.ai=createSide('ai');controls.player=commandsFor('player');controls.ai=commandsFor('ai');state.phase='menu';state.turnPhase='planning';state.paused=false;state.speed=1;state.wave=0;state.elapsed=0;state.kills=0;state.reports=[];state.battleLog=[];state.viewSide='player';events.length=0;}

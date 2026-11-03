@@ -27,12 +27,12 @@ test('reinforcement completion permits paid manual upgrades without upgrading ex
  game.tick(9.9);assert.equal(game.upgrade(towerId).ok,false);
  game.tick(.1);assert.equal(game.state.towers[0].level,1);
  assert.equal(game.canUpgrade(towerId).ok,true);assert.equal(game.upgrade(towerId).ok,true);
- assert.equal(game.state.towers[0].level,2);assert.equal(game.upgrade(towerId).ok,false);
+ assert.equal(game.state.towers[0].level,1);game.tick(5);assert.equal(game.state.towers[0].level,2);assert.equal(game.upgrade(towerId).ok,false);
  for(const [cost,duration] of [[200,15],[350,20],[550,25]]){
   const gold=game.state.gold;
   assert.equal(game.startResearch('reinforcement').ok,true);
   assert.equal(game.state.gold,gold-cost);assert.equal(game.state.research.duration,duration);game.tick(duration);
-  assert.equal(game.upgrade(towerId).ok,true);
+  assert.equal(game.upgrade(towerId).ok,true);game.tick(game.state.towers[0].upgrading.duration);
  }
  assert.equal(game.state.towers[0].level,5);assert.equal(game.canUpgrade(towerId).ok,false);
  assert.equal(game.canResearch('reinforcement').ok,false);

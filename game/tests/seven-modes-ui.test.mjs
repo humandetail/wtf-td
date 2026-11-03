@@ -4,11 +4,11 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 
 async function harness() {
-  const imports = Object.assign({}, ...await Promise.all(['engine','catalog','research','geometry','defense-geometry','modes','gem-catalog','gem-geometry','hero-catalog','legion-catalog'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
+  const imports = Object.assign({}, ...await Promise.all(['tower-upgrades','engine','catalog','research','geometry','defense-geometry','modes','gem-catalog','gem-geometry','hero-catalog','legion-catalog'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
   const nodes=new Map(), events={}; let document;
   const confirmation={answer:true,messages:[]};
   class Element {
-    constructor(tag='button') { this.tagName=tag.toUpperCase();this.hidden=true;this.style={};this.dataset={};this.attrs={};this.events={};this.children=[];this.textContent='';this.classes=new Set();this.classList={toggle:(key,on)=>{if(on)this.classes.add(key);else this.classes.delete(key);}};this.isConnected=true;this.value=''; }
+    constructor(tag='button') { this.tagName=tag.toUpperCase();this.hidden=true;this.style={setProperty(){}};this.dataset={};this.attrs={};this.events={};this.children=[];this.textContent='';this.classes=new Set();this.classList={toggle:(key,on)=>{if(on)this.classes.add(key);else this.classes.delete(key);}};this.isConnected=true;this.value=''; }
     setAttribute(k,v){this.attrs[k]=v;} getAttribute(k){return this.attrs[k];}
     addEventListener(k,fn){this.events[k]=fn;} append(...nodes){this.children.push(...nodes);for(const node of nodes)node.parent=this;}
     replaceChildren(...nodes){this.children=[];this.append(...nodes);} contains(node){return this===node||this.children.some(child=>child.contains(node));}
@@ -161,4 +161,17 @@ test('building succeeds once per selection; rejected placement remains armed in 
   assert.equal(state.towers.length,1,'another map tap must not build '+mode);assert.equal(state.gold,gold);
   ui.armBuild('T01');ui.activatePoint(next);assert.equal(state.towers.length,2);
  }
+});
+
+test('research and tower upgrade buttons contain live progress without a separate research bar',async()=>{
+ const {ui,go,click,node}=await harness();go('loop');
+ assert.ok(ui.game.startResearch('reinforcement').ok);ui.updateUI();
+ assert.match(node('reinforcement-research-button').textContent,/0%.*10.0秒/);
+ assert.equal(node('research-progress').hidden,true);assert.equal(node('research-status').hidden,true);
+ ui.game.tick(5);ui.updateUI();assert.match(node('reinforcement-research-button').textContent,/50%.*5.0秒/);
+ ui.game.tick(5);ui.armBuild('T01');ui.activatePoint({x:190,y:140});click('upgrade-button');
+ assert.match(node('upgrade-button').textContent,/升级中.*0%.*5.0秒/);
+ ui.game.tick(2);ui.updateUI();assert.match(node('upgrade-button').textContent,/升级中.*40%.*3.0秒/);
+ assert.equal(node('upgrade-button').disabled,true);assert.equal(node('sell-button').disabled,true);
+ ui.game.tick(3);ui.updateUI();assert.equal(ui.game.state.towers[0].level,2);assert.doesNotMatch(node('upgrade-button').textContent,/升级中/);
 });

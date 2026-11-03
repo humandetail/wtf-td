@@ -1,3 +1,4 @@
+import {towerUpgradeDuration} from './tower-upgrades.js';
 import { createTouchControls } from './touch-controls.js';
 import { createGame } from './engine.js';
 import { TOWERS, effectiveTowerStats } from './catalog.js';
@@ -206,7 +207,7 @@ function activatePoint(point) {
 
 function updateSelection() {
   const tower = [...game.state.towers, ...game.state.walls, ...(game.state.inventory || [])].find(tower => tower.id === selectedTowerId);
-  const signature = `${game.state.mode}/${JSON.stringify(game.state.inventory || [])}/${selectedTowerId}/${game.state.towers.map(item => `${item.id}:${item.level}:${item.x}:${item.y}:${item.readyAt > game.state.elapsed}`).join(',')}/${game.state.gold}/${armedCode}/${game.state.tech.deployment}:${game.state.tech.reinforcement}/${game.state.phase}/${relocatingId}/${tower?.readyAt > game.state.elapsed}`;
+  const signature = `${game.state.mode}/${JSON.stringify(game.state.inventory || [])}/${selectedTowerId}/${game.state.towers.map(item => `${item.id}:${item.level}:${item.x}:${item.y}:${item.readyAt > game.state.elapsed}`).join(',')}/${game.state.gold}/${armedCode}/${game.state.tech.deployment}:${game.state.tech.reinforcement}/${game.state.phase}/${relocatingId}/${tower?.readyAt > game.state.elapsed}/${tower?.upgrading?.remaining.toFixed(1)}`;
   if (selectedSignature === signature) return;
   selectedSignature = signature;
   element('selected-slot-label').textContent = armedCode ? '建造模式' : tower ? '已选防御单位' : '防线指挥';
@@ -224,13 +225,13 @@ function updateSelection() {
   element('gem-selection-actions').hidden = true;
   const relocate = /** @type {HTMLButtonElement} */ (element('relocate-button'));
   relocate.hidden = wall || game.state.mode !== 'escort';
-  relocate.disabled = game.state.phase !== 'playing' || game.state.gold < 25 || tower.readyAt > game.state.elapsed;
+  relocate.disabled = !!tower.upgrading || game.state.phase !== 'playing' || game.state.gold < 25 || tower.readyAt > game.state.elapsed;
   relocate.textContent = tower.readyAt > game.state.elapsed ? '搬迁停机中 · 3 秒后恢复' : '搬迁 · 25 金币 / 停机 3 秒';
   if (wall) {
     element('tower-title').textContent = WALL.name;
     element('tower-description').textContent = WALL.description;
     element('tower-stats').replaceChildren();
-    /** @type {HTMLButtonElement} */ (element('sell-button')).disabled = game.state.phase !== 'playing' || ['gem','legion'].includes(game.state.mode) && !editable();
+    /** @type {HTMLButtonElement} */ (element('sell-button')).disabled = !!tower.upgrading || game.state.phase !== 'playing' || ['gem','legion'].includes(game.state.mode) && !editable();
     element('sell-button').textContent = '拆除 · 回收 15 金币';
     return;
   }
@@ -255,10 +256,12 @@ function updateSelection() {
   }));
   const upgrade = /** @type {HTMLButtonElement} */ (element('upgrade-button'));
   const eligibility = game.canUpgrade(tower.id);
-  upgrade.textContent = eligibility.ok ? `升级 · ${stats.upgradeCost} 金币` : eligibility.message;
+  upgrade.textContent = tower.upgrading ? `升级中 · ${Math.floor((1-tower.upgrading.remaining/tower.upgrading.duration)*100+1e-6)}% · ${tower.upgrading.remaining.toFixed(1)}秒` : eligibility.ok ? `升级 · ${stats.upgradeCost} 金币 · ${towerUpgradeDuration(tower.level)}秒` : eligibility.message;
+  upgrade.style.setProperty('--progress',`${tower.upgrading ? (1-tower.upgrading.remaining/tower.upgrading.duration)*100 : 0}%`);
+  upgrade.classList.toggle('progress-button',!!tower.upgrading);
   upgrade.title = eligibility.message;
   upgrade.disabled = !eligibility.ok;
-  /** @type {HTMLButtonElement} */ (element('sell-button')).disabled = game.state.phase !== 'playing' || ['gem','legion'].includes(game.state.mode) && !editable();
+  /** @type {HTMLButtonElement} */ (element('sell-button')).disabled = !!tower.upgrading || game.state.phase !== 'playing' || ['gem','legion'].includes(game.state.mode) && !editable();
   element('sell-button').textContent = `出售 · 回收 ${stats.sellValue} 金币`;
 }
 
@@ -279,20 +282,20 @@ function updateResearch() {
       : `已满级 · ${kind === 'deployment' ? `容量 ${capacity}，全部塔种已解锁` : `所有塔可升至 ${technology.levels[level].maxTowerLevel} 级`}`;
     const eligibility = game.canResearch(kind);
     const button = /** @type {HTMLButtonElement} */ (element(`${kind}-research-button`));
-    button.textContent = eligibility.ok ? `研究 Lv.${level + 1}` : eligibility.message;
+    const active = state.research?.kind === kind ? state.research : null;
+    const frozen = state.phase !== 'playing' || state.paused || state.turnPhase === 'planning';
+    button.textContent = active ? `Lv.${active.level} · ${Math.floor((1-active.remaining/active.duration)*100+1e-6)}% · ${frozen ? '已暂停 · ' : ''}${active.remaining.toFixed(1)}秒` : eligibility.ok ? `研究 Lv.${level + 1}` : eligibility.message;
+    button.style.setProperty('--progress',`${active ? (1-active.remaining/active.duration)*100 : 0}%`);
+    button.classList.toggle('progress-button',!!active);
     button.title = eligibility.message;
     button.disabled = !eligibility.ok;
   }
   const research = state.research;
   const progress = /** @type {HTMLProgressElement} */ (element('research-progress'));
-  progress.hidden = !research;
+  progress.hidden = true;
   progress.max = research?.duration || 1;
   progress.value = research ? research.duration - research.remaining : 0;
-  const frozen = state.phase !== 'playing' || state.paused || state.turnPhase === 'planning';
-  const status = research
-    ? `${defs[research.kind].name} Lv.${research.level} · ${frozen ? '已冻结 · ' : ''}剩余 ${research.remaining.toFixed(1)} 秒`
-    : '研究位空闲 · 同时研究一项';
-  if (element('research-status').textContent !== status) element('research-status').textContent = status;
+  element('research-status').hidden = true;
   const cancel = /** @type {HTMLButtonElement} */ (element('cancel-research-button'));
   cancel.hidden = !research;
   cancel.disabled = state.phase !== 'playing';

@@ -20,7 +20,7 @@ test('adjacent free-placed tower bases select and operate on the intended buildi
  assert.equal(upper.ok,true);assert.equal(lower.ok,true);
  const selected=hitTest(190,140,game.state.towers);
  assert.equal(selected,upper.towerId);
- assert.equal(game.upgrade(selected).ok,true);
+ assert.equal(game.upgrade(selected).ok,true);game.tick(5);
  assert.equal(game.state.towers.find(t=>t.id===upper.towerId).level,2);
  assert.equal(game.state.towers.find(t=>t.id===lower.towerId).level,1);
  assert.equal(game.sell(selected).ok,true);
@@ -83,7 +83,7 @@ test('tower IDs select the correct unit through upgrades, sale, rebuilding and r
  const first=game.build(190,140,'T01').towerId;
  const second=game.build(390,140,'T06').towerId;
  const initialDamage=towerStats(game.state.towers[0]).damage;
- for(let i=0;i<4;i++)assert.equal(game.upgrade(first).ok,true);
+ for(const seconds of [5,8,12,16]){assert.equal(game.upgrade(first).ok,true);game.tick(seconds);}
  assert.equal(game.upgrade(first).ok,false);
  assert.equal(game.state.towers[0].level,5);assert.equal(game.state.towers[1].level,1);
  assert.ok(towerStats(game.state.towers[0]).damage>initialDamage);
@@ -91,7 +91,7 @@ test('tower IDs select the correct unit through upgrades, sale, rebuilding and r
  assert.equal(game.sell(first).ok,true);assert.equal(game.state.gold,before+refund);
  const rebuilt=game.build(190,140,'T12').towerId;
  assert.ok(rebuilt>second);assert.equal(game.upgrade(first).ok,false);assert.equal(game.sell(first).ok,false);
- assert.equal(game.upgrade(second).ok,true);assert.equal(game.state.towers.find(t=>t.id===second).level,2);
+ assert.equal(game.upgrade(second).ok,true);game.tick(5);assert.equal(game.state.towers.find(t=>t.id===second).level,2);
  game.launchWave();game.tick(.1);
  assert.equal(game.build(490,140,'T01').towerId,4); // Enemy spawning uses a separate ID sequence.
  game.togglePause();game.setSpeed(3);game.restart();

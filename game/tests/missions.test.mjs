@@ -40,7 +40,7 @@ test('repair requires stopping and earned funds; relocating retains upgrades and
  rejects(game,()=>game.repairConvoy());game.launchWave();game.tick(7);assert.ok(game.state.coreHealth<100);
  game.toggleConvoy();rejects(game,()=>game.repairConvoy());game.toggleConvoy();const health=game.state.coreHealth,gold=game.state.gold;
  assert.equal(game.repairConvoy().ok,true);near(game.state.coreHealth,Math.min(100,health+6));assert.equal(game.state.gold,gold-60);
- assert.equal(game.build(180,570,'T01').ok,true);game.startResearch('reinforcement');game.tick(10);assert.equal(game.upgrade(1).ok,true);
+ assert.equal(game.build(180,570,'T01').ok,true);game.startResearch('reinforcement');game.tick(10);assert.equal(game.upgrade(1).ok,true);game.tick(5);
  const tower=game.state.towers[0],spent=tower.spent,before=game.state.gold;
  rejects(game,()=>game.relocate(1,300,400));assert.equal(game.relocate(1,500,300).ok,true);
  assert.equal(tower.id,1);assert.equal(tower.level,2);assert.equal(tower.spent,spent);assert.equal(game.state.gold,before-25);

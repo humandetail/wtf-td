@@ -1,3 +1,4 @@
+import {beginTowerUpgrade,advanceTowerUpgrades} from './tower-upgrades.js';
 import {ignite,tickBurn} from './tower-effects.js';
 import {TOWERS, ENEMIES, MAX_LEVEL, towerStats, effectiveTowerStats} from './catalog.js';
 import {TECHNOLOGIES, deploymentStats, towerUnlockLevel} from './research.js';
@@ -108,6 +109,7 @@ function createBaseGame(options={}) {
  }
  function step(dt){
   state.elapsed+=dt;
+  advanceTowerUpgrades(state.towers,dt,tower=>events.push({type:'upgrade',x:tower.x,y:tower.y,code:tower.code}));
   if(escort&&state.convoy.moving){
    const convoy=state.convoy,target=ESCORT_CHECKPOINTS[convoy.checkpointIndex]??ESCORT_LENGTH;
    convoy.progress=Math.min(target,convoy.progress+convoySpeed*dt);Object.assign(convoy,pointOnEscortRoute(convoy.progress));
@@ -212,6 +214,7 @@ function createBaseGame(options={}) {
   if(!escort||!playable())return result(false,'当前不能搬迁');
   const tower=state.towers.find(tower=>tower.id===id);
   if(!tower)return result(false,'请先选择已有防御单位');
+  if(tower.upgrading)return result(false,'升级期间不能搬迁');
   if((tower.readyAt??0)>state.elapsed)return result(false,'工事仍在搬迁停机中');
   if(state.gold<25)return result(false,'搬迁需要 25 金币');
   if(Math.hypot(tower.x-x,tower.y-y)<1)return result(false,'请选择新的位置');
@@ -280,6 +283,7 @@ function createBaseGame(options={}) {
   if(state.walls.some(wall=>wall.id===id))return result(false,'路障不能升级');
   const tower=state.towers.find(t=>t.id===id);
   if(!tower) return result(false,'请先选择防御单位');
+  if(tower.upgrading)return result(false,'升级进行中');
   if(tower.level>=MAX_LEVEL) return result(false,'已达最高等级');
   if(tower.level>=TECHNOLOGIES.reinforcement.levels[state.tech.reinforcement].maxTowerLevel)return result(false,`需要强化科技 ${tower.level} 级`);
   const cost=towerStats(tower).upgradeCost;
@@ -289,8 +293,7 @@ function createBaseGame(options={}) {
  upgrade(id){
   const status=game.canUpgrade(id);if(!status.ok)return status;
   const tower=state.towers.find(t=>t.id===id),cost=towerStats(tower).upgradeCost;
-  state.gold-=cost;tower.spent+=cost;tower.level++;
-  events.push({type:'upgrade',x:tower.x,y:tower.y,code:tower.code});return result(true,'升级完成');
+  return beginTowerUpgrade(state,tower,cost);
  },
  sell(id){
   if(!playable()) return result(false,'当前不能出售');
@@ -298,6 +301,7 @@ function createBaseGame(options={}) {
   if(wall){state.gold+=WALL_REFUND;state.walls=state.walls.filter(w=>w!==wall);refreshMaze();events.push({type:'sell',x:wall.x,y:wall.y,amount:WALL_REFUND});return result(true,'路障已拆除，路线已重算');}
   const tower=state.towers.find(t=>t.id===id);
   if(!tower) return result(false,'防御单位不存在');
+  if(tower.upgrading)return result(false,'升级期间不能出售');
   const amount=towerStats(tower).sellValue;state.gold+=amount;state.towers=state.towers.filter(t=>t!==tower);
   refreshMaze();events.push({type:'sell',x:tower.x,y:tower.y,amount});return result(true,'出售完成');
  },

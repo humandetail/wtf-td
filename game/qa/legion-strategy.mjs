@@ -17,6 +17,8 @@ export function playLegionMatch(seed=42,options={}){
   if(side.king.hp<700)game.upgradeKing();
   // Save a coordinated armored push rather than feeding one raider every round.
   if(round%4===3||round>16)while(game.queueMercenary('X08').ok){/* normal queue cap */}
+  // Wait for paid upgrades before committing the army. Research still uses combat time.
+  game.tick(Math.max(0,...side.fighters.map(f=>f.upgrading?.remaining||0)));
   game.startCombat();
   if(options.onFrame){
    for(let frame=0;frame<12000&&game.state.phase==='playing'&&game.state.turnPhase==='combat';frame++){game.tick(.05);options.onFrame(game.state,game.drainEvents());}
