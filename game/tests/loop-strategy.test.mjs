@@ -104,3 +104,10 @@ test('focus beats split against one foe; split beats focus in total group damage
  const damage=(route,count)=>{const g=setup(),t=tower(g,'T01',route,3);for(let i=0;i<count;i++)enemy(g,'X01',560+i*3,300);fire(g,t,5);return g.state.enemies.reduce((sum,e)=>sum+e.maxHp-e.hp,0);};
  assert.ok(damage('A',1)>damage('B',1));assert.ok(damage('B',3)>damage('A',3));
 });
+
+test('loop default capacity is sixty and reaching it defeats exactly once; restart retains the new limit',()=>{
+ const g=createGame();g.start();assert.equal(g.state.limit,60);g.tick(1000);
+ assert.equal(g.state.phase,'defeat');assert.equal(g.state.enemies.length,60);assert.equal(g.drainEvents().filter(e=>e.type==='defeat').length,1);
+ g.tick(100);assert.equal(g.drainEvents().length,0);g.restart();assert.equal(g.state.limit,60);assert.equal(g.state.enemies.length,0);
+ const custom=createGame({limit:12});custom.start();custom.tick(100);assert.equal(custom.state.enemies.length,12);assert.equal(custom.state.phase,'defeat');
+});

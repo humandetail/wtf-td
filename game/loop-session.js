@@ -5,7 +5,7 @@ import {placementStatus,createRoadPosition,advanceOnRoad} from './geometry.js';
 /** @returns {any} */
 const result=(ok,message,extra={})=>({ok,message,...extra});
 export function createLoopGame(options={}){
- const initial=()=>({mode:'loop',phase:'menu',paused:false,speed:1,gold:options.startingGold??600,wave:0,nextWaveIn:options.initialDelay??30,elapsed:0,kills:0,endless:false,limit:options.limit??80,towers:[],enemies:[],walls:[],convoy:null,tech:{deployment:0,reinforcement:0},research:null,regions:[],pendingSpawns:0,endlessKills:0,endlessSupply:0,supplyCursor:0});
+ const initial=()=>({mode:'loop',phase:'menu',paused:false,speed:1,gold:options.startingGold??600,wave:0,nextWaveIn:options.initialDelay??30,elapsed:0,kills:0,endless:false,limit:options.limit??60,towers:[],enemies:[],walls:[],convoy:null,tech:{deployment:0,reinforcement:0},research:null,regions:[],pendingSpawns:0,endlessKills:0,endlessSupply:0,supplyCursor:0});
  const state=initial();let events=[],queue=[],spawnIn=0,nextTower=1,nextEnemy=1;const waveLedger=new Map();
  const emit=e=>{
   events.push(e);
