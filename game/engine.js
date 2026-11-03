@@ -1,3 +1,4 @@
+import {createLoopGame} from './loop-session.js';
 import {beginTowerUpgrade,advanceTowerUpgrades} from './tower-upgrades.js';
 import {ignite,tickBurn} from './tower-effects.js';
 import {TOWERS, ENEMIES, MAX_LEVEL, towerStats, effectiveTowerStats} from './catalog.js';
@@ -13,6 +14,7 @@ import {createLegionGame} from './legion-session.js';
 // Each mode has a different command surface; callers choose it through state.mode.
 /** @param {any} options @returns {any} */
 export function createGame(options={}){
+ if(!options.mode||options.mode==='loop')return createLoopGame(options);
  if(options.mode==='gem')return createGemGame(options);
  if(options.mode==='hero')return createHeroGame(options);
  if(options.mode==='legion')return createLegionGame(options);
@@ -21,7 +23,7 @@ export function createGame(options={}){
 /**
  * @param {{mode?:'loop'|'defense'|'escort'|'maze',convoySpeed?:number,coreHealth?:number,startingGold?:number,limit?:number,waveInterval?:number,spawnInterval?:number,initialDelay?:number,waveCount?:number,waveSize?:(wave:number)=>number,enemyHealthScale?:number,enemySpeedScale?:number,rewardScale?:number,random?:()=>number}} options
  */
-function createBaseGame(options={}) {
+export function createBaseGame(options={}) {
  const defense=options.mode==='defense',escort=options.mode==='escort',maze=options.mode==='maze';
  const finite=defense||escort||maze,clearWaves=defense||maze;
  const coreHealth=options.coreHealth??(escort?100:20);

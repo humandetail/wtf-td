@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame} from '../engine.js';
+// Shared base-engine mechanics retained by defense / escort / maze.
+// The new loop rules are covered by loop-strategy.test.mjs.
+import {createBaseGame as createGame} from '../engine.js';
 import {TOWERS, ENEMIES, towerStats, effectiveTowerStats} from '../catalog.js';
 import {hitTest} from '../render.js';
 

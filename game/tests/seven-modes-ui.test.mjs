@@ -175,3 +175,21 @@ test('research and tower upgrade buttons contain live progress without a separat
  assert.equal(node('upgrade-button').disabled,true);assert.equal(node('sell-button').disabled,true);
  ui.game.tick(3);ui.updateUI();assert.equal(ui.game.state.towers[0].level,2);assert.doesNotMatch(node('upgrade-button').textContent,/升级中/);
 });
+
+test('loop UI exposes both routes, six research levels, safe respecialization and real forecast',async()=>{
+ const {ui,go,click,node,buttons}=await harness();go('loop');const g=ui.game;g.state.gold=10000;g.state.tech.reinforcement=6;
+ ui.armBuild('T01');ui.activatePoint({x:190,y:140});click('upgrade-button');g.tick(5);ui.updateUI();
+ assert.equal(node('upgrade-button').hidden,true);const branch=buttons('loop-controls').find(b=>b.textContent.includes('选择分流'));assert.ok(branch);branch.click();assert.equal(node('upgrade-button').hidden,false);assert.match(node('upgrade-button').textContent,/升级中/);g.tick(8);ui.updateUI();
+ assert.equal(g.state.towers[0].route,'B');assert.match(node('loop-forecast').textContent,/第1波.*12只/);assert.equal(node('mission-button').hidden,false);
+ // Changing gold within the affordable range must not replace touch targets during a tap.
+ const stable=buttons('loop-controls')[0];g.state.gold++;ui.updateUI();assert.equal(buttons('loop-controls')[0],stable);
+ click('pause-button');ui.updateUI();const respec=buttons('loop-controls').find(b=>b.textContent.includes('改选狙猎'));assert.ok(respec);assert.equal(respec.disabled,false);respec.click();assert.equal(g.state.towers[0].route,'A');
+});
+
+test('loop support details show actual aura percentages and reduced endless income',async()=>{
+ const {ui,go,node}=await harness();go('loop');const g=ui.game;g.state.tech.deployment=5;g.state.gold=10000;
+ ui.armBuild('T09');ui.activatePoint({x:190,y:140});const text=()=>node('tower-stats').children.map(n=>n.textContent).join(' ');
+ assert.doesNotMatch(text(),/NaN|undefined/);assert.match(text(),/12%/);
+ g.sell(g.state.towers[0].id);ui.armBuild('T11');ui.activatePoint({x:190,y:140});assert.match(text(),/每 8 秒 \+12/);
+ g.state.endless=true;ui.updateUI();assert.match(text(),/每 20 秒 \+1/);
+});

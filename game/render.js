@@ -230,7 +230,7 @@ export function createRenderer(canvas, artwork) {
       ctx.drawImage(sprite, entity.x - size * .5, entity.y - size * .625 + bob, size, size);
     }
     if (tower) {
-      text((entity.readyAt??0)>elapsed?`搬迁 ${(entity.readyAt-elapsed).toFixed(1)}s`:`Lv.${entity.level}`, entity.x, entity.y + 27, '#f3d88e', 12);
+      text((entity.readyAt??0)>elapsed?`搬迁 ${(entity.readyAt-elapsed).toFixed(1)}s`:`Lv.${entity.level}${entity.route?' · '+entity.route:''}`, entity.x, entity.y + 27, '#f3d88e', 12);
       const stats=specialStats(entity,frameState)||towerStats(entity);
       if (['radar', 'overclock', 'barrier', 'supply','support','healer'].includes(stats.kind)) {
         ring(entity.x, entity.y + 2, 34, stats.color, .45, 1.5);
@@ -243,6 +243,11 @@ export function createRenderer(canvas, artwork) {
       ctx.fillRect(entity.x - width / 2 - 1, top - 1, width + 2, 7);
       ctx.fillStyle = entity.boss ? '#e8b35a' : entity.slowUntil > elapsed ? '#a6d9be' : '#8cc58c';
       ctx.fillRect(entity.x - width / 2, top, width * Math.max(0, entity.hp / entity.maxHp), 5);
+      if(frameState.mode==='loop'){
+        if(entity.shield>0){ctx.fillStyle='#80c8ed';ctx.fillRect(entity.x-width/2,top+7,width*Math.min(1,entity.shield/(entity.maxShield||1)),3);}
+        const labels=[entity.armor>0?'甲':'',entity.healer?'疗':'',entity.immuneUntil>elapsed?'免控':'',...(entity.statuses||[]).filter(s=>s.until>elapsed&&['wet','armor','vulnerable'].includes(s.kind)).map(s=>({wet:'浸',armor:'破',vulnerable:'标'})[s.kind])];
+        text([...new Set(labels)].filter(Boolean).join('·'),entity.x,top-5,'#bfdfda',10);
+      }
       if (entity.boss) text('首领', entity.x, top - 14, '#ffe09e', 13);
     }
   }

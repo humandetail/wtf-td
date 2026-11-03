@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {createGame} from '../engine.js';import {towerStats} from '../catalog.js';
+import {createGame,createBaseGame} from '../engine.js';import {towerStats} from '../catalog.js';
 function setup(code,mode='loop'){
- const g=createGame({mode,startingGold:10000,initialDelay:1000,waveCount:1,waveSize:()=>4,spawnInterval:.02,enemyHealthScale:100,enemySpeedScale:.01,random:()=>0});g.start();
+ const g=(mode==='hero'?createGame:createBaseGame)({mode,startingGold:10000,initialDelay:1000,waveCount:1,waveSize:()=>4,spawnInterval:.02,enemyHealthScale:100,enemySpeedScale:.01,random:()=>0});g.start();
  for(const duration of [12,20]){assert.ok(g.startResearch('deployment').ok);g.tick(duration);}
  if(mode==='hero'){g.moveHeroTo(1100,600);g.tick(3);}
  g.launchWave();g.tick(.3);g.drainEvents();

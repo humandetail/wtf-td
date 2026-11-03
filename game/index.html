@@ -93,6 +93,7 @@
         <aside id="command-drawer" class="command-drawer" aria-labelledby="drawer-title" hidden>
           <div class="drawer-heading"><h2 id="drawer-title">科技指挥</h2><button id="close-drawer-button" class="button compact" type="button">收起 · Esc</button></div>
           <section id="selection-panel" aria-label="防御单位详情" hidden>
+            <p id="loop-enemy-info" class="strategy-summary" hidden></p>
             <div class="selected-summary">
               <p id="selected-slot-label" class="eyebrow">防线指挥</p>
               <p id="selection-hint">点“建造”选择工事，再在绿色区域放置。</p>
@@ -100,12 +101,13 @@
                 <h2 id="tower-title">防御单位</h2>
                 <p id="tower-description"></p>
                 <div id="tower-stats" class="tower-stats"></div>
-                <div id="gem-selection-actions" hidden></div><div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="relocate-button" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" class="button" type="button">出售</button></div>
+                <p id="loop-skill-status" class="strategy-summary" hidden></p><div id="loop-controls" hidden></div><div id="gem-selection-actions" hidden></div><div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="relocate-button" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" class="button" type="button">出售</button></div>
               </div>
             </div>
           </section>
           <section id="mission-panel" class="mission-panel" aria-label="当前任务" hidden>
             <p id="mission-objective"></p>
+            <div id="loop-forecast" class="strategy-forecast" hidden></div>
             <div id="special-mission" hidden></div>
             <div id="escort-mission" hidden>
               <h3 id="convoy-status">已停车 · 0 / 2480</h3>
@@ -174,7 +176,8 @@
       <li><strong>守卫灵姬：英雄与防线协作</strong><p>手机可拖动左下摇杆移动，点技能再点目标并确认；地图工具可放大与拖动。WASD持续移动；右键地面移动，右键敌人指定普攻目标。Q破阵斩、E瞬步、R共鸣护罩：按键后在地图点击目标。Q一级、E二级、R六级开放，消耗法力并有冷却。英雄自动攻击近敌，死亡10秒复活，神女死亡才失败。前往左右精英营地，战胜后在“任务”领取一次性装备／补给；三件装备选一，可花金币强化。守住15波，无无尽。</p></li>
       <li><strong>机关军团：单人对战AI</strong><p>“建造”部署有生命的守军，“任务”购买工人、安排雇佣兵或强化国王，准备阶段不产资源。主动开战后双方锁阵；雇佣兵进入对手战场，成交才增加永久收入。未成交订单可取消全退军需。侦察按钮切换真实敌方地图，侦察时不能建造。波后守军复原、国王损伤保留，报告解释双方战果。一方国王死亡结束，同时死亡为平局，无无尽。</p></li>
       <li><strong>研究科技，扩展防线</strong><p>部署科技提高全场塔容量并逐级解锁种类；出售立即释放容量。强化科技开放更高塔等级，仍需单独付费升级已有塔。点击“科技”打开研究抽屉；“建造”展开工事带，选定工事后自动收起，也可点击“收起建造”手动关闭。两项科技各自逐级研究，共用一个研究位，开始时扣金币，完成后才生效。取消未完成研究全额退款，进度清零。</p></li>
-      <li><strong>搭配火力，迎战首领</strong><p>防御单位会自动攻击或提供辅助。观察射程，组合输出与控制，调整防线来迎战阶段首领。</p></li>
+      <li><strong>循环圈：专精与克制</strong><p>14种塔分近战、远程和辅助。近战建在路旁，不挡路、不承伤。重甲抵御物理，法术或破甲可应对；护盾需要集火或破盾，治疗支援可优先击杀或用微波干扰。三级二选一专精，五级获得标志技能；技能自动触发。点塔可改选敌优先级，清空敌人与待出怪后暂停可付费重置专精，保留等级。情报显示未来两波特性。</p></li>
+      <li><strong>循环圈：科技与无尽</strong><p>部署科技0—5级容量为4／6／8／10／12／16，辅助与经济塔也各占一格。强化科技0—4级开放塔1—5级，5／6级自动增强专精与标志技能。无尽每波固定50只，Boss每5波替换一个普通名额；生命与护盾每波增加第20波基准的1%，线性不复利，移速不额外增加。所有无尽怪物含Boss击杀仅1金币；补给减产且全场共用累计击杀收入10%的产金上限，无怪不产金。</p></li>
       <li><strong>暂停、战报与无尽挑战</strong><p>循环圈与核心保卫战清空 20 波，自由迷宫清空 12 波后通关；这三种玩法可保留防线、金币、耐久、科技与研究继续无尽。灵枢护送抵达终点后结束。暂停、返回菜单和结算冻结全部计时，倍速同步推进。七种对局分别保留在本页内，切换不会清零；结束的对局可随时返回战报，只有重新开始才重置，刷新页面会丢失本页对局。随时使用静音调整体验。</p></li>
     </ol>
     <p class="help-footer">方向键移动光标 · Shift + 方向键微调 · Enter 放置 / 选择 · 空格暂停 / 恢复 · 右键 / Esc 取消建造</p>

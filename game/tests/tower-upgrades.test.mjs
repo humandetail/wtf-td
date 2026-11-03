@@ -10,7 +10,7 @@ for(const mode of ['loop','hero','legion'])test(`${mode}: timed upgrades charge 
  const {towerId}=game.build(point.x,point.y,'T01'),tower=game.state.towers.find(t=>t.id===towerId);
  for(const duration of [5,8,12,16]){
   const old=tower.level,gold=game.state.gold,cost=(game.statsFor?.(tower)||towerStats(tower)).upgradeCost;
-  assert.ok(game.upgrade(towerId).ok);assert.equal(game.state.gold,gold-cost);assert.equal(tower.level,old);assert.equal(tower.upgrading.duration,duration);
+  assert.ok(game.upgrade(towerId,tower.level===2?'A':null).ok);assert.equal(game.state.gold,gold-cost);assert.equal(tower.level,old);assert.equal(tower.upgrading.duration,duration);
   assert.equal(game.upgrade(towerId).ok,false);assert.equal(game.sell(towerId).ok,false);assert.equal(game.state.gold,gold-cost);
   game.togglePause();game.tick(30);assert.equal(tower.upgrading.remaining,duration);game.togglePause();
   game.setSpeed(2);game.tick((duration-1)/2);assert.equal(tower.level,old);assert.ok(Math.abs(tower.upgrading.remaining-1)<1e-7);
