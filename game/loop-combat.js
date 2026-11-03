@@ -19,7 +19,7 @@ export function createLoopCombat(state,emit){
   if(oldShield>0&&e.shield<=1e-9&&tower?.code==='T02'&&tower.route==='A'&&tower.level>=5)effect(e,'vulnerable',stats.master?.2:.15,stats.master?5:4,tower.id);
   if(e.hp>0)return;
   state.kills++;state.gold+=e.reward;if(e.endless)state.endlessKills++;
-  emit({type:'kill',x:e.x,y:e.y,code:e.code,amount:e.reward});
+  emit({type:'kill',x:e.x,y:e.y,code:e.code,amount:e.reward,wave:e.wave,endless:!!e.endless});
   if(opts.secondary)return;
   const burn=(e.burns||[]).filter(b=>b.until>state.elapsed).sort((a,b)=>b.dps-a.dps||a.started-b.started)[0];
   if(burn?.primary&&burn.route==='B'){

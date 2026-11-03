@@ -12,23 +12,23 @@ function position(g,code){const def=g.catalog.find(t=>t.code===code);let best=nu
   if(!best||score>best.score)best={x,y,score};
  }return best;
 }
-export function playLoopStrategy(seedValue=1,style='physical'){
+export function playLoopStrategy(seedValue=1,style='physical',options={}){
  seed=seedValue;const g=createGame({random});g.start();const s=g.state;let peak=0;
  const order=style==='mono'?Array(12).fill('T01'):style==='physical'?['T01','T12','T06','T01','T03','T09','T07','T13','T10','T02','T14','T03']:['T13','T06','T01','T13','T03','T09','T05','T02','T08','T07','T10','T04'];
  const routes=style==='physical'?{T01:'A',T12:'A',T06:'A',T03:'A',T09:'A',T07:'B',T13:'B',T10:'B',T02:'A',T14:'A'}:{T13:'A',T06:'B',T01:'B',T03:'A',T09:'B',T05:'A',T02:'B',T08:'B',T07:'A',T10:'A',T04:'A'};
  const goals=[...order.slice(0,4).map(code=>['build',code]),['research','reinforcement',1],['upgrade',0,2],['upgrade',2,2],['research','deployment',1],['build',order[4]],['build',order[5]],['upgrade',4,2],['research','reinforcement',2],['upgrade',0,3],['upgrade',4,3],['upgrade',2,3],['research','deployment',2],['build',order[6]],['build',order[7]],['research','reinforcement',3],['upgrade',0,4],['upgrade',4,4],['upgrade',2,4],['research','reinforcement',4],['upgrade',0,5],['upgrade',4,5],['research','deployment',3],['build',order[8]],['build',order[9]],['upgrade',6,2],['upgrade',6,3],['upgrade',7,2],['upgrade',7,3],['upgrade',2,5]];
- const income={kills:0,supply:0},spent={build:0,research:0,upgrade:0};let goal=0;
+ const initialGold=s.gold,income={kills:0,supply:0,clear:0},spent={build:0,research:0,upgrade:0};let goal=0,nextActionAt=0;const milestones=[];
  for(let frame=0;frame<2200&&s.phase==='playing';frame++){
-  const beforeGold=s.gold,action=goals[goal];if(action){const [kind,arg,target]=action;
+  const beforeGold=s.gold,decisionReady=s.elapsed>=nextActionAt,action=goals[goal];if(action&&decisionReady){const [kind,arg,target]=action;
    if(kind==='build'&&g.canBuildType(arg).ok){const p=position(g,arg);if(p&&g.build(p.x,p.y,arg).ok)goal++;}
    if(kind==='research'){if(s.tech[arg]>=target)goal++;else if(!s.research)g.startResearch(arg);}
    if(kind==='upgrade'){const t=s.towers[arg];if(t.level>=target)goal++;else if(!t.upgrading)g.upgrade(t.id,t.level===2?routes[t.code]||'A':null);}
   }
-  if(action&&beforeGold>s.gold)spent[action[0]]+=beforeGold-s.gold;
-  for(const t of s.towers)if(g.statsFor(t).damage>0){const priority=t.route==='A'&&['T01','T13','T04'].includes(t.code)?'strongest':s.enemies.some(e=>e.support)?'support':t.code==='T03'?'default':'weakest';if(t.priority!==priority)g.setPriority(t.id,priority);}
-  g.tick(.5);for(const e of g.drainEvents()){if(e.type==='kill')income.kills+=e.amount;if(e.type==='income')income.supply+=e.amount;}peak=Math.max(peak,s.enemies.length);
+  if(action&&beforeGold>s.gold){spent[action[0]]+=beforeGold-s.gold;nextActionAt=s.elapsed+(options.decisionInterval??.5);}
+  for(const t of s.towers)if(decisionReady&&g.statsFor(t).damage>0){const priority=t.route==='A'&&['T01','T13','T04'].includes(t.code)?'strongest':s.enemies.some(e=>e.support)?'support':t.code==='T03'?'default':'weakest';if(t.priority!==priority)g.setPriority(t.id,priority);}
+  g.tick(.5);for(const e of g.drainEvents()){if(e.type==='kill')income.kills+=e.amount;if(e.type==='income')income.supply+=e.amount;if(e.type==='wave-clear')income.clear+=e.amount;if(e.type==='wave')milestones.push({wave:s.wave,elapsed:Math.round(s.elapsed),towers:s.towers.length,gold:s.gold,tech:{...s.tech},kills:s.kills,spent:{...spent}});}peak=Math.max(peak,s.enemies.length);if(options.stopAtWave&&s.wave>=options.stopAtWave)break;
  }
- return {seed:seedValue,style,outcome:s.phase,wave:s.wave,elapsed:Math.round(s.elapsed),peak,gold:s.gold,towers:s.towers.length,levels:s.towers.map(t=>`${t.code}:${t.level}${t.route||''}`),tech:{...s.tech},goal,income,spent,reconciled:400+income.kills+income.supply-spent.build-spent.research-spent.upgrade===s.gold,game:g};
+ return {seed:seedValue,style,decisionInterval:options.decisionInterval??.5,milestones,outcome:s.phase,wave:s.wave,elapsed:Math.round(s.elapsed),peak,gold:s.gold,towers:s.towers.length,levels:s.towers.map(t=>`${t.code}:${t.level}${t.route||''}`),tech:{...s.tech},goal,income,spent,initialGold,reconciled:initialGold+income.kills+income.supply+income.clear-spent.build-spent.research-spent.upgrade===s.gold,game:g};
 }
 export function compareEndlessSupply(seedValue=1){
  const results=[];
@@ -45,5 +45,5 @@ export function compareEndlessSupply(seedValue=1){
 }
 if(import.meta.url===`file://${process.argv[1]}`){
  if(process.argv.includes('--endless')){const rows=compareEndlessSupply();console.log(JSON.stringify(rows,null,2));process.exitCode=rows.every(r=>r.capRespected&&r.reconciled)?0:1;}
- else {const results=[];for(const style of process.argv.includes('--pressure')?['mono']:['physical','magic'])for(const n of process.argv.includes('--pressure')?[1,2,3]:[1,2,3,4,5,6,7,8,9,10]){const {game,...row}=playLoopStrategy(n,style);results.push(row);console.log(JSON.stringify(row));}process.exitCode=results.every(r=>r.outcome==='victory'&&r.reconciled)?0:1;}
+ else {const results=[];for(const style of process.argv.includes('--pressure')?['mono']:['physical','magic'])for(const n of process.argv.includes('--pressure')?[1,2,3]:[1,2,3,4,5,6,7,8,9,10]){const {game,...row}=playLoopStrategy(n,style,process.argv.includes('--early')?{decisionInterval:20,stopAtWave:10}:{});results.push(row);console.log(JSON.stringify(row));}process.exitCode=results.every(r=>(process.argv.includes('--early')?r.wave===10&&r.towers>=6:r.outcome==='victory')&&r.reconciled)?0:1;}
 }

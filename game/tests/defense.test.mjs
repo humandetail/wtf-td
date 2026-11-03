@@ -83,7 +83,7 @@ test('defense uses all roads and core clearance while independent loop session k
  assert.equal(defense.build(500,280,'T01').ok,true);assert.equal(defense.canBuild(550,280,'T01').ok,false);
  assert.equal(defense.canBuild(155,125,'T01').ok,true);assert.equal(defense.canBuild(154,125,'T01').ok,false);
  assert.equal(loop.canBuild(480,150,'T01').ok,true);assert.equal(defense.canBuild(300,300,'T01').ok,true);assert.equal(loop.canBuild(300,300,'T01').ok,false);
- defense.launchWave();defense.tick(.1);assert.equal(loop.state.mode,'loop');assert.equal(loop.state.wave,0);assert.equal(loop.state.gold,400);assert.equal(loop.state.towers.length,0);
+ defense.launchWave();defense.tick(.1);assert.equal(loop.state.mode,'loop');assert.equal(loop.state.wave,0);assert.equal(loop.state.gold,600);assert.equal(loop.state.towers.length,0);
 });
 
 test('finite route geometry clamps distance, turns at fixed corners and ends at the core',async()=>{

@@ -2,11 +2,11 @@ import {TOWERS,ENEMIES} from './catalog.js';
 export const LOOP_TECHNOLOGIES={
  deployment:{name:'部署科技',levels:[
  {capacity:4,unlocks:['T01','T12','T06','T13'],cost:0,duration:0},
- {capacity:6,unlocks:['T03','T07','T09','T11'],cost:120,duration:12},
- {capacity:8,unlocks:['T05','T02','T10'],cost:240,duration:20},
+ {capacity:6,unlocks:['T03','T07','T09','T11'],cost:80,duration:12},
+ {capacity:8,unlocks:['T05','T02','T10'],cost:160,duration:20},
  {capacity:10,unlocks:['T04','T08','T14'],cost:420,duration:30},
  {capacity:12,unlocks:[],cost:650,duration:40},{capacity:16,unlocks:[],cost:950,duration:50}]},
- reinforcement:{name:'强化科技',levels:[{maxTowerLevel:1,cost:0,duration:0},{maxTowerLevel:2,cost:100,duration:10},{maxTowerLevel:3,cost:180,duration:15},{maxTowerLevel:4,cost:300,duration:20},{maxTowerLevel:5,cost:450,duration:25},{maxTowerLevel:5,cost:650,duration:35},{maxTowerLevel:5,cost:900,duration:45}]}
+ reinforcement:{name:'强化科技',levels:[{maxTowerLevel:1,cost:0,duration:0},{maxTowerLevel:2,cost:60,duration:10},{maxTowerLevel:3,cost:120,duration:15},{maxTowerLevel:4,cost:300,duration:20},{maxTowerLevel:5,cost:450,duration:25},{maxTowerLevel:5,cost:650,duration:35},{maxTowerLevel:5,cost:900,duration:45}]}
 };
 const rows={T12:['工程震荡塔',20,.9,125,'melee','physical','破甲15点，持续3秒'],T08:['冷却喷射塔',14,1.2,145,'melee','magic','扇形3目标，减速30%'],T05:['电弧线圈',36,1.1,155,'melee','magic','近邻连锁3目标'],T01:['自动拦截炮塔',22,.55,205,'ranged','physical','快速单体点射'],T03:['重型榴弹炮塔',65,1.8,235,'ranged','physical','半径65范围物理伤害'],T04:['激光跟踪塔',50,.9,265,'ranged','magic','远距离单体法术'],T06:['高压水炮塔',26,.85,205,'ranged','physical','小范围浸水和减速'],T02:['微波干扰塔',18,.9,195,'ranged','magic','对护盾伤害×1.5'],T07:['捕获网发射器',9,2,215,'ranged','physical','低伤定身，优先支援'],T13:['符焰法塔',18,1.2,230,'ranged','magic','每秒12法术灼烧，持续3秒'],T14:['三联追击塔',16,.95,215,'ranged','physical','3个独立目标'],T09:['雷达哨站',0,1,210,'support',null,'附近输出塔射程增益'],T10:['维修机械臂',0,1,200,'support',null,'附近输出塔攻速增益'],T11:['无人机补给站',0,8,190,'support',null,'定时补给，亦占1个容量']};
 export const LOOP_TOWERS=TOWERS.map(base=>{const [name,damage,interval,range,role,damageType,description]=rows[base.code];return {...base,name,damage,interval,range,role,damageType,description};});
@@ -70,3 +70,5 @@ export function loopEnemy(entry,id,position,options={}){
  const shield=entry.boss?(entry.wave>=10?maxHp*.2:0):(['X05','X06'].includes(base.code)?(base.code==='X05'?80:60)*scale:0);
  return {...base,...entry,...position,id,hp:maxHp,maxHp,armor,shield,maxShield:shield,healer:['X03','X11'].includes(base.code),support:['X03','X11'].includes(base.code),speed:base.speed*(entry.boss?.72:1)*(options.enemySpeedScale??1),reward:entry.endless?1:Math.max(1,Math.round(base.reward*(entry.boss?8:1)*(options.rewardScale??1))),progress:0,statuses:[],burns:[],rootUntil:0,immuneUntil:0,healIn:3,selfHealIn:10};
 }
+
+export function loopWaveInterval(wave,endless=false){return endless?26:wave<5?40:wave<10?36:30;}

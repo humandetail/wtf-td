@@ -11,7 +11,8 @@ function harness(options={}){
  }
  const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};
  globalThis.document={getElementById:get,documentElement:{classList:{add(){}}}};const windowEvents={};globalThis.window={addEventListener:(name,fn)=>windowEvents[name]=fn};
- const canvas=new Node();canvas.parentElement=new Node();const game=createGame({mode:options.hero?'hero':'loop'});game.start();let action=true,activations=0;
+ const canvas=new Node();canvas.parentElement=new Node();// Pin funds so these tests measure touch transactions, independent of balance tuning.
+ const game=createGame({mode:options.hero?'hero':'loop',startingGold:400});game.start();let action=true,activations=0;
  const controls=createTouchControls(canvas,{
   canInteract:()=>game.state.phase==='playing'&&!game.state.paused,
   hasAction:()=>action,isHero:()=>!!options.hero,onMove:(x,y)=>{if(options.hero)game.setMoveVector(x,y);},
