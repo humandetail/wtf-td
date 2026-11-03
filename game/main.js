@@ -925,6 +925,8 @@ async function boot() {
   try {
     const artwork = await loadArtwork((done, total) => {
       element('loading-progress').textContent = `读取防御单位与地图 · ${done} / ${total}`;
+    }, (url,attempt,total) => {
+      element('loading-progress').textContent = `素材下载中断，正在重试 ${attempt}/${total}：${url.pathname}`;
     });
     renderer = createRenderer(canvas, artwork);
     artworkCache = artwork;

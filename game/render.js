@@ -12,17 +12,34 @@ const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
 const MAPS = new URL('./assets/maps/v5/', import.meta.url);
 
-function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`图片无法加载：${new URL(url).pathname}`));
-    image.src = String(url);
-  });
+// A dropped PNG request must not permanently abort the whole game startup.
+export async function loadImage(url,{attempts=3,retryDelay=400,timeoutMs=120000,onRetry=(url,attempt,total)=>{}}={}) {
+  const original=new URL(url);
+  for(let attempt=0;attempt<attempts;attempt++){
+    const source=new URL(original);
+    if(attempt)source.searchParams.set('asset_retry',String(attempt));
+    try {
+      return await new Promise((resolve,reject)=>{
+        const picture=new Image();
+        const finish=(ok)=>{
+          clearTimeout(timer);picture.onload=null;picture.onerror=null;
+          if(ok)resolve(picture);else {picture.removeAttribute?.('src');reject(new Error(`图片无法加载：${original.pathname}`));}
+        };
+        const timer=setTimeout(()=>finish(false),timeoutMs);
+        picture.decoding='async';picture.onload=()=>finish(true);picture.onerror=()=>finish(false);picture.src=source.href;
+      });
+    }catch(error){
+      if(attempt===attempts-1)throw new Error(`图片无法加载：${original.pathname}（已尝试${attempts}次，请检查网络后重新加载）`);
+      onRetry(original,attempt+2,attempts);
+      await new Promise(resolve=>setTimeout(resolve,retryDelay*(attempt+1)));
+    }
+  }
 }
 
-/** Load the real original sprites without rewriting or rescaling their files. */
-export async function loadArtwork(onProgress) {
+/** Load the original sprites without rewriting or rescaling their files. */
+export async function loadArtwork(onProgress=(done,total)=>{}, onRetry=(url,attempt,total)=>{}) {
+  let failed=false;
+  const load=url=>loadImage(url,{onRetry:(source,attempt,total)=>{if(!failed)onRetry(source,attempt,total);}});
   const response = await fetch(new URL('manifest.json', ORIGINALS));
   if (!response.ok) throw new Error('原素材清单无法读取，请从项目根目录启动服务。');
   const manifest = await response.json();
@@ -33,28 +50,28 @@ export async function loadArtwork(onProgress) {
   for (const entry of manifest.units) {
     const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
-    tasks.push(async () => { unit.masterImage = await loadImage(new URL(entry.master, ORIGINALS)); });
+    tasks.push(async () => { unit.masterImage = await load(new URL(entry.master, ORIGINALS)); });
   }
   for (const entry of manifest.effects) {
-    tasks.push(async () => { effects.set(entry.code, await loadImage(new URL(entry.path, ORIGINALS))); });
+    tasks.push(async () => { effects.set(entry.code, await load(new URL(entry.path, ORIGINALS))); });
   }
-  tasks.push(async () => { result.ground = await loadImage(new URL('scene.png', MAPS)); });
-  tasks.push(async () => { result.defenseGround = await loadImage(new URL('./assets/maps/core-defense/scene.png', import.meta.url)); });
-  for(const mode of ['escort','maze','gem','hero','legion'])tasks.push(async()=>{result[`${mode}Ground`]=await loadImage(new URL(`./assets/maps/${mode}/scene.png`,import.meta.url));});
-  tasks.push(async()=>{result.convoyImage=await loadImage(new URL('props/P01-tech-supply-crate.png',ORIGINALS));});
-  tasks.push(async()=>{result.wallImage=await loadImage(new URL('props/P02-portable-generator.png',ORIGINALS));});
-  tasks.push(async()=>{result.ruinsImage=await loadImage(new URL('props/P04-broken-stone-stele.png',ORIGINALS));});
-  for(const [key,path]of [['heroAtlas','hero/atlas.png'],['gemAtlas','gem/atlas.png'],['objectivesAtlas','shared/objectives.png']])tasks.push(async()=>{result[key]=await loadImage(new URL(`./assets/modes/${path}`,import.meta.url));});
+  tasks.push(async () => { result.ground = await load(new URL('scene.png', MAPS)); });
+  tasks.push(async () => { result.defenseGround = await load(new URL('./assets/maps/core-defense/scene.png', import.meta.url)); });
+  for(const mode of ['escort','maze','gem','hero','legion'])tasks.push(async()=>{result[`${mode}Ground`]=await load(new URL(`./assets/maps/${mode}/scene.png`,import.meta.url));});
+  tasks.push(async()=>{result.convoyImage=await load(new URL('props/P01-tech-supply-crate.png',ORIGINALS));});
+  tasks.push(async()=>{result.wallImage=await load(new URL('props/P02-portable-generator.png',ORIGINALS));});
+  tasks.push(async()=>{result.ruinsImage=await load(new URL('props/P04-broken-stone-stele.png',ORIGINALS));});
+  for(const [key,path]of [['heroAtlas','hero/atlas.png'],['gemAtlas','gem/atlas.png'],['objectivesAtlas','shared/objectives.png']])tasks.push(async()=>{result[key]=await load(new URL(`./assets/modes/${path}`,import.meta.url));});
   const total=tasks.length;
   let complete = 0;
-  // ponytail: six concurrent image decodes keep the initial menu responsive.
+  // Three concurrent requests limit mobile decode and network pressure.
   const worker = async () => {
-    while (tasks.length) {
-      await tasks.shift()();
-      onProgress(++complete,total);
+    while (tasks.length&&!failed) {
+      try{await tasks.shift()();}catch(error){failed=true;throw error;}
+      if(!failed)onProgress(++complete,total);
     }
   };
-  await Promise.all(Array.from({ length: 6 }, worker));
+  await Promise.all(Array.from({ length: 3 }, worker));
   return result;
 }
 
