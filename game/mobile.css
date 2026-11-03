@@ -23,6 +23,9 @@
 :root.touch-layout .status-bar .resource strong{font-size:17px}
 :root.touch-layout .status-bar .status-label{font-size:11px}
 :root.touch-layout .pressure-status{min-width:0;max-width:none}
+/* Reserve the same two lines for every counter value; never move the battlefield. */
+:root.touch-layout .pressure-label{flex-direction:column;align-items:flex-start;gap:0}
+:root.touch-layout .pressure-label .status-label,:root.touch-layout .pressure-label strong{white-space:nowrap;flex-shrink:0}
 :root.touch-layout .wordmark{font-size:18px}:root.touch-layout .wordmark #current-mode{font-size:10px;max-width:70px;white-space:normal}
 :root.touch-layout .next-wave,:root.touch-layout .kills,:root.touch-layout #defense-enemy-status{display:none!important}
 :root.touch-layout .game-controls{position:fixed;z-index:8;left:0;right:0;bottom:0;display:flex;justify-content:space-around;gap:2px;padding:5px 5px calc(5px + env(safe-area-inset-bottom));background:#12231ff7;border-top:1px solid #748363;box-shadow:0 -6px 25px #0004;overflow-x:auto}
