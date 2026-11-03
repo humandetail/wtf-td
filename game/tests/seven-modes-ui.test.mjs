@@ -148,3 +148,17 @@ test('home and menu preserve the exact seven sessions, funds and structures on r
   }
  }
 });
+
+test('building succeeds once per selection; rejected placement remains armed in every build mode',async()=>{
+ const {ui,go}=await harness();
+ for(const mode of ['loop','defense','escort','maze','hero','legion']){
+  go(mode);const state=ui.game.state;
+  ui.armBuild('T01');ui.activatePoint({x:-100,y:-100});
+  assert.ok(ui.placement,'invalid position keeps preview');assert.equal(state.towers.length,0);
+  const findPoint=()=>{for(let y=40;y<800;y+=40)for(let x=40;x<1280;x+=40)if(ui.game.canBuild(x,y,'T01').ok)return {x,y};throw new Error('No valid build point: '+mode);};
+  ui.activatePoint(findPoint());assert.equal(state.towers.length,1);assert.equal(ui.placement,null);
+  const gold=state.gold,next=findPoint();ui.activatePoint(next);
+  assert.equal(state.towers.length,1,'another map tap must not build '+mode);assert.equal(state.gold,gold);
+  ui.armBuild('T01');ui.activatePoint(next);assert.equal(state.towers.length,2);
+ }
+});

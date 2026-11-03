@@ -190,7 +190,11 @@ function activatePoint(point) {
     resultMessage(result);
   } else if (armedCode) {
     const result = game.build(point.x, point.y, armedCode);
-    if (result.ok) selectedTowerId = result.towerId;
+    if (result.ok) {
+      selectedTowerId = result.towerId;
+      armedCode = null;
+      touchControls?.clear();
+    }
     resultMessage(result);
   } else {
     selectedTowerId = renderer.hitTest(point.x, point.y, [...game.state.towers, ...game.state.walls]);
