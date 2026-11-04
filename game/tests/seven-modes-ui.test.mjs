@@ -193,3 +193,22 @@ test('loop support details show actual aura percentages and reduced endless inco
  g.sell(g.state.towers[0].id);ui.armBuild('T11');ui.activatePoint({x:190,y:140});assert.match(text(),/每 8 秒 \+12/);
  g.state.endless=true;ui.updateUI();assert.match(text(),/每 20 秒 \+1/);
 });
+
+test('compact menu switches secondary panels and shows live research progress',async()=>{
+ const {node,go,click,key,ui}=await harness();go('loop');
+ click('more-button');assert.equal(node('settings-panel').hidden,false);assert.equal(node('research-panel').hidden,true);assert.equal(node('more-button').getAttribute('aria-expanded'),'true');
+ click('mission-button');assert.equal(node('settings-panel').hidden,true);assert.equal(node('mission-panel').hidden,false);
+ key('keydown','Escape');assert.equal(node('command-drawer').hidden,true);
+ click('research-button');click('deployment-research-button');assert.match(node('research-button').textContent,/科技 0%/);
+ ui.game.tick(6);ui.updateUI();assert.match(node('research-button').textContent,/科技 50%/);
+ click('more-button');assert.equal(node('research-panel').hidden,true);assert.equal(node('settings-panel').hidden,false);
+ click('more-button');assert.equal(node('command-drawer').hidden,true);
+});
+
+test('quiet HUD keeps automatic wave timing and one-tap placement cancellation visible',async()=>{
+ const {node,go,click,ui}=await harness();go('loop');
+ assert.match(node('wave-label').textContent,/备战 30s/);
+ ui.armBuild('T01');assert.equal(node('focus-button').textContent,'取消放置');
+ const gold=ui.game.state.gold;click('focus-button');assert.equal(node('focus-button').textContent,'建造');assert.equal(ui.game.state.gold,gold);assert.equal(ui.game.state.towers.length,0);
+ ui.game.tick(30);ui.updateUI();assert.match(node('wave-label').textContent,/下波 40s/);
+});

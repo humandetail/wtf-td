@@ -83,10 +83,14 @@ function setDrawer(mode = null, trigger = canvas) {
   const drawer = element('command-drawer');
   const restoreFocus = drawer.contains(document.activeElement);
   drawer.hidden = !mode;
+  drawer.dataset.view = mode || '';
   element('research-panel').hidden = mode !== 'research';
   element('selection-panel').hidden = mode !== 'tower';
   element('mission-panel').hidden = mode !== 'mission';
-  element('drawer-title').textContent = mode === 'tower' ? '工事详情' : mode === 'mission' ? '任务指挥' : '科技指挥';
+  element('settings-panel').hidden = mode !== 'settings';
+  element('more-button').setAttribute('aria-expanded', String(mode === 'settings'));
+  element('more-button').setAttribute('aria-current', mode === 'mission' ? 'true' : 'false');
+  element('drawer-title').textContent = mode === 'tower' ? '工事详情' : mode === 'mission' ? (game.state.mode==='loop'?'战场情报':'任务指挥') : mode === 'settings' ? '对局菜单' : '科技研究';
   element('research-button').setAttribute('aria-expanded', String(mode === 'research'));
   element('mission-button').setAttribute('aria-expanded', String(mode === 'mission'));
   if (mode) {
@@ -127,7 +131,7 @@ function syncEvents() {
   for (const event of game.drainEvents()) {
     renderer.event(event);
     audio.play(event);
-    if (['wave', 'core-hit', 'wave-clear', 'checkpoint', 'convoy-toggle', 'convoy-repair', 'relocate', 'supply', 'hero-death', 'hero-respawn', 'hero-level', 'camp-clear', 'camp-reward'].includes(event.type)) notice(event.message || (event.type === 'core-hit' ? `防线受到 ${event.amount} 点伤害` : '战场状态已更新'), event.type === 'core-hit' ? 4 : 2.5);
+    if (['wave', 'core-hit', 'wave-clear', 'checkpoint', 'convoy-toggle', 'convoy-repair', 'relocate', 'hero-death', 'hero-respawn', 'hero-level', 'camp-clear', 'camp-reward'].includes(event.type)) notice(event.message || (event.type === 'core-hit' ? `防线受到 ${event.amount} 点伤害` : '战场状态已更新'), event.type === 'core-hit' ? 4 : 2.5);
     if (event.type === 'research-complete') {
       notice(event.message, 4);
       selectedSignature = '';
@@ -335,6 +339,12 @@ function updateResearch() {
     button.disabled = !eligibility.ok;
   }
   const research = state.research;
+  const shortcut = element('research-button');
+  const percent = research ? Math.floor((1-research.remaining/research.duration)*100+1e-6) : 0;
+  shortcut.textContent = research ? `科技 ${percent}%` : '科技';
+  shortcut.style.setProperty('--progress', `${percent}%`);
+  shortcut.classList.toggle('progress-button', !!research);
+  shortcut.title = research ? `${defs[research.kind].name} · ${research.remaining.toFixed(1)} 秒${state.paused?' · 已暂停':''}` : '科技研究';
   const progress = /** @type {HTMLProgressElement} */ (element('research-progress'));
   progress.hidden = true;
   progress.max = research?.duration || 1;
@@ -571,6 +581,12 @@ function updateMission() {
 function updateUI() {
   const state = game.state;
   element('gold-value').textContent = String(Math.floor(state.gold));
+  const waveCap = state.mode==='maze'?12:state.mode==='hero'?15:20;
+  const counting = !['gem','legion'].includes(state.mode) && Number.isFinite(state.nextWaveIn) && (state.endless || state.wave<waveCap) && (state.mode==='loop'||!state.waveActive);
+  element('wave-label').textContent = counting ? `${state.wave?'下波':'备战'} ${Math.max(0,Math.ceil(state.nextWaveIn))}s` : '波次';
+  const placing = !!armedCode || !!pendingGem || !!armedSkill || relocatingId!==null;
+  element('focus-button').textContent = placing ? '取消放置' : element('build-dock').hidden ? '建造' : '收起建造';
+  element('focus-button').classList.toggle('cancel-placement',placing);
   element('wave-value').textContent = state.endless ? `∞ ${state.wave}` : state.mode === 'escort' ? String(state.wave) : `${state.wave} / ${state.mode === 'maze' ? 12 : state.mode === 'hero' ? 15 : state.mode === 'legion' ? '∞' : 20}`;
   element('enemy-value').textContent = String(state.enemies.length);
   element('enemy-limit').textContent = String(state.limit);
@@ -716,7 +732,7 @@ function enterGame(restart = false) {
   else if (game.state.paused) game.togglePause();
   if (freshSession) setBuildDock(false);
   showView('game');
-  if (freshSession) notice(['gem', 'hero', 'legion'].includes(game.state.mode) ? ({gem:'打开“任务”鉴定五选一、部署宝石；准备完毕主动开战。',hero:'WASD移动，右键移动或指定敌人；Q/E/R后点击目标，“任务”查看装备和营地奖励。',legion:'单人对战AI：建造守军，“任务”管理经济派兵并主动开战；侦察按钮切换战场。'})[game.state.mode] : `点击“建造”选择工事；“科技”打开研究。${['escort', 'maze'].includes(game.state.mode) ? '“任务”查看目标与主动指令。' : ''}`, 5);
+  if (freshSession) notice(['gem', 'hero', 'legion'].includes(game.state.mode) ? ({gem:'点击“建造”鉴定宝石；菜单内查看任务。',hero:'WASD移动，右键移动或指定敌人；Q/E/R后点击目标，菜单内查看装备和营地奖励。',legion:'单人对战AI：建造守军，菜单内管理经济派兵并主动开战；侦察按钮切换战场。'})[game.state.mode] : `点击“建造”选择工事；“科技”打开研究。${['escort', 'maze'].includes(game.state.mode) ? '菜单内查看任务与主动指令。' : ''}`, 3);
   lastPhase = game.state.phase;
   updateUI();
   canvas.focus({ preventScroll: true });
@@ -734,7 +750,7 @@ function armBuild(code) {
   setBuildDock(false);
   void audio.unlock();
   const eligibility = game.canBuildType(code);
-  notice(`已选${buildItems.find(tower => tower.code === code).name} · ${eligibility.ok ? '在绿色区域放置，右键或 Esc 取消。' : eligibility.message}`);
+  notice(`已选${buildItems.find(tower => tower.code === code).name} · ${eligibility.ok ? '在绿色区域选择位置；点“取消放置”退出。' : eligibility.message}`);
   updateUI();
   canvas.focus({ preventScroll: true });
 }
@@ -745,8 +761,13 @@ function bindControls() {
     const isOpen = element('research-button').getAttribute('aria-expanded') === 'true';
     setDrawer(isOpen ? null : 'research', element('research-button'));
   });
+  element('more-button').addEventListener('click', () => {
+    const open = element('more-button').getAttribute('aria-expanded') === 'true';
+    setDrawer(open ? null : 'settings', element('more-button'));
+  });
   element('close-drawer-button').addEventListener('click', () => setDrawer());
   element('focus-button').addEventListener('click', () => {
+    if (armedCode || pendingGem || armedSkill || relocatingId!==null) { cancelBuild(); return; }
     if (game.state.mode === 'gem') { setDrawer('mission', element('focus-button')); return; }
     setBuildDock(element('build-dock').hidden);
   });
@@ -772,7 +793,7 @@ function bindControls() {
   for (const mode of modeNames) element(`mode-${mode}-button`).addEventListener('click', () => selectMode(mode));
   element('mission-button').addEventListener('click', () => {
     const open = element('mission-button').getAttribute('aria-expanded') === 'true';
-    setDrawer(open ? null : 'mission', element('mission-button'));
+    setDrawer(open ? null : 'mission', element('more-button'));
   });
   element('convoy-toggle-button').addEventListener('click', () => { void audio.unlock(); resultMessage(game.toggleConvoy()); });
   element('convoy-repair-button').addEventListener('click', () => { void audio.unlock(); resultMessage(game.repairConvoy()); });

@@ -53,30 +53,24 @@
       <header class="status-bar">
         <button id="home-button" class="wordmark" type="button" aria-label="返回主菜单，保留当前对局">环界<span id="current-mode">循环圈</span></button>
         <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
-        <div class="resource"><span class="status-label">波次</span><strong id="wave-value">—</strong></div>
+        <div class="resource"><span id="wave-label" class="status-label">波次</span><strong id="wave-value">—</strong></div>
         <div class="pressure-status">
           <div class="pressure-label"><span id="pressure-label" class="status-label">环路积怪</span><strong id="loop-pressure-value"><span id="enemy-value">—</span><span class="muted"> / <span id="enemy-limit">—</span></span></strong><strong id="core-pressure-value" hidden><span id="core-health-value">20</span><span class="muted"> / <span id="core-health-limit">20</span></span></strong></div>
           <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
         </div>
-        <div id="defense-enemy-status" class="resource" hidden><span class="status-label">在场敌人</span><strong id="defense-enemy-value">0</strong></div>
-        <div class="resource next-wave"><span id="next-wave-label" class="status-label">下一波</span><strong id="next-wave-value">—</strong></div>
-        <div class="resource kills"><span class="status-label">已击杀</span><strong id="kill-value">—</strong></div>
-        <nav class="game-controls" aria-label="对局控制">
-          <button id="mission-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" hidden>任务</button>
-          <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
-          <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="展开建造浮层，选择防御工事">建造</button>
+      </header>
+      <nav class="game-controls" aria-label="对局控制">
+        <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="选择防御工事">建造</button>
+        <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
+        <div class="control-utilities">
           <button id="pause-button" class="button compact" type="button">暂停</button>
           <button id="speed-button" class="button compact" type="button">1× 速度</button>
-          <button id="mute-button" class="button compact" type="button" aria-pressed="false">声音开</button>
-          <button id="menu-button" class="button compact quiet" type="button" title="确认后暂停并保留本局，返回后可继续">主菜单</button>
-        </nav>
-      </header>
+          <button id="more-button" class="button compact quiet" type="button" aria-controls="command-drawer" aria-expanded="false">菜单</button>
+        </div>
+      </nav>
       <div id="battle-stage" class="battle-stage">
         <div class="map-frame">
           <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。点“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
-          <div class="map-tools" aria-label="地图视野">
-            <button id="map-zoom-button" type="button" title="放大地图">1×</button><button id="map-pan-button" type="button" aria-pressed="false">拖动地图</button><button id="map-reset-button" type="button">全图</button>
-          </div>
           <div id="touch-actions" hidden><span id="touch-action-status">确认目标</span><button id="touch-confirm-button" class="button primary" type="button">确认</button><button id="touch-cancel-button" class="button" type="button">取消</button></div>
           <div id="hero-move-pad" role="group" aria-label="英雄移动摇杆" hidden><span aria-hidden="true"></span><small>移动</small></div>
           <div id="hero-hud" class="mode-hud" hidden aria-label="英雄状态与技能">
@@ -91,7 +85,22 @@
           <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
         </div>
         <aside id="command-drawer" class="command-drawer" aria-labelledby="drawer-title" hidden>
-          <div class="drawer-heading"><h2 id="drawer-title">科技指挥</h2><button id="close-drawer-button" class="button compact" type="button">收起 · Esc</button></div>
+          <div class="drawer-heading"><h2 id="drawer-title">科技指挥</h2><button id="close-drawer-button" class="button compact" type="button">收起</button></div>
+          <section id="settings-panel" aria-label="对局菜单" hidden>
+            <div class="session-summary">
+              <div id="defense-enemy-status" class="resource" hidden><span class="status-label">在场敌人</span><strong id="defense-enemy-value">0</strong></div>
+              <div class="resource next-wave"><span id="next-wave-label" class="status-label">下一波</span><strong id="next-wave-value">—</strong></div>
+              <div class="resource kills"><span class="status-label">已击杀</span><strong id="kill-value">—</strong></div>
+            </div>
+            <div class="map-tools" aria-label="地图视野">
+              <button id="map-zoom-button" type="button" title="放大地图">1×</button><button id="map-pan-button" type="button" aria-pressed="false">拖动地图</button><button id="map-reset-button" type="button">全图</button>
+            </div>
+            <div class="session-actions">
+              <button id="mission-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" hidden>任务</button>
+              <button id="mute-button" class="button compact" type="button" aria-pressed="false">声音开</button>
+              <button id="menu-button" class="button compact quiet" type="button" title="确认后暂停并保留本局，返回后可继续">主菜单</button>
+            </div>
+          </section>
           <section id="selection-panel" aria-label="防御单位详情" hidden>
             <p id="loop-enemy-info" class="strategy-summary" hidden></p>
             <div class="selected-summary">
