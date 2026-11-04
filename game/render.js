@@ -39,7 +39,7 @@ export async function loadImage(url,{attempts=3,retryDelay=400,timeoutMs=120000,
 /** Load the original sprites without rewriting or rescaling their files. */
 export async function loadArtwork(onProgress=(done,total)=>{}, onRetry=(url,attempt,total)=>{}) {
   let failed=false;
-  const load=url=>loadImage(url,{onRetry:(source,attempt,total)=>{if(!failed)onRetry(source,attempt,total);}});
+  const load=(url,options={})=>loadImage(url,{...options,onRetry:(source,attempt,total)=>{if(!failed)onRetry(source,attempt,total);}});
   const response = await fetch(new URL('manifest.json', ORIGINALS));
   if (!response.ok) throw new Error('原素材清单无法读取，请从项目根目录启动服务。');
   const manifest = await response.json();
@@ -55,9 +55,9 @@ export async function loadArtwork(onProgress=(done,total)=>{}, onRetry=(url,atte
   for (const entry of manifest.effects) {
     tasks.push(async () => { effects.set(entry.code, await load(new URL(entry.path, ORIGINALS))); });
   }
-  tasks.push(async () => { result.ground = await load(new URL('scene.png', MAPS)); });
-  tasks.push(async () => { result.defenseGround = await load(new URL('./assets/maps/core-defense/scene.png', import.meta.url)); });
-  for(const mode of ['escort','maze','gem','hero','legion'])tasks.push(async()=>{result[`${mode}Ground`]=await load(new URL(`./assets/maps/${mode}/scene.png`,import.meta.url));});
+  tasks.push(async () => { result.ground = await load(new URL('scene.webp', MAPS),{timeoutMs:15000}); });
+  tasks.push(async () => { result.defenseGround = await load(new URL('./assets/maps/core-defense/scene.webp', import.meta.url),{timeoutMs:15000}); });
+  for(const mode of ['escort','maze','gem','hero','legion'])tasks.push(async()=>{result[`${mode}Ground`]=await load(new URL(`./assets/maps/${mode}/scene.webp`,import.meta.url),{timeoutMs:15000});});
   tasks.push(async()=>{result.convoyImage=await load(new URL('props/P01-tech-supply-crate.png',ORIGINALS));});
   tasks.push(async()=>{result.wallImage=await load(new URL('props/P02-portable-generator.png',ORIGINALS));});
   tasks.push(async()=>{result.ruinsImage=await load(new URL('props/P04-broken-stone-stele.png',ORIGINALS));});

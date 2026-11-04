@@ -37,7 +37,7 @@ test('production asset loader and painter render all seven actual sessions with 
  const {canvas,calls}=canvasHarness(),progress=[];
  const artwork=await loadArtwork((n,total)=>progress.push([n,total]));
  assert.equal(progress.length,43);assert.deepEqual(progress.at(-1),[43,43]);
- for(const mode of ['gem','hero','legion'])assert.ok(artwork[`${mode}Ground`].url.includes(`/maps/${mode}/scene.png`));
+ for(const mode of ['gem','hero','legion'])assert.ok(artwork[`${mode}Ground`].url.includes(`/maps/${mode}/scene.webp`));
  for(const unit of artwork.units.values())for(const direction of ['E','SE','S','SW','W','NW','N','NE'])unit.images.set(direction,unit.masterImage);
  const renderer=createRenderer(canvas(),artwork);
  for(const mode of ['loop','defense','escort','maze','gem','hero','legion']){

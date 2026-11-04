@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 const root=fileURLToPath(new URL('../',import.meta.url)),destination=resolve(root,'_site');
 const files=new Set(['game/index.html','game/styles.css','game/mobile.css','outputs/manifest.json']);
 for(const file of await readdir(resolve(root,'game')))if(file.endsWith('.js'))files.add(`game/${file}`);
-for(const map of ['v5','core-defense','escort','maze','gem','hero','legion'])files.add(`game/assets/maps/${map}/scene.png`);
+for(const map of ['v5','core-defense','escort','maze','gem','hero','legion'])files.add(`game/assets/maps/${map}/scene.webp`);
 for(const file of ['hero/atlas.png','gem/atlas.png','shared/objectives.png'])files.add(`game/assets/modes/${file}`);
 const manifest=JSON.parse(await readFile(resolve(root,'outputs/manifest.json'),'utf8'));
 for(const unit of manifest.units)for(const path of [unit.master,...Object.values(unit.directions)])files.add(`outputs/${path}`);
