@@ -1,7 +1,7 @@
 import {LOOP_TOWERS,LOOP_TECHNOLOGIES,LOOP_ROUTES,LOOP_PRIORITIES,loopStats,loopUnlockLevel,upgradeQuote,loopWave,loopEnemy,loopWaveInterval} from './loop-catalog.js';
 import {createLoopCombat} from './loop-combat.js';
 import {createResearchControls} from './research-controls.js';
-import {placementStatus,createRoadPosition,advanceOnRoad} from './geometry.js';
+import {loopPlacementStatus,createRoadPosition,advanceOnRoad} from './geometry.js';
 /** @returns {any} */
 const result=(ok,message,extra={})=>({ok,message,...extra});
 export function createLoopGame(options={}){
@@ -33,7 +33,7 @@ export function createLoopGame(options={}){
   launchWave(){if(state.phase!=='playing'||state.paused||queue.length||!state.endless&&state.wave>=(options.waveCount??20))return result(false,'当前不能提前出怪');beginWave();return result(true,'下一波开始');},
   ...research,
   canBuildType(code){if(state.phase!=='playing')return result(false,'请先开始对局');const def=LOOP_TOWERS.find(t=>t.code===code);if(!def)return result(false,'无效防御单位');const unlock=loopUnlockLevel(code);if(state.tech.deployment<unlock)return result(false,`需要部署科技 ${unlock} 级`);if(state.towers.length>=LOOP_TECHNOLOGIES.deployment.levels[state.tech.deployment].capacity)return result(false,'部署容量已满');return result(state.gold>=def.price,state.gold>=def.price?'可以建造':'金币不足');},
-  canBuild(x,y,code){const s=game.canBuildType(code);return s.ok?placementStatus(x,y,state.towers):s;},
+  canBuild(x,y,code){const s=game.canBuildType(code);return s.ok?loopPlacementStatus(x,y,state.towers):s;},
   build(x,y,code){const s=game.canBuild(x,y,code);if(!s.ok)return s;const def=LOOP_TOWERS.find(t=>t.code===code),id=nextTower++;state.gold-=def.price;state.towers.push({id,code,x,y,level:1,spent:def.price,angle:0,priority:'default',route:null,cooldown:0,cycles:0});emit({type:'build',x,y,code});return result(true,'建造完成',{towerId:id});},
   canUpgrade(id){const t=state.towers.find(t=>t.id===id);if(state.phase!=='playing'||!t)return result(false,'请先选择防御单位');if(t.upgrading)return result(false,'升级进行中');if(t.level>=5)return result(false,'已达最高等级');if(t.level>=LOOP_TECHNOLOGIES.reinforcement.levels[state.tech.reinforcement].maxTowerLevel)return result(false,`需要强化科技 ${t.level} 级`);return result(state.gold>=upgradeQuote(t,state).cost,state.gold>=upgradeQuote(t,state).cost?'可以升级':'金币不足');},
   upgrade(id,route=null){const s=game.canUpgrade(id);if(!s.ok)return s;const t=state.towers.find(t=>t.id===id);if(t.level===2&&!['A','B'].includes(route))return result(false,'升至3级请选择A或B专精');const quote=upgradeQuote(t,state);state.gold-=quote.cost;t.spent+=quote.cost;t.upgrading={...quote,remaining:quote.duration,route:t.level===2?route:null};return result(true,`升级开始，${quote.duration}秒后完成`);},

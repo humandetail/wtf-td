@@ -6,7 +6,7 @@ import {inflateSync} from 'node:zlib';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
-import {FOOTPRINT, BUILD_CENTER_BOUNDS, PLAZA, ROAD_SEGMENTS, ROAD_NODES, placementStatus} from '../game/geometry.js';
+import {FOOTPRINT, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, PLAZA, ROAD_SEGMENTS, ROAD_NODES, loopPlacementStatus, placementStatus} from '../game/geometry.js';
 import {DEFENSE_LANES, DEFENSE_ROAD_SEGMENTS, DEFENSE_PLAZA, defensePlacementStatus} from '../game/defense-geometry.js';
 import {SLOTS as V2_SLOTS, LOOP_LENGTH as V2_LENGTH, pointOnLoop as v2Point} from '../game/assets/maps/v2/source/layout-geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -150,7 +150,7 @@ for(const version of ['v3','v4']){
  console.log(`✓ ${version} 路网像素、禁止压路与 ${freePoints} 个非固定建造采样点有效`);
 }
 // Both maps are painted as whole scenes. Inspect actual colors, not a synthetic lane alpha mask.
-async function checkPaintedScene(directory,segments,nodes,plaza,canPlace,minimumSamples) {
+async function checkPaintedScene(directory,segments,nodes,plaza,canPlace,minimumSamples,bounds=BUILD_CENTER_BOUNDS) {
 const sceneBytes=await read(`${directory}/scene.png`);
 assert(sceneBytes.equals(await read(`${directory}/source/scene-imagegen-original.png`)),`${directory} 场景与保留生成原图不一致`);
 const sceneWidth=sceneBytes.readUInt32BE(16),sceneHeight=sceneBytes.readUInt32BE(20);
@@ -175,7 +175,7 @@ for(const {x1,y1,x2,y2} of segments){
 }
 assert(paintedSamples>minimumSamples,`${directory} 实际铺路采样不足`);
 let paintedFootprints=0;
-for(let y=BUILD_CENTER_BOUNDS.y;y<=BUILD_CENTER_BOUNDS.y+BUILD_CENTER_BOUNDS.height;y+=13)for(let x=BUILD_CENTER_BOUNDS.x;x<=BUILD_CENTER_BOUNDS.x+BUILD_CENTER_BOUNDS.width;x+=19){
+for(let y=bounds.y;y<=bounds.y+bounds.height;y+=13)for(let x=bounds.x;x<=bounds.x+bounds.width;x+=19){
  if(!canPlace(x,y).ok)continue;
  paintedFootprints++;
  for(const dx of [-FOOTPRINT.width/2,0,FOOTPRINT.width/2])for(const dy of [-FOOTPRINT.height/2,0,FOOTPRINT.height/2]){
@@ -187,7 +187,7 @@ for(let y=BUILD_CENTER_BOUNDS.y;y<=BUILD_CENTER_BOUNDS.y+BUILD_CENTER_BOUNDS.hei
 console.log(`✓ ${directory} 实际场景 ${paintedSamples} 个路面色彩采样与 ${paintedFootprints} 处建筑占地采样有效（节点装饰另行看图）`);
 }
 const loopSegments=ROAD_NODES.flatMap((node,index)=>node.neighbors.filter(n=>n>index).map(n=>({x1:node.x,y1:node.y,x2:ROAD_NODES[n].x,y2:ROAD_NODES[n].y})));
-await checkPaintedScene('game/assets/maps/v5',loopSegments,ROAD_NODES,PLAZA,placementStatus,700);
+await checkPaintedScene('game/assets/maps/v5',loopSegments,ROAD_NODES,PLAZA,loopPlacementStatus,700,LOOP_BUILD_AREA.bounds);
 await checkPaintedScene('game/assets/maps/core-defense',DEFENSE_ROAD_SEGMENTS,DEFENSE_LANES.flatMap(lane=>lane.points.map(([x,y])=>({x,y}))),DEFENSE_PLAZA,defensePlacementStatus,300);
 for(const mode of ['escort','maze','gem','hero','legion']){
  const directory=`game/assets/maps/${mode}`,bytes=await read(`${directory}/scene.png`);

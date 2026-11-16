@@ -70,7 +70,7 @@
       </nav>
       <div id="battle-stage" class="battle-stage">
         <div class="map-frame">
-          <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。点“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
+          <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。点“建造”选择工事，再在地图亮处选点。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
           <div id="touch-actions" hidden><span id="touch-action-status">确认目标</span><button id="touch-confirm-button" class="button primary" type="button">确认</button><button id="touch-cancel-button" class="button" type="button">取消</button></div>
           <div id="hero-move-pad" role="group" aria-label="英雄移动摇杆" hidden><span aria-hidden="true"></span><small>移动</small></div>
           <div id="hero-hud" class="mode-hud" hidden aria-label="英雄状态与技能">
@@ -83,6 +83,7 @@
           </div>
           <div id="legion-hud" class="mode-hud" hidden><span id="legion-kings"></span><button id="scout-button" class="button compact" type="button">侦察对手</button></div>
           <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+          <p id="build-status" class="notice placement-status" role="status" hidden></p>
         </div>
         <aside id="command-drawer" class="command-drawer" aria-labelledby="drawer-title" hidden>
           <div class="drawer-heading"><h2 id="drawer-title">科技指挥</h2><button id="close-drawer-button" class="button compact" type="button">收起</button></div>
@@ -105,7 +106,7 @@
             <p id="loop-enemy-info" class="strategy-summary" hidden></p>
             <div class="selected-summary">
               <p id="selected-slot-label" class="eyebrow">防线指挥</p>
-              <p id="selection-hint">点“建造”选择工事，再在绿色区域放置。</p>
+              <p id="selection-hint">点“建造”选择工事，再在地图亮处选点。</p>
               <div id="tower-panel" hidden>
                 <h2 id="tower-title">防御单位</h2>
                 <p id="tower-description"></p>
@@ -153,8 +154,12 @@
         <section id="build-dock" class="build-dock" aria-labelledby="build-heading" hidden>
           <div class="build-toolbar">
             <h2 id="build-heading">防御工事</h2><span id="tower-capacity" class="capacity-label">容量 0 / 4</span>
-            <p id="build-status" class="build-status" role="status" aria-live="polite">点“建造”选择工事，再在绿色区域放置。</p>
-            <button id="cancel-build-button" class="button compact cancel-build" type="button" hidden>取消建造 · Esc</button>
+            <div id="build-filters" class="build-filters" role="group" aria-label="按工事职责筛选">
+              <button type="button" data-category="all" aria-pressed="true">全部</button>
+              <button type="button" data-category="damage" aria-pressed="false">输出</button>
+              <button type="button" data-category="control" aria-pressed="false">控制</button>
+              <button type="button" data-category="support" aria-pressed="false">辅助</button>
+            </div>
           </div>
           <div id="shop-list" class="shop-list" aria-label="十四种防御单位；迷宫额外提供路障，横向滚动查看更多"></div>
         </section>
@@ -176,7 +181,7 @@
     <div class="dialog-heading"><p class="eyebrow">作战手册</p><button id="close-help" class="button compact" type="button" autofocus>关闭</button></div>
     <h2 id="help-title">选择战场，构筑你的防线</h2>
     <ol class="help-steps">
-      <li><strong>选择工事，自由布防</strong><p>点“建造”展开底部工事带，选择工事后在绿色区域任意放置，每次选定只建造一座，完成后自动退出放置。道路、中心枢纽及重叠区域不可放置，红色预览显示原因。右键、Esc 或“取消建造”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
+      <li><strong>选择工事，自由布防</strong><p>点“建造”查看工事的用途。选中工事后在地图亮处选点。触屏可点按或拖动预览，再点确认。每次选定建造一座，完成后自动退出放置。遇到不可放置的位置，地图上方会显示原因。右键、Esc 或“取消放置”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
       <li><strong>没有终点，只有积压</strong><p>循环圈开局600金币、首波准备30秒；每个常规波次实际清完补给60金币，仅发一次。普通怪物和 Boss 都从地图中心出生，每只独立等概率选择上、下、左、右。外环、内环与中心通道彼此连通，敌人在交叉点随机选择前进方向，不原地掉头，绕行也不会消失。新波次按时到来，场上怪物达到容怪上限即失败。</p></li>
       <li><strong>核心保卫战：守住终点</strong><p>每波按北、东、南、西轮换入口，敌人沿单向道路抵达中央后消失。核心共 20 点耐久，普通怪漏过扣 1，Boss 扣 5，漏怪不获得击杀奖励。核心归零即失败。首波准备 18 秒；每波清场获得 40 + 波次 × 5 金币，随后准备 12 秒。清场前不会开启下一波。</p></li>
       <li><strong>灵枢护送：移动的防线</strong><p>载具初始停车，耐久 100；打开“任务”主动启程或停车，沿 S 路线到达终点即胜利。敌人每 18 秒从路线前后伏击，接近后持续攻击，停车也不会停止敌人或波次。到 800 / 1600 距离自动停车，各补给 100 金币，需主动继续。仅停车时可花 60 金币恢复 6 耐久。选择已有塔可用 25 金币搬迁至任意合法位置，保留 ID、等级与投资，但停机 3 游戏秒；期间不攻击、不提供辅助与收入，不能重复搬迁。右键或 Esc 取消。载具归零即失败，无无尽。</p></li>

@@ -9,6 +9,18 @@ function tower(g,code,route=null,level=1,x=500,y=300){const t={id:g.state.towers
 function enemy(g,code='X01',x=570,y=300,extra={}){const e=loopEnemy({code,boss:false,wave:1,endless:g.state.endless},100+g.state.enemies.length,createRoadPosition(()=>.1));Object.assign(e,{x,y,speed:0,hp:100000,maxHp:100000},extra);g.state.enemies.push(e);return e;}
 function fire(g,t,n=1){for(let i=0;i<n;i++){t.cooldown=0;g.tick(.05);}}
 
+test('loop builds in the widened strip between roads and rejects bases that cross into the road',()=>{
+ const game=setup();
+ for(const [x,y] of [[400,118],[510,156]]){
+  assert.equal(game.canBuild(x,y,'T01').ok,true);
+  assert.equal(game.build(x,y,'T01').ok,true);
+  const tower=game.state.towers.at(-1);
+  assert.deepEqual([tower.x,tower.y],[x,y]);
+ }
+ assert.equal(game.canBuild(400,110,'T01').message,'道路和连接通道不可建造');
+ assert.equal(game.canBuild(510,164,'T01').message,'道路和连接通道不可建造');
+});
+
 test('loop owns its catalog and 4/6/8/10/12/16 capacity; other modes keep original technology',()=>{
  const g=setup();assert.equal(g.catalog.length,14);assert.deepEqual(g.technologies.deployment.levels.map(l=>l.capacity),[4,6,8,10,12,16]);assert.equal(g.technologies.reinforcement.levels.length,7);
  for(const mode of ['defense','escort','maze','hero'])assert.deepEqual(createGame({mode}).technologies?.deployment.levels.map(l=>l.capacity)||[4,8,12,20],[4,8,12,20]);

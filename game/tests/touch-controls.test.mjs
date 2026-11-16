@@ -25,7 +25,10 @@ test('touch only previews until confirmation; cancellation and dragging never sp
  const h=harness();h.canvas.emit('pointerdown');h.canvas.emit('pointerup');
  assert.equal(h.game.state.gold,400);assert.equal(h.get('touch-actions').hidden,false);assert.equal(h.get('touch-confirm-button').disabled,false);
  h.get('touch-confirm-button').emit('click');assert.equal(h.game.state.gold,300);assert.equal(h.game.state.towers.length,1);assert.ok(Math.abs(h.game.state.towers[0].x-192)<1e-8);
- h.canvas.emit('pointerdown',{clientX:110});h.canvas.emit('pointermove',{clientX:160});h.canvas.emit('pointerup',{clientX:160});assert.equal(h.activations,1);
+ h.canvas.emit('pointerdown',{clientX:110});h.canvas.emit('pointermove',{clientX:160});h.canvas.emit('pointerup',{clientX:160});
+ assert.equal(h.activations,1);
+ assert.equal(h.get('touch-actions').hidden,false);assert.equal(h.get('touch-confirm-button').disabled,false);
+ assert.equal(h.game.state.gold,300);
  h.canvas.emit('pointerdown',{clientX:140});h.canvas.emit('pointerup',{clientX:140});h.get('touch-cancel-button').emit('click');h.get('touch-confirm-button').emit('click');assert.equal(h.activations,1);
 });
 test('zoom and camera drag preserve world mapping and suppress synthetic purchase clicks',()=>{
