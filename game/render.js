@@ -1,4 +1,4 @@
-import { WORLD, FOOTPRINT, BUILD_BOUNDS, BUILD_CENTER_BOUNDS, BUILD_EXCLUSIONS, ENTRY } from './geometry.js';
+import { WORLD, FOOTPRINT, BUILD_BOUNDS, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, ENTRY } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 import { DEFENSE_CORE, DEFENSE_LANES, DEFENSE_BUILD_EXCLUSIONS } from './defense-geometry.js';
 import {ESCORT_POINTS,ESCORT_CHECKPOINTS,ESCORT_BUILD_EXCLUSIONS,pointOnEscortRoute} from './escort-geometry.js';
@@ -105,8 +105,8 @@ export function createRenderer(canvas, artwork) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
   const backgrounds = {}, buildMasks = {};
-  for (const {mode, ground, exclusions} of [
-    {mode:'loop', ground:artwork.ground, exclusions:BUILD_EXCLUSIONS},
+  for (const {mode, ground, exclusions, bounds = BUILD_CENTER_BOUNDS} of [
+    {mode:'loop', ground:artwork.ground, ...LOOP_BUILD_AREA},
     {mode:'defense', ground:artwork.defenseGround, exclusions:DEFENSE_BUILD_EXCLUSIONS},
     {mode:'escort', ground:artwork.escortGround, exclusions:ESCORT_BUILD_EXCLUSIONS},
     {mode:'maze', ground:artwork.mazeGround, exclusions:[]},
@@ -124,13 +124,13 @@ export function createRenderer(canvas, artwork) {
     const buildMask = document.createElement('canvas');
     buildMask.width = WORLD.width; buildMask.height = WORLD.height;
     const mask = buildMask.getContext('2d');
-    mask.fillStyle = '#9ae6ad45';
+    mask.fillStyle = '#fff';
     if(mode==='hero'){
       // The preview samples continuous authoritative geometry; these are not build slots.
       for(let y=0;y<WORLD.height;y+=4)for(let x=0;x<WORLD.width;x+=4)if(heroPlacementStatus(x+2,y+2).ok)mask.fillRect(x,y,4,4);
     }else if(mode==='legion'){
       const b=LEGION_DEPLOYMENT;mask.fillRect(b.left,b.top,b.right-b.left,b.bottom-b.top);
-    }else mask.fillRect(BUILD_CENTER_BOUNDS.x, BUILD_CENTER_BOUNDS.y, BUILD_CENTER_BOUNDS.width, BUILD_CENTER_BOUNDS.height);
+    }else mask.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
     for (const area of exclusions) mask.clearRect(area.x, area.y, area.width, area.height);
     buildMasks[mode] = buildMask;
   }
@@ -327,32 +327,38 @@ export function createRenderer(canvas, artwork) {
     particles = particles.filter(item => item.age < item.life);
   }
 
-  function draw(state, selectedTowerId, placement, dt = 0, cursor = null) {
+  function draw(state, selectedTowerId, placement, dt = 0, cursor = null, buildArea = placement) {
     state=projectBattleState(state);frameState=state;
     const mode = state.mode;
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     ctx.drawImage(backgrounds[mode], 0, 0);
-    drawTacticalGround(state,placement);
-    if (placement&&!placement.skill) {
+    if (buildArea?.code) {
       free.clearRect(0, 0, WORLD.width, WORLD.height);
-      const footprint=mode==='legion'?{width:LEGION_RADIUS*2,height:LEGION_RADIUS*2}:placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+      const footprint = buildArea.code === 'WALL' ? WALL_FOOTPRINT : FOOTPRINT;
       if(mode==='maze'){
-        free.fillStyle='#9ae6ad45';
+        free.fillStyle='#fff';
         free.fillRect(BUILD_BOUNDS.x+footprint.width/2,BUILD_BOUNDS.y+footprint.height/2,BUILD_BOUNDS.width-footprint.width,BUILD_BOUNDS.height-footprint.height);
       }else free.drawImage(buildMasks[mode], 0, 0);
       for (const tower of [...state.towers,...state.walls||[]]) {
-        if(placement.relocating&&tower.id===placement.towerId)continue;
+        if(buildArea.relocating&&tower.id===buildArea.towerId)continue;
         if(mode==='legion'){free.save();free.globalCompositeOperation='destination-out';free.beginPath();free.arc(tower.x,tower.y,LEGION_RADIUS*2+8,0,Math.PI*2);free.fill();free.restore();continue;}
         const other=tower.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
         const halfX=(footprint.width+other.width)/2+8,halfY=(footprint.height+other.height)/2+8;
         free.clearRect(tower.x-halfX,tower.y-halfY,halfX*2,halfY*2);
       }
       if(mode==='hero')for(const entity of [state.hero,...state.enemies]){
-        if(entity.hp<=0)continue;
+        if(entity===state.hero ? !entity.alive : entity.hp<=0)continue;
         free.clearRect(entity.x-60,entity.y-40,120,80);
       }
+      // Keep the terrain color where the building's center can go.
+      free.save();
+      free.globalCompositeOperation = 'source-out';
+      free.fillStyle = '#101c17ac';
+      free.fillRect(0, 0, WORLD.width, WORLD.height);
+      free.restore();
       ctx.drawImage(freeMask, 0, 0);
     }
+    drawTacticalGround(state,placement);
     if(mode==='loop'||mode==='defense'){
     ctx.save();
     ctx.globalAlpha = reduceMotion ? .16 : .16 + Math.sin(state.elapsed * 2) * .05;
@@ -375,11 +381,11 @@ export function createRenderer(canvas, artwork) {
     const active=state.towers.filter(t=>(t.readyAt??0)<=state.elapsed);
     const focus=movingTower?{...movingTower,x:placement.x,y:placement.y}:placement?.code?{...placement,level:placement.level||1}:selected;
     const range=focus&&focus.code!=='WALL'?(specialStats(focus,state)?.range??(placement&&!movingTower?TOWERS.find(t=>t.code===focus.code)?.range:effectiveTowerStats(focus,active).range)):0;
-    if (position && range) {
+    if (position && range && (!placement || placement.ok)) {
       ctx.save();
       ctx.fillStyle = '#f7df8612';
-      ctx.strokeStyle = '#f7df8680';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = placement ? '#f7df86d9' : '#f7df8680';
+      ctx.lineWidth = placement ? 2.5 : 1.5;
       ctx.setLineDash([6, 6]);
       ctx.beginPath();
       ctx.arc(position.x, position.y, range, 0, Math.PI * 2);
@@ -397,21 +403,23 @@ export function createRenderer(canvas, artwork) {
     if(state.convoy){const convoy=state.convoy;text(convoy.moving?'护送载具 · 行进':'护送载具 · 停车',Math.max(100,Math.min(1180,convoy.x)),convoy.y+40,'#c4ffdf',14);}
     if (placement&&!placement.skill) {
       const color = placement.ok ? '#a4e6ae' : '#f29a84';
-      const unit = artwork.units.get(placement.code);
+      const useSpecialArt = mode === 'gem' || ['T13','T14'].includes(placement.code);
+      const unit = useSpecialArt ? null : artwork.units.get(placement.code);
       ctx.save();
-      ctx.globalAlpha = .52;
+      ctx.globalAlpha = placement.ok ? .78 : .45;
       if(placement.code==='WALL')drawWall(placement.x,placement.y);
-      if(mode==='gem'||['T13','T14'].includes(placement.code))special.actor({...placement,level:placement.level||1},state);
+      if(useSpecialArt)special.actor({...placement,level:placement.level||1},state);
       if (unit?.masterImage) ctx.drawImage(unit.masterImage, placement.x - 64, placement.y - 80, 128, 128);
       ctx.globalAlpha = 1;
       ctx.fillStyle = placement.ok ? '#71cf8b35' : '#e7786635';
       ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+      if (!placement.ok) ctx.setLineDash([6,4]);
       const size=mode==='legion'?{width:LEGION_RADIUS*2,height:LEGION_RADIUS*2}:placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
       ctx.fillRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
       ctx.strokeRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
       const labelX = Math.max(130, Math.min(WORLD.width - 130, placement.x));
       const labelY = placement.y > 100 ? placement.y - 91 : placement.y + 49;
-      text(placement.ok ? placement.relocating?'点击搬迁':'点击建造' : placement.message, labelX, labelY, color, 15);
+      text(placement.ok ? '可放置' : '不可放置', labelX, labelY, color, 17);
       ctx.restore();
     } else if(placement?.skill){text(`点击施放 ${placement.skill}`,Math.max(130,Math.min(1150,placement.x)),Math.max(30,placement.y-40),'#b5efda',14);
     } else if (cursor) {

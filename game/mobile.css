@@ -40,7 +40,10 @@
 :root.touch-layout .command-drawer .button{min-height:44px}
 :root.touch-layout .drawer-heading{position:sticky;top:-14px;background:#15241c;z-index:1;padding-top:6px}
 :root.touch-layout .build-dock,:root.touch-layout #build-dock.hero-build-dock{bottom:6px;left:6px;right:6px;padding:10px;border-radius:16px 16px 8px 8px;max-height:70%;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;animation:sheet-in .18s ease-out}
-:root.touch-layout .build-toolbar{gap:8px;flex-wrap:wrap}:root.touch-layout .build-status{flex-basis:100%;font-size:13px}
+:root.touch-layout .build-toolbar{gap:8px;flex-wrap:wrap}
+:root.touch-layout .build-filters{flex-basis:100%;margin-left:0}
+:root.touch-layout .build-filters button{flex:1;min-height:40px}
+:root.touch-layout #touch-actions:not([hidden])~.placement-status{display:none}
 :root.touch-layout .shop-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:none;overflow:visible}
 :root.touch-layout .tower-card{width:auto;min-width:0;min-height:94px;font-size:13px}
 :root.touch-layout #hero-hud{height:111px;bottom:8px;left:112px;right:8px;width:auto;max-width:none;padding:6px;background:#14241de6;border-radius:10px}
@@ -91,7 +94,13 @@
 :root.touch-layout .command-drawer{border-top:1px solid #4b6053;border-radius:14px 14px 8px 8px}
 :root.touch-layout .drawer-heading{background:#15241c}
 :root.touch-layout .notice{top:12px;font-size:13px;max-width:calc(100% - 24px)}
-:root.touch-layout #touch-actions{top:12px}
+:root.touch-layout #touch-actions{top:12px;pointer-events:none}
+:root.touch-layout #touch-actions button{pointer-events:auto}
+@media(orientation:landscape) and (max-height:550px){
+  :root.touch-layout #touch-actions{left:auto;width:clamp(112px,22vw,172px);display:grid;grid-template-columns:1fr 1fr}
+  :root.touch-layout #touch-actions span{grid-column:1/-1}
+  :root.touch-layout #touch-actions button{padding-inline:4px}
+}
 @media(orientation:landscape) and (max-height:550px){:root.touch-layout .game-controls{padding-top:4px;padding-bottom:calc(4px + env(safe-area-inset-bottom))}:root.touch-layout .game-controls>.button{min-height:46px}:root.touch-layout .game-controls .control-utilities .button{min-height:44px}:root.touch-layout .status-bar{min-height:42px;padding:3px 8px}}
 .game-controls #focus-button.cancel-placement::before{content:'×';mask:none;-webkit-mask:none;background:none;font-size:26px;line-height:22px;text-align:center}
 .status-bar .status-label{white-space:nowrap}

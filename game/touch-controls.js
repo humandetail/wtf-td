@@ -23,6 +23,7 @@ export function createTouchControls(canvas, callbacks) {
   document.documentElement.classList.add('touch-layout');
   event.preventDefault();event.stopImmediatePropagation();suppressUntil=performance.now()+800;
   if(gesture){gesture=null;clear();return;}
+  clear();
   gesture={id:event.pointerId,x:event.clientX,y:event.clientY,start:{...offset},moved:false};canvas.setPointerCapture(event.pointerId);
  },true);
  canvas.addEventListener('pointermove',event=>{
@@ -31,13 +32,14 @@ export function createTouchControls(canvas, callbacks) {
   if(!gesture||event.pointerId!==gesture.id)return;
   const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;gesture.moved ||= Math.hypot(dx,dy)>10;
   if(pan){offset={x:gesture.start.x+dx,y:gesture.start.y+dy};camera();}
+  else if(gesture.moved&&callbacks.canInteract()&&callbacks.hasAction())callbacks.onPreview(world(event));
  },true);
  canvas.addEventListener('pointerup',event=>{
   if(event.pointerType!=='touch')return;
   event.preventDefault();event.stopImmediatePropagation();suppressUntil=performance.now()+800;
   if(!gesture||event.pointerId!==gesture.id)return;
   const moved=gesture.moved;gesture=null;
-  if(pan||moved||!callbacks.canInteract())return;
+  if(pan||!callbacks.canInteract()||(moved&&!callbacks.hasAction()))return;
   canvas.focus({preventScroll:true});point=world(event);
   if(callbacks.hasAction()){
    const status=callbacks.onPreview(point);byId('touch-actions').hidden=false;

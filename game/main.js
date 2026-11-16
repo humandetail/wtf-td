@@ -21,6 +21,7 @@ function element(id) {
 }
 
 const canvas = /** @type {HTMLCanvasElement} */ (element('game-canvas'));
+const touchPointer = globalThis.matchMedia?.('(pointer: coarse)');
 const help = /** @type {HTMLDialogElement} */ (element('help-dialog'));
 const sessions = { loop: createGame(), defense: createGame({ mode: 'defense' }), escort: createGame({ mode: 'escort' }), maze: createGame({ mode: 'maze' }), gem: createGame({ mode: 'gem' }), hero: createGame({ mode: 'hero' }), legion: createGame({ mode: 'legion' }) };
 const modeNames = Object.keys(sessions);
@@ -41,11 +42,20 @@ let touchControls = null;
 function stopHero() { touchControls?.stop(); moveKeys.clear(); if (game.state.mode === 'hero') game.setMoveVector(0, 0); }
 function editable() { return game.state.phase === 'playing' && !game.state.paused && (!game.state.turnPhase || game.state.turnPhase === 'planning'); }
 const roles = {
-  wall: '改变行军路线', magic: '魔法灼烧', multi: '多重攻击',
+  wall: '改变行军路线', magic: '单体灼烧', multi: '多目标输出',
   direct: '单体输出', splash: '范围输出', chain: '连锁输出', slow: '减速控制',
   root: '定身控制', frost: '范围减速', radar: '射程增伤', overclock: '攻速辅助',
-  supply: '金币补给', barrier: '区域减速', aura: '范围强化', pierce: '首领破甲', boss: '首领克星', matrix: '连锁强化', echo: '协同回响', tank: '近战前排', support: '伤害辅助', healer: '修复友军',
+  supply: '金币补给', barrier: '区域减速', aura: '范围强化', pierce: '单体输出 · 首领增伤', boss: '首领克星', matrix: '连锁强化', echo: '协同回响', tank: '近战前排', support: '伤害辅助', healer: '修复友军',
 };
+const loopRoles = { T02: '破盾输出', T09: '射程辅助', T12: '破甲辅助' };
+function buildCategories(tower) {
+  if (game.state.mode === 'loop' && tower.code === 'T02') return 'damage';
+  if (game.state.mode === 'loop' && tower.code === 'T12') return 'support';
+  if (tower.code === 'T06') return 'damage control';
+  if (['slow', 'frost', 'root', 'barrier'].includes(tower.kind)) return 'control';
+  if (['direct', 'splash', 'chain', 'magic', 'multi'].includes(tower.kind)) return 'damage';
+  return 'support';
+}
 let renderer;
 let selectedTowerId = null;
 let selectedEnemyId = null;
@@ -53,6 +63,7 @@ let loopPanelSignature = '';
 let armedCode = null;
 let relocatingId = null;
 let placement = null;
+let buildArea = null;
 let pointerPosition = null;
 let keyboardMode = false;
 const keyboardPointer = { x: 190, y: 140 };
@@ -150,26 +161,35 @@ function resultMessage(result) {
 function refreshPlacement() {
   const pending = buildItems.find(item => item.code === armedCode);
   const moving = game.state.towers.find(item => item.id === relocatingId);
+  const gem = pendingGem?.kind === 'draft' ? game.state.draft?.candidates[pendingGem.id]
+    : pendingGem ? game.state.inventory.find(t => t.id === pendingGem.id) : null;
+  const eligibility = pending ? game.canBuildType(pending.code) : null;
+  const gemHasRoom = gem && game.state.towers.length < technologies().deployment.levels[game.state.tech.deployment].capacity;
+  buildArea = moving ? { code: moving.code, towerId: moving.id, relocating: true }
+    : eligibility?.ok ? { code: pending.code }
+    : gemHasRoom ? { code: gem.code } : null;
   placement = pointerPosition && (armedCode || moving)
     ? { ...pointerPosition, code: moving?.code || armedCode,
       ...(moving ? { towerId: moving.id, relocating: true, ...game.canRelocate(moving.id, pointerPosition.x, pointerPosition.y) }
         : game.canBuild(pointerPosition.x, pointerPosition.y, armedCode)) }
     : null;
-  const eligibility = pending ? game.canBuildType(pending.code) : null;
-  const message = moving ? `搬迁 ${TOWERS.find(item => item.code === moving.code).name} · 25 金币 · ${placement?.message || '选择新位置，保留等级，停机 3 秒；右键或 Esc 取消'}`
-    : pending ? `${pending.name} · ${pending.price} 金币 · ${placement ? placement.message : !eligibility.ok ? eligibility.message : '移动到绿色区域放置，成功后自动退出'}`
-      : '点“建造”选择工事，再在绿色区域放置。';
-  if (pendingGem && pointerPosition) {
-    const gem = pendingGem.kind === 'draft' ? game.state.draft?.candidates[pendingGem.id] : game.state.inventory.find(t=>t.id===pendingGem.id);
-    if (gem) placement = { ...pointerPosition, code: gem.code, level:gem.level, ...(game.state.towers.length >= technologies().deployment.levels[game.state.tech.deployment].capacity ? {ok:false,message:'部署容量已满'} : gemPlacementStatus(pointerPosition.x,pointerPosition.y,game.state.towers)) };
+  if (gem && pointerPosition) {
+    placement = { ...pointerPosition, code: gem.code, level: gem.level, ...(gemHasRoom
+      ? gemPlacementStatus(pointerPosition.x, pointerPosition.y, game.state.towers)
+      : { ok: false, message: '部署容量已满' }) };
   }
-  if(armedSkill&&pointerPosition)placement={...pointerPosition,skill:armedSkill,ok:true};
+  if (armedSkill && pointerPosition) placement = { ...pointerPosition, skill: armedSkill, ok: true };
+  const name = moving ? `搬迁${TOWERS.find(item => item.code === moving.code).name}`
+    : pending?.name ?? (gem && catalog().find(item => item.code === gem.code)?.name);
+  const problem = placement && !placement.ok ? placement.message
+    : eligibility && !eligibility.ok ? eligibility.message : gem && !gemHasRoom ? '部署容量已满' : '';
+  const price = moving ? 25 : pending?.price;
+  const hint = touchPointer?.matches ? '点按或拖动亮处预览，再确认' : '移到亮处预览，点击放置';
+  const message = name ? [name, price && `${price} 金币`, problem || (placement?.ok ? '可在此放置' : hint)].filter(Boolean).join(' · ') : '';
   const status = element('build-status');
+  status.hidden = !message;
   if (status.textContent !== message) status.textContent = message;
-  status.classList.toggle('invalid', !!placement && !placement.ok || !!pending && !eligibility.ok);
-  element('cancel-build-button').hidden = !armedCode && !moving && !pendingGem && !armedSkill;
-  if (pendingGem) status.textContent = '宝石待部署：点击地图合法区域放置；右键或Esc取消。';
-  if (armedSkill) status.textContent = `${armedSkill} 待施放：点击地图目标。`;
+  status.classList.toggle('invalid', !!problem);
 }
 
 function cancelBuild() {
@@ -209,7 +229,7 @@ function activatePoint(point) {
     else {
       selectedEnemyId=game.state.mode==='loop'?game.state.enemies.find(e=>Math.hypot(e.x-point.x,e.y-point.y)<32)?.id:null;
       setDrawer(selectedEnemyId?'tower':null,canvas);
-      if(!selectedEnemyId)notice('点“建造”选择工事，再在绿色区域放置。');
+      if(!selectedEnemyId)notice('点“建造”选择工事，再在地图亮处选点。');
     }
     updateUI();
   }
@@ -226,8 +246,8 @@ function updateSelection() {
   if (!tower) {
     const pending = buildItems.find(item => item.code === armedCode);
     element('selection-hint').textContent = pending
-      ? `已选${pending.name}（${pending.price} 金币），在绿色区域任意放置。右键或 Esc 取消建造。`
-      : '点“建造”选择工事，再在绿色区域放置；点击已有工事查看属性。';
+      ? `已选${pending.name}（${pending.price} 金币），请在地图亮处选点。右键或 Esc 取消放置。`
+      : '点“建造”选择工事，点击已有工事查看属性。';
     return;
   }
   const wall = tower.code === 'WALL';
@@ -372,7 +392,7 @@ function gemPortrait(code){
 function gemEffectText(tower, field = []) {
   const stats = gemStats(tower, field);
   const combat = stats.damage > 0 ? `伤害 ${stats.damage.toFixed(1)} · 间隔 ${stats.interval.toFixed(2)}秒` : stats.kind === 'echo' ? `每四次友军命中回响 ${stats.echoDamage} 伤害` : '自身不攻击';
-  return `${stats.description} ${combat} · 射程／作用半径 ${Math.round(stats.range)}${stats.kind === 'chain' ? ` · 连锁${stats.chainCount}目标／${Math.round(stats.chainRange)}距离` : ''}`;
+  return `${roles[stats.kind]}：${stats.description} ${combat} · 射程／作用半径 ${Math.round(stats.range)}${stats.kind === 'chain' ? ` · 连锁${stats.chainCount}目标／${Math.round(stats.chainRange)}距离` : ''}`;
 }
 function gemAuraText(tower, field) {
   const stats = gemStats(tower, field), base = gemStats(tower);
@@ -593,7 +613,7 @@ function updateUI() {
   element('kill-value').textContent = String(state.kills);
   const defense = state.mode !== 'loop';
   element('current-mode').textContent = MODE_DETAILS[state.mode].name;
-  canvas.setAttribute('aria-label', `${MODE_DETAILS[state.mode].name}战场。点“建造”选择工事，再在绿色区域放置。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。`);
+  canvas.setAttribute('aria-label', `${MODE_DETAILS[state.mode].name}战场。点“建造”选择工事，再在地图亮处选点。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。`);
   element('pressure-label').textContent = state.mode === 'escort' ? '载具耐久' : state.mode === 'maze' ? '出口耐久' : defense ? '核心耐久' : '环路积怪';
   element('loop-pressure-value').hidden = defense;
   element('core-pressure-value').hidden = !defense;
@@ -618,15 +638,15 @@ function updateUI() {
   element('mute-button').setAttribute('aria-pressed', String(audio.muted));
   for (const card of element('shop-list').querySelectorAll('.tower-card')) {
     const code = /** @type {HTMLButtonElement} */ (card).dataset.code;
-    const definition = buildItems.find(item => item.code === code);
-    /** @type {HTMLButtonElement} */ (card).hidden = code === 'WALL' && state.mode !== 'maze';
     card.setAttribute('aria-pressed', String(armedCode === code));
     /** @type {HTMLButtonElement} */ (card).disabled = state.mode === 'gem' || state.mode === 'legion' && legionView !== 'player';
     const eligibility = game.canBuildType(code);
     card.classList.toggle('unaffordable', !eligibility.ok);
     card.classList.toggle('locked', !eligibility.ok);
-    card.querySelector('.availability').textContent = eligibility.ok ? '可建造' : eligibility.message;
-    card.setAttribute('title', `${definition.description} · ${eligibility.message}`);
+    const availability = /** @type {HTMLElement} */ (card.querySelector('.availability'));
+    availability.hidden = eligibility.ok;
+    if (availability.textContent !== eligibility.message) availability.textContent = eligibility.message;
+    card.setAttribute('aria-disabled', String(!eligibility.ok));
   }
   updateResearch();
   updateLoopPanels();
@@ -742,15 +762,16 @@ function armBuild(code) {
   selectedEnemyId=null;
   if (game.state.mode === 'gem') { setDrawer('mission'); notice('宝石只能通过任务面板鉴定选留。'); return; }
   if (game.state.mode === 'legion' && legionView !== 'player') { notice('返回己方战场后才能部署。'); return; }
+  const eligibility = game.canBuildType(code);
+  if (!eligibility.ok) { notice(eligibility.message); return; }
   pendingGem = null; armedSkill = null;
   setDrawer();
   armedCode = code;
   relocatingId = null;
   selectedTowerId = null;
+  pointerPosition = null;
   setBuildDock(false);
   void audio.unlock();
-  const eligibility = game.canBuildType(code);
-  notice(`已选${buildItems.find(tower => tower.code === code).name} · ${eligibility.ok ? '在绿色区域选择位置；点“取消放置”退出。' : eligibility.message}`);
   updateUI();
   canvas.focus({ preventScroll: true });
 }
@@ -830,7 +851,10 @@ function bindControls() {
     helpPaused = false;
     updateUI();
   });
-  element('cancel-build-button').addEventListener('click', cancelBuild);
+  element('build-filters').addEventListener('click', event => {
+    const filter = /** @type {HTMLElement} */ (event.target).closest('button[data-category]');
+    if (filter) filterShop(/** @type {HTMLElement} */ (filter).dataset.category);
+  });
   element('shop-list').addEventListener('click', event => {
     const card = /** @type {HTMLElement} */ (event.target).closest('button[data-code]');
     if (!card) return;
@@ -921,25 +945,44 @@ function bindControls() {
   });
 }
 
+function filterShop(category) {
+  const shop = element('shop-list');
+  for (const filter of element('build-filters').querySelectorAll('button[data-category]')) {
+    filter.setAttribute('aria-pressed', String(/** @type {HTMLElement} */ (filter).dataset.category === category));
+  }
+  for (const card of shop.querySelectorAll('.tower-card')) {
+    const button = /** @type {HTMLButtonElement} */ (card);
+    button.hidden = category !== 'all' && !button.dataset.categories.split(' ').includes(category);
+  }
+  shop.scrollLeft = 0;
+  element('build-dock').scrollTop = 0;
+}
+
 function renderShop() {
   const shop = element('shop-list');
   shop.setAttribute('aria-label',`${buildItems.length}种可查看的防御单位`);
     shop.replaceChildren();
-    for (const tower of buildItems) {
+    const levels = technologies().deployment.levels;
+    const unlockLevel = tower => levels.findIndex(level => level.unlocks.includes(tower.code));
+    for (const tower of [...buildItems].sort((a, b) => unlockLevel(a) - unlockLevel(b))) {
       const card = document.createElement('button');
       card.type = 'button'; card.className = 'tower-card'; card.dataset.code = tower.code;
+      card.dataset.categories = buildCategories(tower);
       card.setAttribute('aria-pressed', 'false');
-      card.title = tower.description;
       const image = document.createElement(tower.code === 'WALL'||['T13','T14'].includes(tower.code) ? 'span' : 'img');
       if(['T13','T14'].includes(tower.code)){image.className='gem-portrait';image.style.backgroundPosition=tower.code==='T13'?'66.6667% 0%':'33.3333% 50%';image.style.float='none';image.setAttribute('aria-hidden','true');}
       else if (tower.code === 'WALL') { image.className = 'wall-icon'; image.textContent = '▥'; image.setAttribute('aria-hidden', 'true'); }
       else { /** @type {HTMLImageElement} */ (image).src = artworkCache.units.get(tower.assetCode || tower.code)?.masterImage.src || ''; /** @type {HTMLImageElement} */ (image).alt = ''; }
       const name = document.createElement('strong'); name.textContent = tower.name;
       const price = document.createElement('span'); price.className = 'price'; price.textContent = `${tower.price} 金币`;
-      const role = document.createElement('small'); role.className = 'role'; role.textContent = game.state.mode==='loop'?`${tower.role==='melee'?'近战':tower.role==='support'?'辅助':'远程'} · ${tower.damageType==='physical'?'物理':tower.damageType==='magic'?'法术':'增益'}`:roles[tower.kind] || '自动作战';
+      const role = document.createElement('small'); role.className = 'role';
+      role.textContent = (game.state.mode === 'loop' && loopRoles[tower.code])
+        || (tower.code === 'T06' ? '范围输出 · 减速' : roles[tower.kind]);
+      const effect = document.createElement('span'); effect.className = 'tower-effect'; effect.textContent = tower.description;
       const availability = document.createElement('small'); availability.className = 'availability';
-      card.append(image, name, price, role, availability); shop.append(card);
+      card.append(image, name, price, role, effect, availability); shop.append(card);
     }
+    filterShop('all');
 }
 
 async function boot() {
@@ -982,7 +1025,7 @@ async function boot() {
       if (view === 'game') {
         game.tick(dt);
         syncEvents();
-        renderer.draw(game.state.mode === 'legion' ? { ...game.state, viewSide: legionView } : game.state, selectedTowerId, placement, dt, keyboardMode ? keyboardPointer : null);
+        renderer.draw(game.state.mode === 'legion' ? { ...game.state, viewSide: legionView } : game.state, selectedTowerId, placement, dt, keyboardMode ? keyboardPointer : null, buildArea);
         uiIn -= dt;
         if (uiIn <= 0) { updateUI(); uiIn = .1; }
         if (performance.now() > noticeUntil) element('notice').hidden = true;

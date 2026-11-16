@@ -60,27 +60,40 @@ export function advanceOnRoad(entity,distance,random=Math.random){
 }
 
 const halfX=FOOTPRINT.width/2,halfY=FOOTPRINT.height/2;
-const margin=ROAD_SHOULDER;
-export const BUILD_CENTER_BOUNDS = {
-  x:BUILD_BOUNDS.x+halfX,y:BUILD_BOUNDS.y+halfY,
-  width:BUILD_BOUNDS.width-FOOTPRINT.width,height:BUILD_BOUNDS.height-FOOTPRINT.height,
+const centerBounds = ({x,y,width,height}) => ({
+  x:x+halfX,y:y+halfY,width:width-FOOTPRINT.width,height:height-FOOTPRINT.height,
+});
+const plazaExclusion = {
+  x:PLAZA.x-halfX-ROAD_SHOULDER,y:PLAZA.y-halfY-ROAD_SHOULDER,
+  width:PLAZA.width+FOOTPRINT.width+ROAD_SHOULDER*2,height:PLAZA.height+FOOTPRINT.height+ROAD_SHOULDER*2,
+  reason:'中心枢纽不可建造',
 };
-// Conservative full-footprint clearance includes the road's planted shoulders.
-export const BUILD_EXCLUSIONS = ROAD_SEGMENTS.map(road=>({
-  x:Math.min(road.x1,road.x2)-ROAD_WIDTH/2-halfX-margin,
-  y:Math.min(road.y1,road.y2)-ROAD_WIDTH/2-halfY-margin,
-  width:Math.abs(road.x2-road.x1)+ROAD_WIDTH+FOOTPRINT.width+margin*2,
-  height:Math.abs(road.y2-road.y1)+ROAD_WIDTH+FOOTPRINT.height+margin*2,
-  reason:'道路和连接通道不可建造',
-}));
-BUILD_EXCLUSIONS.push({x:PLAZA.x-halfX-margin,y:PLAZA.y-halfY-margin,width:PLAZA.width+FOOTPRINT.width+margin*2,height:PLAZA.height+FOOTPRINT.height+margin*2,reason:'中心枢纽不可建造'});
+function buildExclusions(margin) {
+  return [...ROAD_SEGMENTS.map(road=>({
+    x:Math.min(road.x1,road.x2)-ROAD_WIDTH/2-halfX-margin,
+    y:Math.min(road.y1,road.y2)-ROAD_WIDTH/2-halfY-margin,
+    width:Math.abs(road.x2-road.x1)+ROAD_WIDTH+FOOTPRINT.width+margin*2,
+    height:Math.abs(road.y2-road.y1)+ROAD_WIDTH+FOOTPRINT.height+margin*2,
+    reason:'道路和连接通道不可建造',
+  })), plazaExclusion];
+}
+export const BUILD_CENTER_BOUNDS = centerBounds(BUILD_BOUNDS);
+export const BUILD_EXCLUSIONS = buildExclusions(ROAD_SHOULDER);
+// Full tower bases can reach the inside edge of the outer paved ring.
+export const LOOP_BUILD_AREA = {
+  bounds: centerBounds({x:100,y:84,width:1080,height:632}),
+  exclusions: buildExclusions(2),
+};
 const contains=(rect,x,y)=>x>=rect.x&&x<=rect.x+rect.width&&y>=rect.y&&y<=rect.y+rect.height;
-export function placementStatus(x,y,towers=[],exclusions=BUILD_EXCLUSIONS) {
-  if(!Number.isFinite(x)||!Number.isFinite(y)||!contains(BUILD_CENTER_BOUNDS,x,y))return {ok:false,message:'超出可建造区域'};
+export function placementStatus(x,y,towers=[],exclusions=BUILD_EXCLUSIONS,bounds=BUILD_CENTER_BOUNDS) {
+  if(!Number.isFinite(x)||!Number.isFinite(y)||!contains(bounds,x,y))return {ok:false,message:'超出可建造区域'};
   const blocked=exclusions.find(rect=>contains(rect,x,y));
   if(blocked)return {ok:false,message:blocked.reason};
   if(towers.some(tower=>Math.abs(tower.x-x)<FOOTPRINT.width+FOOTPRINT.gap&&Math.abs(tower.y-y)<FOOTPRINT.height+FOOTPRINT.gap))return {ok:false,message:'与现有防御单位占地重叠'};
   return {ok:true,message:'可以建造'};
+}
+export function loopPlacementStatus(x,y,towers=[]) {
+  return placementStatus(x,y,towers,LOOP_BUILD_AREA.exclusions,LOOP_BUILD_AREA.bounds);
 }
 export const ZONES = [
   {name:'外环防线',x:1110,y:100,color:'#d5dfa6'},
