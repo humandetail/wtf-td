@@ -12,23 +12,24 @@ function harness(options={}){
  const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};
  globalThis.document={getElementById:get,documentElement:{classList:{add(){}}}};const windowEvents={};globalThis.window={addEventListener:(name,fn)=>windowEvents[name]=fn};
  const canvas=new Node();canvas.parentElement=new Node();// Pin funds so these tests measure touch transactions, independent of balance tuning.
- const game=createGame({mode:options.hero?'hero':'loop',startingGold:400});game.start();let action=true,activations=0;
+ const game=createGame({mode:options.hero?'hero':'loop',startingGold:400,draftRandom:()=>0});game.start();let action=true,activations=0;
+ if(!options.hero){game.chooseCard(0);game.draw();game.chooseCard(0);}
  const controls=createTouchControls(canvas,{
   canInteract:()=>game.state.phase==='playing'&&!game.state.paused,
   hasAction:()=>action,isHero:()=>!!options.hero,onMove:(x,y)=>{if(options.hero)game.setMoveVector(x,y);},
-  onCancel:()=>{action=false;},onPreview:p=>game.canBuild(p.x,p.y,'T01'),
-  onActivate:p=>{activations++;game.build(p.x,p.y,'T01');}
+  onCancel:()=>{action=false;},onPreview:p=>game.canDeploy(game.state.cards[0].id,p.x,p.y),
+  onActivate:p=>{activations++;game.deploy(game.state.cards[0].id,p.x,p.y);}
  });
  return {canvas,get,game,controls,windowEvents,get activations(){return activations;}};
 }
 test('touch only previews until confirmation; cancellation and dragging never spend gold',()=>{
  const h=harness();h.canvas.emit('pointerdown');h.canvas.emit('pointerup');
- assert.equal(h.game.state.gold,400);assert.equal(h.get('touch-actions').hidden,false);assert.equal(h.get('touch-confirm-button').disabled,false);
- h.get('touch-confirm-button').emit('click');assert.equal(h.game.state.gold,300);assert.equal(h.game.state.towers.length,1);assert.ok(Math.abs(h.game.state.towers[0].x-192)<1e-8);
+ assert.equal(h.game.state.gold,250);assert.equal(h.game.state.cards.length,2);assert.equal(h.get('touch-actions').hidden,false);assert.equal(h.get('touch-confirm-button').disabled,false);
+ h.get('touch-confirm-button').emit('click');assert.equal(h.game.state.gold,250);assert.equal(h.game.state.cards.length,1);assert.equal(h.game.state.towers.length,1);assert.ok(Math.abs(h.game.state.towers[0].x-192)<1e-8);
  h.canvas.emit('pointerdown',{clientX:110});h.canvas.emit('pointermove',{clientX:160});h.canvas.emit('pointerup',{clientX:160});
  assert.equal(h.activations,1);
  assert.equal(h.get('touch-actions').hidden,false);assert.equal(h.get('touch-confirm-button').disabled,false);
- assert.equal(h.game.state.gold,300);
+ assert.equal(h.game.state.gold,250);assert.equal(h.game.state.cards.length,1);
  h.canvas.emit('pointerdown',{clientX:140});h.canvas.emit('pointerup',{clientX:140});h.get('touch-cancel-button').emit('click');h.get('touch-confirm-button').emit('click');assert.equal(h.activations,1);
 });
 test('zoom and camera drag preserve world mapping and suppress synthetic purchase clicks',()=>{
@@ -36,7 +37,7 @@ test('zoom and camera drag preserve world mapping and suppress synthetic purchas
  h.canvas.emit('pointerdown');h.canvas.emit('pointermove',{clientX:160,clientY:90});h.canvas.emit('pointerup',{clientX:160,clientY:90});assert.equal(h.activations,0);assert.match(h.canvas.style.transform,/translate\(100px,46.25px\)/);
  let prevented=false;h.canvas.emit('click',{preventDefault(){prevented=true;}});assert.equal(prevented,true);
  h.get('map-pan-button').emit('click');h.canvas.emit('pointerdown',{clientX:90,clientY:49.375});h.canvas.emit('pointerup',{clientX:90,clientY:49.375});h.get('touch-confirm-button').emit('click');
- assert.equal(h.game.state.gold,300);assert.ok(Math.abs(h.game.state.towers[0].x-192)<1e-8);assert.ok(Math.abs(h.game.state.towers[0].y-140)<1e-8);
+ assert.equal(h.game.state.gold,250);assert.equal(h.game.state.cards.length,1);assert.ok(Math.abs(h.game.state.towers[0].x-192)<1e-8);assert.ok(Math.abs(h.game.state.towers[0].y-140)<1e-8);
  h.get('map-reset-button').emit('click');assert.equal(h.canvas.style.transform,'translate(0px,0px) scale(1)');assert.equal(h.get('touch-actions').hidden,true);
 });
 test('hero joystick drives the actual hero and releases on cancel, blur, pause and reset',()=>{
@@ -49,5 +50,5 @@ test('hero joystick drives the actual hero and releases on cancel, blur, pause a
 });
 test('multitouch cancellation and paused confirmation cannot place towers',()=>{
  const h=harness();h.canvas.emit('pointerdown');h.canvas.emit('pointerdown',{pointerId:2});h.canvas.emit('pointerup');assert.equal(h.get('touch-actions').hidden,true);
- h.canvas.emit('pointerdown');h.canvas.emit('pointerup');h.game.togglePause();h.get('touch-confirm-button').emit('click');assert.equal(h.activations,0);assert.equal(h.game.state.gold,400);
+ h.canvas.emit('pointerdown');h.canvas.emit('pointerup');h.game.togglePause();h.get('touch-confirm-button').emit('click');assert.equal(h.activations,0);assert.equal(h.game.state.gold,250);assert.equal(h.game.state.cards.length,2);
 });

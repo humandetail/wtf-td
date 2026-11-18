@@ -42,7 +42,8 @@ export function createRoadPosition(random=Math.random){
   });
   return {...ENTRY,angle:Math.atan2(dy,dx),roadFrom,roadTo};
 }
-export function advanceOnRoad(entity,distance,random=Math.random){
+/** @param {(node: any, exits: number[]) => number|void} [chooseExit] */
+export function advanceOnRoad(entity,distance,random=Math.random,chooseExit){
   let remaining=distance;
   while(remaining>0){
     const target=ROAD_NODES[entity.roadTo],dx=target.x-entity.x,dy=target.y-entity.y;
@@ -53,7 +54,8 @@ export function advanceOnRoad(entity,distance,random=Math.random){
     }
     entity.x=target.x;entity.y=target.y;remaining-=length;
     const exits=target.neighbors.filter(index=>index!==entity.roadFrom);
-    const next=exits[exits.length===1?0:Math.floor(random()*exits.length)];
+    const override=exits.length>1?chooseExit?.(target,exits):undefined;
+    const next=typeof override==='number'?override:exits[exits.length===1?0:Math.floor(random()*exits.length)];
     entity.roadFrom=entity.roadTo;entity.roadTo=next;
     entity.angle=Math.atan2(ROAD_NODES[next].y-target.y,ROAD_NODES[next].x-target.x);
   }

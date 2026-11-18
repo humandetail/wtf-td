@@ -6,14 +6,14 @@ import fs from 'node:fs';
 
 test('actual controls preserve four distinct sessions, drive and repair, relocate, build and sell walls, and reopen reports', async () => {
   const base = fileURLToPath(new URL('../', import.meta.url));
-  const imports = Object.assign({}, ...await Promise.all(['tower-upgrades','engine', 'catalog', 'research', 'geometry', 'defense-geometry', 'modes'].map(name => import(pathToFileURL(base + name + '.js')))));
+  const imports = Object.assign({}, ...await Promise.all(['render','tower-upgrades','engine', 'catalog', 'research', 'geometry', 'defense-geometry', 'modes'].map(name => import(pathToFileURL(base + name + '.js')))));
   const html = fs.readFileSync(base + 'index.html', 'utf8');
   const nodes = new Map();
   class Element {
     constructor(id = '') { this.id = id; this.hidden = true; this.attrs = {}; this.events = {}; this.style = { setProperty() {} }; this.dataset = {}; this.classList = { toggle() {} }; this.isConnected = true; this.tagName = 'BUTTON'; this.textContent = ''; }
     setAttribute(k, v) { this.attrs[k] = v; } getAttribute(k) { return this.attrs[k]; }
     addEventListener(k, fn) { this.events[k] = fn; } querySelectorAll() { return []; } contains() { return false; } closest() { return null; }
-    focus() { document.activeElement = this; } replaceChildren() {} click() { if (!this.disabled) this.events.click?.({ target: this }); }
+    focus() { document.activeElement = this; } append() {} replaceChildren() {} click() { if (!this.disabled) this.events.click?.({ target: this }); }
   }
   for (const [, id] of html.matchAll(/id="([^"]+)"/g)) nodes.set(id, new Element(id));
   const documentEvents = {};

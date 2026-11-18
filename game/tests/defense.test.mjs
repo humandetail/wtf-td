@@ -78,12 +78,12 @@ test('preparation, pause, speed, research and endless preserve this mode while r
 });
 
 test('defense uses all roads and core clearance while independent loop session keeps original placement',()=>{
- const defense=createGame({mode:'defense',startingGold:10000});const loop=createGame();defense.start();loop.start();
+ const defense=createGame({mode:'defense',startingGold:10000});const loop=createGame({draftRandom:()=>0});defense.start();loop.start();loop.chooseCard(0);const card=loop.state.cards[0].id;
  for(const [x,y] of [[480,150],[540,200],[640,280],[980,300],[820,620],[740,530],[290,500],[500,360],[640,360]])assert.equal(defense.canBuild(x,y,'T01').ok,false,`${x},${y}`);
  assert.equal(defense.build(500,280,'T01').ok,true);assert.equal(defense.canBuild(550,280,'T01').ok,false);
  assert.equal(defense.canBuild(155,125,'T01').ok,true);assert.equal(defense.canBuild(154,125,'T01').ok,false);
- assert.equal(loop.canBuild(480,150,'T01').ok,true);assert.equal(defense.canBuild(300,300,'T01').ok,true);assert.equal(loop.canBuild(300,300,'T01').ok,false);
- defense.launchWave();defense.tick(.1);assert.equal(loop.state.mode,'loop');assert.equal(loop.state.wave,0);assert.equal(loop.state.gold,600);assert.equal(loop.state.towers.length,0);
+ assert.equal(loop.canDeploy(card,480,150).ok,true);assert.equal(defense.canBuild(300,300,'T01').ok,true);assert.equal(loop.canDeploy(card,300,300).ok,false);
+ defense.launchWave();defense.tick(.1);assert.equal(loop.state.mode,'loop');assert.equal(loop.state.wave,0);assert.equal(loop.state.gold,450);assert.equal(loop.state.towers.length,0);
 });
 
 test('finite route geometry clamps distance, turns at fixed corners and ends at the core',async()=>{

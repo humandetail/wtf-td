@@ -1,74 +1,140 @@
-import {TOWERS,ENEMIES} from './catalog.js';
-export const LOOP_TECHNOLOGIES={
- deployment:{name:'部署科技',levels:[
- {capacity:4,unlocks:['T01','T12','T06','T13'],cost:0,duration:0},
- {capacity:6,unlocks:['T03','T07','T09','T11'],cost:80,duration:12},
- {capacity:8,unlocks:['T05','T02','T10'],cost:160,duration:20},
- {capacity:10,unlocks:['T04','T08','T14'],cost:420,duration:30},
- {capacity:12,unlocks:[],cost:650,duration:40},{capacity:16,unlocks:[],cost:950,duration:50}]},
- reinforcement:{name:'强化科技',levels:[{maxTowerLevel:1,cost:0,duration:0},{maxTowerLevel:2,cost:60,duration:10},{maxTowerLevel:3,cost:120,duration:15},{maxTowerLevel:4,cost:300,duration:20},{maxTowerLevel:5,cost:450,duration:25},{maxTowerLevel:5,cost:650,duration:35},{maxTowerLevel:5,cost:900,duration:45}]}
+import {TOWERS, ENEMIES} from './catalog.js';
+import {CARD_ROWS, ENEMY_ROWS, WAVE_ROWS} from './loop-roster.js';
+
+const baseStats = {
+ T01:[22,.55,205,'ranged','physical'], T02:[18,.9,195,'ranged','magic'],
+ T03:[65,1.8,235,'ranged','physical'], T04:[50,.9,265,'ranged','magic'],
+ T05:[36,1.1,155,'melee','magic'], T06:[26,.85,205,'ranged','physical'],
+ T07:[9,2,215,'ranged','physical'], T08:[14,1.2,145,'melee','magic'],
+ T09:[0,1,210,'support',null], T10:[0,1,200,'support',null],
+ T11:[0,8,190,'support',null], T12:[20,.9,125,'melee','physical'],
+ T13:[18,1.2,230,'ranged','magic'], T14:[16,.95,215,'ranged','physical'],
 };
-const rows={T12:['工程震荡塔',20,.9,125,'melee','physical','破甲15点，持续3秒'],T08:['冷却喷射塔',14,1.2,145,'melee','magic','扇形3目标，减速30%'],T05:['电弧线圈',36,1.1,155,'melee','magic','近邻连锁3目标'],T01:['自动拦截炮塔',22,.55,205,'ranged','physical','快速单体点射'],T03:['重型榴弹炮塔',65,1.8,235,'ranged','physical','半径65范围物理伤害'],T04:['激光跟踪塔',50,.9,265,'ranged','magic','远距离单体法术'],T06:['高压水炮塔',26,.85,205,'ranged','physical','小范围浸水和减速'],T02:['微波干扰塔',18,.9,195,'ranged','magic','对护盾伤害×1.5'],T07:['捕获网发射器',9,2,215,'ranged','physical','低伤定身，优先支援'],T13:['符焰法塔',18,1.2,230,'ranged','magic','每秒12法术灼烧，持续3秒'],T14:['三联追击塔',16,.95,215,'ranged','physical','3个独立目标'],T09:['雷达哨站',0,1,210,'support',null,'附近输出塔射程增益'],T10:['维修机械臂',0,1,200,'support',null,'附近输出塔攻速增益'],T11:['无人机补给站',0,8,190,'support',null,'定时补给，亦占1个容量']};
-export const LOOP_TOWERS=TOWERS.map(base=>{const [name,damage,interval,range,role,damageType,description]=rows[base.code];return {...base,name,damage,interval,range,role,damageType,description};});
-export const LOOP_ROUTES={
- T12:[['碎甲','单体破甲25点','连续4击追加重击'],['扫荡','扇形攻击3人','每5击范围破甲震波']],
- T08:[['深寒','连续3次喷射冻结','解冻保留寒缓'],['广域','120°扇形6人','每5击留下减速区']],
- T05:[['跳弧','连锁5人，首击0.8倍','每4击末端电爆'],['电容','双目标，主目标1.25倍','连续4击超载']],
- T01:[['狙猎','锁定同目标逐击叠伤','第6击追加穿甲弹'],['分流','3目标各0.55倍伤害','5目标独立射击']],
- T03:[['爆破','扩大爆区，伤害0.9倍','每4炮两枚集束弹'],['攻坚','小爆区强化对重甲','连续3炮破甲重击']],
- T04:[['聚焦','同目标连续照射叠伤','连续6击过载束'],['贯穿','直线穿透3人','穿透最多5人']],
- T06:[['水牢','减速30%','每4击束缚爆心'],['潮涌','更大浸水覆盖','每5击扩散水环']],
- T02:[['破障','对盾伤害×2.5','破盾后短时易伤'],['干扰','抑制治疗50%','每4击区域抑制治疗']],
- T07:[['猎首','单体定身1秒','捕获目标集火标记'],['群缚','多目标捕网','每4击范围撒网']],
- T13:[['焚心','强化主灼烧50%','持续灼烧4秒爆燃'],['传火','主灼烧死亡传火','主灼烧死亡爆炸']],
- T14:[['弹幕','5目标各0.8倍','7目标独立攻击'],['追猎','低血目标补射','击杀加快下次攻击']],
- T09:[['标定','每2秒标记最强目标','强化精英／Boss标记'],['组网','射程光环22%','周期超距脉冲']],
- T10:[['超频','攻速光环25%','周期短时超频'],['调校','强化对重甲／护盾伤害','周期发放攻击充能']],
- T11:[['经贸','每周期额外8金币','持续存续40秒分红'],['军需','附近升级费降低12%','附近升级耗时缩短15%']]
+export const LOOP_TOWERS=Object.entries(CARD_ROWS).map(([code,[name,rarity,...data]])=>{
+ const original=TOWERS.find(t=>t.code===code);
+ const [assetCode,role,damageType,damage,interval,range,...skills]=original
+  ? [original.assetCode??code,baseStats[code][3],baseStats[code][4],...baseStats[code].slice(0,3),...data] : data;
+ return {...original,code,name,rarity,assetCode,role,damageType,damage,interval,range,skills,
+  population:{common:1,rare:2,epic:3}[rarity],description:skills[0],
+  kind:original?.kind??(role==='support'?'aura':'direct'),color:original?.color??(damageType==='physical'?'#ffe494':'#9bc9ff')};
+});
+export const LOOP_PRIORITIES={default:'默认职责',strongest:'最强目标',weakest:'最低生命',fastest:'最快目标',shield:'护盾优先',support:'支援优先',gold:'金币优先'};
+export const FIXED_ROUTES={T01:'A',T02:'B',T03:'A',T04:'A',T05:'A',T06:'B',T07:'B',T08:'A',T09:'A',T10:'B',T11:'A',T12:'B',T13:'B',T14:'A'};
+const roster=new Map(LOOP_TOWERS.map(t=>[t.code,t]));
+export const loopTower=code=>roster.get(code);
+export const LOOP_EQUIPMENT={
+ core:{name:'增幅核心',cost:80,description:'攻击与灼烧伤害 +10%',damage:.1},
+ gear:{name:'调速齿轮',cost:80,description:'攻击频率 +10%',rate:.1},
+ coil:{name:'约束线圈',cost:80,description:'主动控制时长 +15%',control:.15},
+ lens:{name:'增程阵列',cost:80,description:'射程或作用半径 +10%',range:.1},
+ scatter:{name:'散射火控',cost:60,description:'伤害、攻速 +10%，多目标上限 +1',components:['core','gear'],damage:.1,rate:.1,targets:1},
+ siege:{name:'破阵弹头',cost:60,description:'伤害、射程 +10%，对 Boss 直接伤害 +25%',components:['core','lens'],damage:.1,range:.1,boss:.25},
+ field:{name:'滞行力场',cost:60,description:'射程 +10%，主动控制时长 +35%',components:['coil','lens'],range:.1,control:.35},
+ relay:{name:'协同枢纽',cost:60,description:'雷达与维修作用半径 +20%，主动技能周期缩短15%',components:['gear','lens'],range:.2,period:.15},
 };
-export const LOOP_PRIORITIES={default:'默认职责',strongest:'最强目标',weakest:'最低生命',fastest:'最快目标',shield:'护盾优先',support:'支援优先'};
-export const loopUnlockLevel=code=>LOOP_TECHNOLOGIES.deployment.levels.findIndex(l=>l.unlocks.includes(code));
-export function loopStats(tower,state={tech:{reinforcement:0},towers:[],elapsed:0,endless:false}){
- const base=LOOP_TOWERS.find(t=>t.code===tower.code),level=tower.level||1,r=tower.route,advanced=level>=3&&(state.tech.reinforcement>=5),master=level>=5&&state.tech.reinforcement>=6;
- const s={...base,level,route:r,advanced,master,damage:base.damage*[1,1.55,2.4,3.7,5.75][level-1],interval:base.interval/[1,1.04,1.08,1.12,1.16][level-1],range:base.range+(base.role==='support'?0:6*(level-1)),targetCount:1,upgradeCost:level>=5?0:Math.round(base.price*[0,.85,1.1,1.4,1.8][level]),sellValue:Math.floor((tower.spent??base.price)*.7),income:12+4*(level-1),burnDps:12*[1,1.55,2.4,3.7,5.75][level-1],aura:.1+.02*level,conditional:0,boost:0,supplyIncome:0,supplyInterval:8,slow:0,shieldMultiplier:1,splash:0};
- if(base.code==='T12'){s.targetCount=r==='B'?(advanced?4:3):1;if(r==='B')s.damage*=.7;}
- if(base.code==='T08'){s.targetCount=r==='B'?(advanced?8:6):3;s.slow=r==='A'?.3:.3;}
- if(base.code==='T05'){s.targetCount=r==='A'?(advanced?6:5):r==='B'?2:3;if(r==='A')s.damage*=.8;}
- if(base.code==='T01'&&r==='B'){s.targetCount=level>=5?(master?6:5):3;s.damage*=advanced?.6:.55;}
- if(base.code==='T03'){s.splash=r==='A'?(advanced?95:85):r==='B'?35:65;s.targetCount=r==='A'?8:r==='B'?3:6;if(r==='A')s.damage*=.9;}
- if(base.code==='T04'&&r==='B')s.targetCount=level>=5?(master?6:5):3;
- if(base.code==='T06'){s.splash=r==='B'?65:45;s.targetCount=r==='B'?6:4;s.slow=r==='A'?(advanced?.35:.3):.15;if(r==='B')s.damage*=.85;}
- if(base.code==='T02')s.shieldMultiplier=r==='A'?(advanced?3:2.5):1.5;
- if(base.code==='T07'){s.targetCount=r==='B'?(advanced?4:3):1;if(r==='B')s.damage*=.5;}
- if(base.code==='T13'&&r==='A')s.burnDps*=advanced?1.7:1.5;
- if(base.code==='T14'){s.targetCount=r==='A'?(level>=5?(master?8:7):5):3;if(r==='A')s.damage*=advanced?.85:.8;}
- if(base.code==='T09')s.boost=r==='B'?(tower.pulseUntil>state.elapsed?(master?.35:.3):(advanced?.25:.22)):s.aura;
- if(base.code==='T10')s.boost=r==='A'?(tower.pulseUntil>state.elapsed?(master?.45:.4):(advanced?.28:.25)):s.aura;
- const supplyIncome=state.endless?(r==='A'?(advanced?3:2):1):s.income+(r==='A'?(advanced?10:8):0);
- Object.assign(s,{supplyIncome,supplyInterval:state.endless?20:8});
- // Only output/control towers receive support: no self-buff or recursive aura ranges.
- if(base.role!=='support'){
-  let range=0,rate=0,conditional=0;
-  for(const a of state.towers){if(Math.hypot(a.x-tower.x,a.y-tower.y)>(a.code==='T09'?210:a.code==='T10'?200:0))continue;
-   const ar=a.level>=3?a.route:null,hi=a.level>=3&&state.tech.reinforcement>=5,top=a.level>=5&&state.tech.reinforcement>=6,basic=.1+.02*a.level;
-   if(a.code==='T09')range=Math.max(range,ar==='B'?(a.pulseUntil>state.elapsed?(top?.35:.3):(hi?.25:.22)):basic);
-   if(a.code==='T10'){rate=Math.max(rate,ar==='A'?(a.pulseUntil>state.elapsed?(top?.45:.4):(hi?.28:.25)):basic);if(ar==='B')conditional=Math.max(conditional,hi?.16:.12);}
-  }s.range*=1+range;s.interval/=1+rate;s.conditional=conditional;
+export function gearBonus(tower,key){
+ return Math.max(0,...(Array.isArray(tower.equipment)?tower.equipment:[]).map(item=>LOOP_EQUIPMENT[item.code]?.[key]??0));
+}
+const growth=[1,1.55,2.4,3.7,5.75], rates=[1,1.04,1.08,1.12,1.16];
+export function loopStats(tower,state={towers:[],elapsed:0,endless:false,dust:[]}){
+ const base=loopTower(tower.code),level=tower.level||1,r=level>=3?FIXED_ROUTES[tower.code]:null;
+ const s={...base,level,route:r,advanced:false,master:false,damage:base.damage*growth[level-1],interval:base.interval/rates[level-1],
+  range:(base.range+(base.role==='support'?0:6*(level-1)))*(1+gearBonus(tower,'range')),targetCount:1,
+  sellValue:tower.paid?75:0,burnDps:12*growth[level-1],burnDuration:3,boost:.1+.02*level,aura:.1+.02*level,
+  conditional:0,slow:0,shieldMultiplier:1,splash:0,supplyInterval:state.endless?20:8,
+  supplyIncome:state.endless?(level>=3?2:1):12+4*(level-1)+(level>=3?8:0),
+  control:gearBonus(tower,'control'),bossBonus:gearBonus(tower,'boss'),gearPeriod:gearBonus(tower,'period'),supportSources:[]};
+ switch(base.code){
+  case 'T03': s.splash=r?85:65;s.targetCount=r?8:6;if(r)s.damage*=.9;break;
+  case 'T05': s.targetCount=r?5:3;if(r)s.damage*=.8;break;
+  case 'T06': s.splash=r?65:45;s.targetCount=r?6:4;s.slow=.15;if(r)s.damage*=.85;break;
+  case 'T07': s.targetCount=r?3:1;if(r)s.damage*=.5;break;
+  case 'T08': s.targetCount=3;break;
+  case 'T12': s.targetCount=r?3:1;if(r)s.damage*=.7;break;
+  case 'T02': s.shieldMultiplier=1.5;break;
+  case 'T14': s.targetCount=level>=5?7:r?5:3;if(r)s.damage*=.8;break;
+  case 'T25': s.targetCount=level>=5&&(tower.cycles||0)%4===0?6:r||level>=3?4:3;break;
+  case 'T26': s.splash=50;s.targetCount=4;break;
+  case 'T32': s.targetCount=level>=5&&(tower.cycles||0)%4===0?6:4;break;
+  case 'T34': s.splash=58;s.targetCount=5;break;
  }
+ if(base.role==='support')return s;
+ s.targetCount+=gearBonus(tower,'targets');
+ s.damage*=1+gearBonus(tower,'damage');s.burnDps*=1+gearBonus(tower,'damage');
+ let range=0,rate=0;
+ const rangeSources=[],rateSources=[],conditionalSources=[];
+ for(const ally of state.towers){
+  if(!['T09','T10','T22'].includes(ally.code))continue;
+  const reach=loopTower(ally.code).range*(1+gearBonus(ally,'range'));
+  if(Math.hypot(ally.x-tower.x,ally.y-tower.y)>reach)continue;
+  const aura=.1+.02*ally.level;
+  if(ally.code==='T09')rangeSources.push({value:aura,id:ally.id});
+  if(ally.code==='T10'){rateSources.push({value:aura,id:ally.id});if(ally.level>=3)conditionalSources.push({value:.12,id:ally.id});}
+  if(ally.code==='T22'){
+   const targets=nearbyAttackers(state,ally,reach,ally.level>=3?2:1);
+   const index=targets.findIndex(t=>t.id===tower.id);
+   if(index>=0)rangeSources.push({value:index===0&&ally.level>=5?.20:.12,id:ally.id});
+  }
+ }
+ for(const [key,pool] of Object.entries({range:rangeSources,rate:rateSources,conditional:conditionalSources})){
+  const best=pool.sort((a,b)=>b.value-a.value||a.id-b.id)[0];
+  if(!best)continue;
+  s.supportSources.push({id:best.id,key});
+  if(key==='range')range=best.value;if(key==='rate')rate=best.value;if(key==='conditional')s.conditional=best.value;
+ }
+ s.range*=1+range;s.interval/=(1+rate)*(1+gearBonus(tower,'rate'));
+ if(state.dust?.some(z=>z.until>state.elapsed&&Math.hypot(z.x-tower.x,z.y-tower.y)<=65))s.range*=.85;
+ if(tower.hostileRateUntil>state.elapsed)s.interval/=1-tower.hostileRate;
  return s;
 }
-export function upgradeQuote(tower,state){if(tower.level>=5)return {cost:0,duration:0};const stats=loopStats(tower,state);let discount=0,timeDiscount=0;
- if(stats.role!=='support')for(const t of state.towers)if(t.code==='T11'&&t.route==='B'&&Math.hypot(t.x-tower.x,t.y-tower.y)<=190){discount=Math.max(discount,state.tech.reinforcement>=5?.16:.12);if(t.level>=5)timeDiscount=Math.max(timeDiscount,state.tech.reinforcement>=6?.2:.15);}
- return {cost:Math.max(1,Math.round(stats.upgradeCost*(1-Math.min(.2,discount)))),duration:Math.round([0,5,8,12,16][tower.level]*(1-Math.min(.25,timeDiscount))*100)/100};}
-const pools=[[1,1,4],[1,7,4],[1,2,2],[1,5,4],[1,2,4],[1,2,3],[4,4,10,1],[5,6,1],[2,8,3],[4,5,9],[1,3,10,5],[2,8,9],[4,10,10,7],[5,6,11],[2,3,9],[4,8,11,5],[2,8,3,12],[5,6,10,11],[4,8,9,12],[2,5,10,11]];
-export function loopWave(w,endless=w>20,countOverride=null){
- const n=w-20,pool=pools[w<=20?w-1:10+(n-1)%10],boss=w%5===0,total=countOverride??(endless?50:10+2*w),normal=endless?total-Number(boss):total;
- const entries=Array.from({length:normal},(_,i)=>({code:`X${String(pool[i%pool.length]).padStart(2,'0')}`,boss:false,wave:w,endless}));if(boss)entries.push({code:'X12',boss:true,wave:w,endless});return entries;
+export function nearbyAttackers(state,source,range,limit){
+ const distance=t=>Math.hypot(t.x-source.x,t.y-source.y);
+ return state.towers.filter(t=>loopTower(t.code)?.role!=='support'&&distance(t)<=range)
+  .sort((a,b)=>distance(a)-distance(b)||a.id-b.id).slice(0,limit);
+}
+export const LOOP_ENEMIES=Object.fromEntries(Object.entries(ENEMY_ROWS).map(([code,[name,assetCode,hp,speed,reward,description,counter,armor]])=>[
+ code,{code,name,assetCode,hp:Number(hp),speed:Number(speed),reward:Number(reward),description,counter,armor:Number(armor??({X02:.35,X08:.35,E01:.25,C01:.4}[code]??0)),
+  color:ENEMIES.find(item=>item.code===assetCode)?.color??'#f5d79b'}
+]));
+export const CHALLENGES=[
+ ['C01',3,0,'core',0],['C02',5,1,'gear',0],['C03',7,2,'coil',0],['C04',9,3,'lens',0],
+ ['C05',11,0,'core',60],['C06',13,1,'gear',60],['C07',16,2,'coil',90],['C08',18,3,'lens',120],
+].map(([code,wave,direction,item,gold])=>({code:String(code),wave:Number(wave),direction:Number(direction),item:String(item),gold:Number(gold),name:LOOP_ENEMIES[code].name,
+ description:LOOP_ENEMIES[code].description,reward:LOOP_EQUIPMENT[item].name+(gold?' ＋ '+gold+' 金币':'')}));
+export const GOLD_RUSHES=[
+ {code:'G01',direction:[0],reward:90},{code:'G02',direction:[1,1],reward:120},
+ {code:'G03',direction:[0,1,2],reward:160},{code:'G04',direction:[3],reward:200},
+];
+export const waveMultiplier=(wave,endless)=>endless?4.04*(1+.01*(wave-20)):1+.16*(wave-1);
+export function loopWave(wave,endless=wave>20,countOverride=null){
+ const pool=WAVE_ROWS['w'+(endless?11+(wave-21)%10:wave)];
+ const bossCode=wave%5===0?'B'+String(endless?[5,6,7,8,9,10,11,12,1,2,3,4][(wave/5-5)%12]:wave/5).padStart(2,'0'):null;
+ const total=endless?50-Number(!!bossCode):10+2*wave;
+ const count=countOverride??total;
+ const weights=pool.map(([,n])=>Number(n)),weight=weights.reduce((a,b)=>a+b,0);
+ const quotas=weights.map(n=>Math.floor(n*count/weight));
+ const remainder=weights.map((n,i)=>({i,value:n*count%weight})).sort((a,b)=>b.value-a.value||a.i-b.i);
+ for(const {i} of remainder.slice(0,count-quotas.reduce((a,b)=>a+b,0)))quotas[i]++;
+ const entries=[];
+ for(let remaining=count;remaining>0;){
+  for(const [i,[code]] of pool.entries()){
+   const group=Math.min(quotas[i],code==='X10'?3:1);
+   for(let j=0;j<group;j++)entries.push({code,wave,endless,boss:false,cohort:j>0});
+   quotas[i]-=group;remaining-=group;
+  }
+ }
+ if(bossCode)entries.push({code:bossCode,wave,endless,boss:true,cohort:false});
+ return entries;
 }
 export function loopEnemy(entry,id,position,options={}){
- const base=ENEMIES.find(e=>e.code===entry.code),scale=entry.endless?4.04*(1+.01*(entry.wave-20)):1+.16*(entry.wave-1),maxHp=base.hp*scale*(entry.boss?10:1)*(options.enemyHealthScale??1),armor=['X02','X08'].includes(base.code)?.35:base.code==='X12'?.25:0;
- const shield=entry.boss?(entry.wave>=10?maxHp*.2:0):(['X05','X06'].includes(base.code)?(base.code==='X05'?80:60)*scale:0);
- return {...base,...entry,...position,id,hp:maxHp,maxHp,armor,shield,maxShield:shield,healer:['X03','X11'].includes(base.code),support:['X03','X11'].includes(base.code),speed:base.speed*(entry.boss?.72:1)*(options.enemySpeedScale??1),reward:entry.endless?1:Math.max(1,Math.round(base.reward*(entry.boss?8:1)*(options.rewardScale??1))),progress:0,statuses:[],burns:[],rootUntil:0,immuneUntil:0,healIn:3,selfHealIn:10};
+ const base=LOOP_ENEMIES[entry.code],scale=entry.special==='gold'?1:waveMultiplier(entry.scaleWave??entry.wave,entry.endless);
+ const maxHp=base.hp*scale*(options.enemyHealthScale??1);
+ const shield=({X05:80}[entry.code]??0)*scale+({B02:maxHp*.12,G04:350}[entry.code]??0);
+ const elite=entry.code.startsWith('E'),reward=entry.special||entry.summoned?0:entry.endless?1:Math.max(1,Math.round(base.reward*(options.rewardScale??1)));
+ return {...base,...entry,...position,id,hp:maxHp,maxHp,shield,maxShield:shield,elite,reward,scale,
+  shieldHits:entry.shieldHits??({X06:3,E04:4,B10:8,C04:7}[entry.code]??0),
+  support:['X03','X11','X16','X18','X21','E02','E05','E06','E08','C05','B09'].includes(entry.code),
+  healer:['X03','X11','E06'].includes(entry.code),speed:base.speed*(options.enemySpeedScale??1),
+  progress:position.progress??0,statuses:[],burns:[],rootUntil:0,immuneUntil:0,skillAt:{},thresholds:0};
 }
-
 export function loopWaveInterval(wave,endless=false){return endless?26:wave<5?40:wave<10?36:30;}

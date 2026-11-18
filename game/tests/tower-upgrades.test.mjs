@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createGame} from '../engine.js';
 import {towerStats} from '../catalog.js';
 
-for(const mode of ['loop','hero','legion'])test(`${mode}: timed upgrades charge once, preserve old stats, pause, accelerate and finish once`,()=>{
+for(const mode of ['hero','legion'])test(`${mode}: timed upgrades charge once, preserve old stats, pause, accelerate and finish once`,()=>{
  const game=createGame({mode,startingGold:10000,initialDelay:1000,ai:false});game.start();
  game.state.tech.reinforcement=4;
  let point;for(let y=100;y<700&&!point;y+=40)for(let x=100;x<1100;x+=40)if(game.canBuild(x,y,'T01').ok){point={x,y};break;}

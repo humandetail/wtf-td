@@ -11,6 +11,13 @@ import {createSpecialPainter,projectBattleState,specialStats} from './special-re
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
 const MAPS = new URL('./assets/maps/v5/', import.meta.url);
+const LOOP_SPRITES = new Set([
+  ...Array.from({length:22},(_,i)=>'T'+(i+15)),
+  ...'X13 X14 X15 X17 X19 X20 X21 X22 X23 X24 E02 E05 E06 E08 E10 B05 B06 B07 B08 B09 B10 B11 B12 C01 C02 C03 C06 C07 C08 G01 G02 G04'.split(' '),
+]);
+export function loopSpriteUrl(code){
+  return LOOP_SPRITES.has(code)?new URL('./assets/modes/loop/'+code+'.png',import.meta.url):null;
+}
 
 // A dropped PNG request must not permanently abort the whole game startup.
 export async function loadImage(url,{attempts=3,retryDelay=400,timeoutMs=120000,onRetry=(url,attempt,total)=>{}}={}) {
@@ -105,6 +112,16 @@ export function createRenderer(canvas, artwork) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
   const backgrounds = {}, buildMasks = {};
+  const loopSprites = new Map();
+  function loopSprite(code) {
+    const url=loopSpriteUrl(code);
+    if(!url)return null;
+    if(!loopSprites.has(code)){
+      loopSprites.set(code,null);
+      void loadImage(url,{attempts:2,timeoutMs:5000}).then(sprite=>loopSprites.set(code,sprite)).catch(()=>{});
+    }
+    return loopSprites.get(code);
+  }
   for (const {mode, ground, exclusions, bounds = BUILD_CENTER_BOUNDS} of [
     {mode:'loop', ground:artwork.ground, ...LOOP_BUILD_AREA},
     {mode:'defense', ground:artwork.defenseGround, exclusions:DEFENSE_BUILD_EXCLUSIONS},
@@ -236,18 +253,27 @@ export function createRenderer(canvas, artwork) {
     if(entity.convoy){drawConvoy(entity);return;}
     if(entity.burnRemaining>0)ring(entity.x,entity.y+3,23,'#d59bff',.8,2);
     const unit = artwork.units.get(entity.assetCode||entity.code);
+    const model = frameState.mode==='loop'?loopSprite(entity.code):null;
     const size = frameState.mode==='legion'?96:tower ? 128 : entity.boss ? 184 : 126;
     ctx.fillStyle = tower ? '#18271b3d' : '#18271b66';
     ctx.beginPath();
     ctx.ellipse(entity.x, entity.y + 3, tower ? 31 : entity.boss ? 31 : 19, tower ? 11 : entity.boss ? 9 : 8, 0, 0, Math.PI * 2);
     ctx.fill();
-    if (unit) {
-      const sprite = spriteFor(unit, entity.angle || 0);
+    if (unit || model) {
+      const sprite = model||spriteFor(unit, entity.angle || 0);
       const bob = (!tower||frameState.mode==='legion') && !reduceMotion ? Math.sin((entity.progress??elapsed*40) * .13) * 1.6 : 0;
-      ctx.drawImage(sprite, entity.x - size * .5, entity.y - size * .625 + bob, size, size);
+      const recoil = model&&tower&&!reduceMotion ? Math.max(0,1-(elapsed-(entity.lastAttack??-1))/.14)*5 : 0;
+      const x=entity.x-Math.cos(entity.angle||0)*recoil;
+      ctx.save();
+      if(entity.hidden)ctx.globalAlpha=.35;
+      if(model&&Math.cos(entity.angle||0)<-.2){
+        ctx.translate(x,0);ctx.scale(-1,1);
+        ctx.drawImage(sprite,-size*.5,entity.y-size*.625+bob,size,size);
+      }else ctx.drawImage(sprite, x - size * .5, entity.y - size * .625 + bob, size, size);
+      ctx.restore();
     }
     if (tower) {
-      text((entity.readyAt??0)>elapsed?`搬迁 ${(entity.readyAt-elapsed).toFixed(1)}s`:`Lv.${entity.level}${entity.route?' · '+entity.route:''}`, entity.x, entity.y + 27, '#f3d88e', 12);
+      text((entity.readyAt??0)>elapsed?`搬迁 ${(entity.readyAt-elapsed).toFixed(1)}s`:`Lv.${entity.level}`, entity.x, entity.y + 27, '#f3d88e', 12);
       const stats=specialStats(entity,frameState)||towerStats(entity);
       if (['radar', 'overclock', 'barrier', 'supply','support','healer'].includes(stats.kind)) {
         ring(entity.x, entity.y + 2, 34, stats.color, .45, 1.5);
@@ -262,8 +288,16 @@ export function createRenderer(canvas, artwork) {
       ctx.fillRect(entity.x - width / 2, top, width * Math.max(0, entity.hp / entity.maxHp), 5);
       if(frameState.mode==='loop'){
         if(entity.shield>0){ctx.fillStyle='#80c8ed';ctx.fillRect(entity.x-width/2,top+7,width*Math.min(1,entity.shield/(entity.maxShield||1)),3);}
-        const labels=[entity.armor>0?'甲':'',entity.healer?'疗':'',entity.immuneUntil>elapsed?'免控':'',...(entity.statuses||[]).filter(s=>s.until>elapsed&&['wet','armor','vulnerable'].includes(s.kind)).map(s=>({wet:'浸',armor:'破',vulnerable:'标'})[s.kind])];
+        const labels=[entity.elite?'◆':'',entity.special==='gold'?'金':entity.special==='challenge'?'挑战':'',
+          entity.shieldHits>0?'盾×'+entity.shieldHits:'',entity.hidden?'隐':'',entity.armor>0?'甲':'',entity.healer?'疗':'',
+          entity.mirrorType==='magic'||entity.magicUntil>elapsed?'法抗':'',entity.immuneUntil>elapsed?'免控':'',
+          ...(entity.statuses||[]).filter(s=>s.until>elapsed&&['wet','armor','vulnerable','haste','magicArmor'].includes(s.kind)).map(s=>({wet:'浸',armor:'破',vulnerable:'标',haste:'疾',magicArmor:'法抗'})[s.kind])];
         text([...new Set(labels)].filter(Boolean).join('·'),entity.x,top-5,'#bfdfda',10);
+        if(entity.channel){
+          ctx.fillStyle='#f6bc66';ctx.fillRect(entity.x-width/2,top+12,width*Math.max(0,(elapsed-entity.channel.start)/(entity.channel.until-entity.channel.start)),2);
+        }
+        if(entity.special==='gold')ring(entity.x,entity.y,23+(reduceMotion?0:2*Math.sin(elapsed*6)),'#f6cf66',.75,2);
+        if(entity.special==='challenge')ring(entity.x,entity.y,24,'#ec8e67',.8,2);
       }
       if (entity.boss) text('首领', entity.x, top - 14, '#ffe09e', 13);
     }
@@ -272,7 +306,9 @@ export function createRenderer(canvas, artwork) {
   function event(event) {
     if(['attack','king-attack','hero-attack'].includes(event.type))event={...event,type:'shot',tx:event.tx??event.targetX,ty:event.ty??event.targetY,color:event.side==='ai'?'#e8b08d':'#a4ead5'};
     if(['damage','hero-hit'].includes(event.type))event={...event,type:'hit',amount:event.damage??event.amount,color:'#e89d8c'};
-    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8, 'core-hit': .65,relocate:.65,fusion:.9,echo:.3,'hero-skill':.5,'unit-death':.7,heal:.7 };
+    const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8,
+      'core-hit': .65,relocate:.65,fusion:.9,echo:.3,'hero-skill':.5,'unit-death':.7,heal:.7,
+      'shield-hit':.26,'boss-cast':.65,interrupt:.45 };
     if (!(event.type in lifetimes)) return;
     particles.push({ ...event, age: 0, life: lifetimes[event.type] });
     if (particles.length > 240) particles = particles.slice(-240);
@@ -309,9 +345,14 @@ export function createRenderer(canvas, artwork) {
         ctx.stroke();
         const effect = artwork.effects.get('F04');
         if (effect) ctx.drawImage(effect, item.x - 24, item.y - 40, 48, 48);
+      } else if (['shield-hit','boss-cast','interrupt'].includes(item.type)) {
+        const color=item.type==='shield-hit'?'#8cdbff':item.type==='interrupt'?'#beffe6':'#ffab62';
+        ring(item.x,item.y,18+progress*26,color,1-progress,2);
       } else if (item.type === 'kill' || item.type === 'income' || item.type === 'sell') {
         text(`+${item.amount}`, item.x, item.y - 45 - progress * 24, '#ffe08b', 16);
         if (item.type === 'kill') {
+          const sprite=frameState.mode==='loop'?loopSprite(item.code):null;
+          if(sprite)ctx.drawImage(sprite,item.x-43,item.y-55+progress*15,86,86);
           const effect = artwork.effects.get('F06');
           if (effect) ctx.drawImage(effect, item.x - 35, item.y - 50, 70, 70);
         }
@@ -404,12 +445,13 @@ export function createRenderer(canvas, artwork) {
     if (placement&&!placement.skill) {
       const color = placement.ok ? '#a4e6ae' : '#f29a84';
       const useSpecialArt = mode === 'gem' || ['T13','T14'].includes(placement.code);
-      const unit = useSpecialArt ? null : artwork.units.get(placement.code);
+      const model = mode==='loop'?loopSprite(placement.code):null;
+      const unit = useSpecialArt ? null : artwork.units.get(placement.assetCode??placement.code);
       ctx.save();
       ctx.globalAlpha = placement.ok ? .78 : .45;
       if(placement.code==='WALL')drawWall(placement.x,placement.y);
       if(useSpecialArt)special.actor({...placement,level:placement.level||1},state);
-      if (unit?.masterImage) ctx.drawImage(unit.masterImage, placement.x - 64, placement.y - 80, 128, 128);
+      if (model||unit?.masterImage) ctx.drawImage(model||unit.masterImage, placement.x - 64, placement.y - 80, 128, 128);
       ctx.globalAlpha = 1;
       ctx.fillStyle = placement.ok ? '#71cf8b35' : '#e7786635';
       ctx.strokeStyle = color; ctx.lineWidth = 2.5;
