@@ -106,13 +106,30 @@
           <section id="selection-panel" aria-label="防御单位详情" hidden>
             <p id="loop-enemy-info" class="strategy-summary" hidden></p>
             <div class="selected-summary">
-              <p id="selected-slot-label" class="eyebrow">防线指挥</p>
-              <p id="selection-hint">点“建造”选择工事，再在地图亮处选点。</p>
               <div id="tower-panel" hidden>
                 <h2 id="tower-title">防御单位</h2>
-                <p id="tower-description"></p>
-                <div id="tower-stats" class="tower-stats"></div>
-                <p id="loop-skill-status" class="strategy-summary" hidden></p><div id="loop-controls" hidden></div><div id="gem-selection-actions" hidden></div><div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="relocate-button" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" class="button" type="button">出售</button></div>
+                <p id="loop-skill-status" class="strategy-summary" hidden></p>
+                <div class="tower-sections" role="group" aria-label="工事详情分区">
+                  <button id="tower-properties-button" class="button compact" type="button" aria-expanded="false" aria-controls="tower-properties">属性</button>
+                  <button id="tower-skills-button" class="button compact" type="button" aria-expanded="false" aria-controls="tower-skills" hidden>技能</button>
+                  <button id="tower-equipment-button" class="button compact" type="button" aria-expanded="false" aria-controls="tower-equipment" hidden>装备</button>
+                  <button id="tower-management-button" class="button compact" type="button" aria-expanded="false" aria-controls="tower-management">操作</button>
+                </div>
+                <div id="tower-properties" class="tower-section" hidden>
+                  <p id="tower-description"></p>
+                  <div id="tower-stats" class="tower-stats"></div>
+                </div>
+                <div id="tower-skills" class="tower-section" hidden>
+                  <div id="loop-skills"></div>
+                </div>
+                <div id="tower-equipment" class="tower-section" hidden>
+                  <div id="loop-controls" hidden></div>
+                </div>
+                <div id="tower-management" class="tower-section" hidden>
+                  <div id="loop-targeting" hidden></div>
+                  <div id="gem-selection-actions" hidden></div>
+                  <div class="tower-actions"><button id="upgrade-button" class="button primary" type="button">升级</button><button id="relocate-button" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" class="button" type="button">出售</button></div>
+                </div>
               </div>
             </div>
           </section>
@@ -178,6 +195,10 @@
           </div>
           <div id="loop-cards" class="loop-panel-list" hidden></div>
           <div id="shop-list" class="shop-list" aria-label="十四种防御单位；迷宫额外提供路障，横向滚动查看更多"></div>
+          <div id="shop-tower-preview" class="card-preview" hidden>
+            <div><h3 id="shop-tower-name"></h3><p id="shop-tower-description"></p></div>
+            <button id="shop-build-button" class="button compact primary" type="button">布置</button>
+          </div>
         </section>
       </div>
     </section>

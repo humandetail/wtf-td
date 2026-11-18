@@ -59,6 +59,8 @@ let selectedTowerId = null;
 let selectedEnemyId = null;
 let loopPanelSignature = '';
 let loopCardsSignature = '';
+let loopCardSelection = '';
+let shopSelection = '';
 let loopEquipmentSignature = '';
 let loopChallengeSignature = '';
 let armedCardId = null;
@@ -75,12 +77,26 @@ let noticeUntil = 0;
 let helpPaused = false;
 let selectedSignature = '';
 let drawerTrigger = canvas;
+let inspectedTowerId = null;
+const towerSections = ['properties', 'skills', 'equipment', 'management'];
+
+function showTowerSection(active = null) {
+  for (const section of towerSections) {
+    element(`tower-${section}`).hidden = active !== section;
+    element(`tower-${section}-button`).setAttribute('aria-expanded', String(active === section));
+  }
+}
 
 function setBuildDock(open) {
   if(open)touchControls?.clear();
   const dock = element('build-dock');
   const restoreFocus = !open && dock.contains(document.activeElement);
   if (open) { stopHero(); setDrawer(); }
+  if (!open && !dock.hidden) {
+    loopCardSelection = '';
+    loopCardsSignature = '';
+    shopSelection = '';
+  }
   dock.hidden = !open;
   const button = element('focus-button');
   button.setAttribute('aria-pressed', String(!open));
@@ -96,6 +112,8 @@ function setDrawer(mode = null, trigger = canvas) {
   if (mode) { stopHero(); setBuildDock(false); }
   const drawer = element('command-drawer');
   const restoreFocus = drawer.contains(document.activeElement);
+  if (mode === 'tower' && (drawer.dataset.view !== 'tower' || inspectedTowerId !== selectedTowerId)) showTowerSection();
+  inspectedTowerId = mode === 'tower' ? selectedTowerId : null;
   drawer.hidden = !mode;
   drawer.dataset.view = mode || '';
   element('research-panel').hidden = mode !== 'research';
@@ -125,6 +143,9 @@ function fitBattlefield() {
     const fittedWidth = Math.max(0, Math.min(width, height * WORLD.width / WORLD.height));
     canvas.style.width = `${fittedWidth}px`;
     canvas.style.height = `${fittedWidth * WORLD.height / WORLD.width}px`;
+    const sideSpace = Math.floor((width - fittedWidth) / 2) - 10;
+    frame.parentElement.style.setProperty('--map-side-space', `${sideSpace}px`);
+    frame.parentElement.classList.toggle('has-map-gutter', sideSpace >= 168);
   }).observe(frame);
 }
 
@@ -246,7 +267,7 @@ function activatePoint(point) {
     else {
       selectedEnemyId=game.state.mode==='loop'?game.state.enemies.find(e=>Math.hypot(e.x-point.x,e.y-point.y)<32)?.id:null;
       setDrawer(selectedEnemyId?'tower':null,canvas);
-      if(!selectedEnemyId)notice(cardLoop()?'打开“卡牌”，从卡包选择部署。':'点“建造”选择工事，再在地图亮处选点。');
+      if (!selectedEnemyId) setBuildDock(false);
     }
     updateUI();
   }
@@ -254,20 +275,20 @@ function activatePoint(point) {
 
 function updateSelection() {
   const tower = [...game.state.towers, ...game.state.walls, ...(game.state.mode === 'gem' ? game.state.inventory : [])].find(tower => tower.id === selectedTowerId);
+  if (element('command-drawer').dataset.view === 'tower' && !tower && !game.state.enemies.some(enemy => enemy.id === selectedEnemyId)) {
+    selectedTowerId = null;
+    selectedEnemyId = null;
+    setDrawer();
+  }
   const signature = `${game.state.mode}/${JSON.stringify(game.state.inventory || [])}/${selectedTowerId}/${game.state.towers.map(item => `${item.id}:${item.level}:${item.x}:${item.y}:${item.readyAt > game.state.elapsed}`).join(',')}/${game.state.gold}/${armedCode}/${armedCardId}/${game.state.tech?.deployment}:${game.state.tech?.reinforcement}/${game.state.phase}/${relocatingId}/${tower?.readyAt > game.state.elapsed}/${tower?.upgrading?.remaining.toFixed(1)}/${game.state.endless}/${tower?.route}/${game.state.mode==='loop'?game.state.towers.filter(t=>t.pulseUntil>game.state.elapsed).map(t=>t.id).join(','):''}`;
   if (selectedSignature === signature) return;
   selectedSignature = signature;
-  element('selected-slot-label').textContent = armedCode || armedCardId!==null ? '建造模式' : tower ? '已选防御单位' : '防线指挥';
   element('tower-panel').hidden = !tower;
-  element('selection-hint').hidden = !!tower;
-  if (!tower) {
-    const pending = buildItems.find(item => item.code === armedCode);
-    element('selection-hint').textContent = pending
-      ? `已选${pending.name}（${pending.price} 金币），请在地图亮处选点。右键或 Esc 取消放置。`
-      : cardLoop() ? '打开“卡牌”部署，点选已有工事查看属性与装备。' : '点“建造”选择工事，点击已有工事查看属性。';
-    return;
-  }
+  if (!tower) return;
   const wall = tower.code === 'WALL';
+  element('tower-skills-button').hidden = !cardLoop();
+  element('tower-equipment-button').hidden = !cardLoop();
+  element('loop-targeting').hidden = !cardLoop();
   element('upgrade-button').hidden = wall || game.state.mode === 'gem' || cardLoop();
   element('gem-selection-actions').hidden = true;
   const relocate = /** @type {HTMLButtonElement} */ (element('relocate-button'));
@@ -397,42 +418,103 @@ function renderLoopCards() {
   root.hidden = !enabled;
   element('build-filters').hidden = enabled;
   element('shop-list').hidden = enabled;
-  element('build-heading').textContent = enabled ? '抽卡与卡包' : '防御工事';
+  if (enabled) element('shop-tower-preview').hidden = true;
+  element('build-dock').dataset.mode = enabled ? 'cards' : 'shop';
+  const { draft, cards, gold, paused, phase, capacity } = game.state;
+  element('build-heading').textContent = !enabled ? '防御工事'
+    : draft ? (draft.cost ? '抽卡三选一' : '免费三选一') : `卡包 · ${cards.length} 张`;
   if (!enabled) { loopCardsSignature = ''; return; }
   if (element('build-dock').hidden) return;
-  const { draft, cards, gold, paused, phase, capacity } = game.state;
   const disabled = phase !== 'playing' || paused;
   const signature = JSON.stringify([draft,cards,gold>=150,disabled,capacity,game.state.towers.map(tower=>tower.code)]);
   if (signature === loopCardsSignature) return;
   loopCardsSignature = signature;
+  const restoreFocus = root.contains(document.activeElement);
   root.replaceChildren();
-  const panel = document.createElement('div');
-  panel.className = 'loop-card-grid';
+  const choices = document.createElement('div');
+  choices.className = 'card-choices';
+  const preview = document.createElement('div');
+  preview.id = 'loop-card-preview';
+  preview.className = 'card-preview';
+  const icons = [];
+  function addChoice(strip, group, key, code, actions) {
+    const definition = catalog().find(item=>item.code===code);
+    const label = definition?.name ?? code;
+    const button = commandButton('', () => {
+      loopCardSelection = loopCardSelection === key ? '' : key;
+      showSelection();
+    });
+    button.className = 'card-choice';
+    button.title = label;
+    button.dataset.rarity = definition?.rarity ?? 'common';
+    button.dataset.group = group;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('aria-controls', preview.id);
+    const fallback = document.createElement('span');
+    fallback.textContent = code;
+    button.append(fallback);
+    loopPortrait(button,code,definition?.assetCode);
+    icons.push({ button, key, code, actions });
+    strip.append(button);
+  }
+  function showSelection() {
+    const choice = icons.find(icon => icon.key === loopCardSelection);
+    for (const icon of icons) icon.button.setAttribute('aria-pressed', String(icon === choice));
+    preview.hidden = !choice;
+    preview.replaceChildren();
+    if (!choice) { loopCardSelection = ''; return; }
+    const detail = loopCardDetails(choice.code, true);
+    const actions = document.createElement('div');
+    actions.className = 'card-preview-actions';
+    choice.actions(actions);
+    preview.append(detail, actions);
+  }
+  const strip = (label) => {
+    const group = document.createElement('div');
+    group.className = 'card-choice-strip';
+    group.setAttribute('role','group');
+    group.setAttribute('aria-label',label);
+    choices.append(group);
+    return group;
+  };
   if (draft) {
-    paragraph(root,draft.cost ? '三选一 · 已支付抽卡费用' : '免费起手 · 三选一');
+    const offers = strip(draft.cost ? '候选卡' : '免费起手卡');
     for (const [index,code] of draft.codes.entries()) {
-      const offer = loopCardDetails(code);
-      offer.append(commandButton('选留到卡包',()=>resultMessage(game.chooseCard(index)),disabled));
-      panel.append(offer);
+      addChoice(offers,'draft',`draft:${index}:${code}`,code, actions => {
+        actions.append(commandButton('选留到卡包',()=>resultMessage(game.chooseCard(index)),disabled));
+      });
     }
-    root.append(panel);
-  } else {
-    root.append(commandButton(gold>=150?'抽卡 · 150 金币':'抽卡 · 需要 150 金币',()=>resultMessage(game.draw()),disabled||gold<150));
   }
-  const title = document.createElement('h3');
-  title.textContent = `卡包 · ${cards.length} 张`;
-  root.append(title);
-  if (!cards.length) paragraph(root,'选留的卡牌可跨波保留、部署或出售。');
-  const bag = document.createElement('div');
-  bag.className = 'loop-card-grid';
-  for (const card of cards) {
-    const item = loopCardDetails(card.code);
-    const eligible = game.canDeploy(card.id);
-    if (!eligible.ok) paragraph(item,eligible.message);
-    item.append(commandButton('部署',()=>armCard(card.id),disabled||!eligible.ok),commandButton(`售卡 · +${card.paid?75:0} 金币`,()=>resultMessage(game.sellCard(card.id)),disabled));
-    bag.append(item);
+  let drawButton;
+  if (!draft || cards.length) {
+    if (draft) paragraph(choices,`卡包 · ${cards.length} 张`);
+    const bag = strip(`卡包 · ${cards.length} 张`);
+    if (!draft) {
+      drawButton = commandButton('', () => {
+        const result = game.draw();
+        if (result.ok) loopCardSelection = '';
+        resultMessage(result);
+      }, disabled || gold < 150);
+      drawButton.className = 'card-choice card-draw';
+      drawButton.setAttribute('aria-label','抽卡 · 150 金币');
+      const label = document.createElement('strong');
+      label.textContent = '抽卡';
+      const cost = document.createElement('span');
+      cost.textContent = '150 金';
+      drawButton.append(label,cost);
+      bag.append(drawButton);
+    }
+    for (const card of cards) {
+      addChoice(bag,'bag',`bag:${card.id}`,card.code, actions => {
+        const eligible = game.canDeploy(card.id);
+        if (!eligible.ok) paragraph(actions,eligible.message);
+        actions.append(commandButton('部署',()=>armCard(card.id),disabled||!eligible.ok),commandButton(`售卡 · +${card.paid?75:0} 金币`,()=>resultMessage(game.sellCard(card.id)),disabled));
+      });
+    }
   }
-  root.append(bag);
+  root.append(choices,preview);
+  showSelection();
+  if (restoreFocus) ((icons.find(icon => icon.key === loopCardSelection) ?? icons[0])?.button ?? drawButton)?.focus({ preventScroll: true });
 }
 
 function loopPortrait(card,code,assetCode) {
@@ -453,16 +535,26 @@ function setPortrait(image, source, fallback) {
   if (source || fallback) image.src = source ?? fallback;
 }
 
-function loopCardDetails(code) {
+function loopCardDetails(code, compact = false) {
   const tower = catalog().find(item=>item.code===code);
   const card = document.createElement('article');
   card.className = 'loop-content-card';
   card.dataset.rarity = tower?.rarity ?? 'common';
   const title = document.createElement('h4');
   title.textContent = tower?.name ?? code;
-  loopPortrait(card,code,tower?.assetCode);
+  if (!compact) loopPortrait(card,code,tower?.assetCode);
   card.append(title);
   paragraph(card,`${({common:'普通',rare:'稀有',epic:'史诗'})[card.dataset.rarity]} · ${tower?.population??1} 人口`);
+  if (compact && tower?.skills?.length > 1) {
+    paragraph(card,`1级 · ${tower.skills[0]}`);
+    const extra = document.createElement('details');
+    const label = document.createElement('summary');
+    label.textContent = '后续技能';
+    extra.append(label);
+    for (const [index, skill] of tower.skills.slice(1).entries()) paragraph(extra,`${2*index+3}级 · ${skill}`);
+    card.append(extra);
+    return card;
+  }
   for (const [index,skill] of (tower?.skills??[]).entries()) paragraph(card,`${2*index+1}级 · ${skill}`);
   return card;
 }
@@ -568,10 +660,14 @@ function updateCardLoopPanels(root, forecast, enemyInfo) {
   if(signature===loopPanelSignature)return;
   loopPanelSignature=signature;
   root.replaceChildren();
+  const skills = element('loop-skills');
+  skills.replaceChildren();
   for(const [index,skill] of (definition?.skills??[]).entries()){
     const level=2*index+1;
-    paragraph(root,`${level}级 · ${tower.level>=level?'已解锁':'待解锁'} · ${skill}`);
+    paragraph(skills,`${level}级 · ${tower.level>=level?'已解锁':'待解锁'} · ${skill}`);
   }
+  const targeting = element('loop-targeting');
+  targeting.replaceChildren();
   if (definition?.role !== 'support') {
     const label=document.createElement('label');
     label.textContent='选敌优先级';
@@ -586,7 +682,7 @@ function updateCardLoopPanels(root, forecast, enemyInfo) {
     select.value=tower.priority??'default';
     select.addEventListener('change',()=>resultMessage(game.setPriority(tower.id,select.value)));
     label.append(select);
-    root.append(label);
+    targeting.append(label);
   }
   const slots=document.createElement('div');
   slots.className='loop-panel-list';
@@ -920,18 +1016,7 @@ function updateUI() {
   element('speed-button').textContent = `${state.speed}× 速度`;
   element('mute-button').textContent = audio.muted ? '声音关' : '声音开';
   element('mute-button').setAttribute('aria-pressed', String(audio.muted));
-  if(!cardLoop())for (const card of element('shop-list').querySelectorAll('.tower-card')) {
-    const code = /** @type {HTMLButtonElement} */ (card).dataset.code;
-    card.setAttribute('aria-pressed', String(armedCode === code));
-    /** @type {HTMLButtonElement} */ (card).disabled = state.mode === 'gem' || state.mode === 'legion' && legionView !== 'player';
-    const eligibility = game.canBuildType(code);
-    card.classList.toggle('unaffordable', !eligibility.ok);
-    card.classList.toggle('locked', !eligibility.ok);
-    const availability = /** @type {HTMLElement} */ (card.querySelector('.availability'));
-    availability.hidden = eligibility.ok;
-    if (availability.textContent !== eligibility.message) availability.textContent = eligibility.message;
-    card.setAttribute('aria-disabled', String(!eligibility.ok));
-  }
+  if (!cardLoop() && !element('build-dock').hidden) updateShopSelection();
   updateResearch();
   renderLoopCards();
   renderLoopEquipmentShop();
@@ -975,7 +1060,7 @@ function showEnd() {
 }
 
 function clearTransient() {
-  selectedEnemyId=null;loopPanelSignature='';loopCardsSignature='';loopEquipmentSignature='';loopChallengeSignature='';armedCardId=null;
+  selectedEnemyId=null;loopPanelSignature='';loopCardsSignature='';loopCardSelection='';shopSelection='';loopEquipmentSignature='';loopChallengeSignature='';armedCardId=null;
   stopHero();
   pendingGem = null; armedSkill = null; legionView = 'player';
   selectedTowerId = null;
@@ -1039,7 +1124,7 @@ function enterGame(restart = false) {
   else if (game.state.paused) game.togglePause();
   if (freshSession) setBuildDock(cardLoop() && !!game.state.draft);
   showView('game');
-  if (freshSession) notice(cardLoop() ? '免费选一张起手卡，再从卡包部署到战场。' : ['gem', 'hero', 'legion'].includes(game.state.mode) ? ({gem:'点击“建造”鉴定宝石；菜单内查看任务。',hero:'WASD移动，右键移动或指定敌人；Q/E/R后点击目标，菜单内查看装备和营地奖励。',legion:'单人对战AI：建造守军，菜单内管理经济派兵并主动开战；侦察按钮切换战场。'})[game.state.mode] : `点击“建造”选择工事；“科技”打开研究。${['escort', 'maze'].includes(game.state.mode) ? '菜单内查看任务与主动指令。' : ''}`, 3);
+  if (freshSession && !cardLoop()) notice(['gem', 'hero', 'legion'].includes(game.state.mode) ? ({gem:'点击“建造”鉴定宝石；菜单内查看任务。',hero:'WASD移动，右键移动或指定敌人；Q/E/R后点击目标，菜单内查看装备和营地奖励。',legion:'单人对战AI：建造守军，菜单内管理经济派兵并主动开战；侦察按钮切换战场。'})[game.state.mode] : `点击“建造”选择工事；“科技”打开研究。${['escort', 'maze'].includes(game.state.mode) ? '菜单内查看任务与主动指令。' : ''}`, 3);
   lastPhase = game.state.phase;
   updateUI();
   canvas.focus({ preventScroll: true });
@@ -1064,6 +1149,9 @@ function armBuild(code) {
 }
 
 function bindControls() {
+  for (const section of towerSections) element(`tower-${section}-button`).addEventListener('click', () => {
+    showTowerSection(element(`tower-${section}`).hidden ? section : null);
+  });
   for (const key of ['Q','E','R']) element(`hero-${key.toLowerCase()}-button`).addEventListener('click', () => armHeroSkill(key));
   element('research-button').addEventListener('click', () => {
     const isOpen = element('research-button').getAttribute('aria-expanded') === 'true';
@@ -1078,7 +1166,10 @@ function bindControls() {
     if (!element('loop-encyclopedia').hidden) {
       setDrawer('mission', element('more-button'));
       element('loop-encyclopedia-button').focus({preventScroll:true});
-    } else setDrawer();
+    } else {
+      if (element('command-drawer').dataset.view === 'tower') { selectedTowerId = null; selectedEnemyId = null; }
+      setDrawer();
+    }
   });
   element('loop-encyclopedia-button').addEventListener('click', () => {
     setDrawer('encyclopedia',element('more-button'));
@@ -1158,8 +1249,11 @@ function bindControls() {
   element('shop-list').addEventListener('click', event => {
     const card = /** @type {HTMLElement} */ (event.target).closest('button[data-code]');
     if (!card) return;
-    armBuild(/** @type {HTMLButtonElement} */ (card).dataset.code);
+    const code = /** @type {HTMLButtonElement} */ (card).dataset.code;
+    shopSelection = shopSelection === code ? '' : code;
+    updateShopSelection();
   });
+  element('shop-build-button').addEventListener('click', () => { if (shopSelection) armBuild(shopSelection); });
   function pointer(event) {
     const bounds = canvas.getBoundingClientRect();
     return {
@@ -1229,7 +1323,8 @@ function bindControls() {
       event.preventDefault();
       const hadDrawer = !element('command-drawer').hidden;
       setDrawer();
-      selectedTowerId = null; cancelBuild();
+      setBuildDock(false);
+      selectedTowerId = null; selectedEnemyId = null; cancelBuild();
       if (!hadDrawer) canvas.focus({ preventScroll: true });
     }
   });
@@ -1253,9 +1348,29 @@ function filterShop(category) {
   for (const card of shop.querySelectorAll('.tower-card')) {
     const button = /** @type {HTMLButtonElement} */ (card);
     button.hidden = category !== 'all' && !button.dataset.categories.split(' ').includes(category);
+    if (button.hidden && button.dataset.code === shopSelection) shopSelection = '';
   }
+  updateShopSelection();
   shop.scrollLeft = 0;
   element('build-dock').scrollTop = 0;
+}
+
+function updateShopSelection() {
+  for (const card of element('shop-list').querySelectorAll('.tower-card')) {
+    const button = /** @type {HTMLButtonElement} */ (card);
+    const eligibility = game.canBuildType(button.dataset.code);
+    button.setAttribute('aria-pressed', String(shopSelection === button.dataset.code));
+    button.classList.toggle('locked', !eligibility.ok);
+  }
+  const tower = buildItems.find(item => item.code === shopSelection);
+  element('shop-tower-preview').hidden = !tower;
+  if (!tower) return;
+  const eligibility = game.canBuildType(tower.code);
+  const role = tower.code === 'T06' ? '范围输出 · 减速' : roles[tower.kind];
+  element('shop-tower-name').textContent = `${tower.name} · ${tower.price} 金币`;
+  element('shop-tower-description').textContent = [role,tower.description,eligibility.ok ? '' : eligibility.message].filter(Boolean).join(' · ');
+  const button = /** @type {HTMLButtonElement} */ (element('shop-build-button'));
+  button.disabled = !eligibility.ok || game.state.paused || (game.state.mode === 'legion' && legionView !== 'player');
 }
 
 function renderShop() {
@@ -1278,12 +1393,8 @@ function renderShop() {
         setPortrait(/** @type {HTMLImageElement} */ (image), unit?.masterImage?.src ?? unit?.masterUrl.href, undefined);
       }
       const name = document.createElement('strong'); name.textContent = tower.name;
-      const price = document.createElement('span'); price.className = 'price'; price.textContent = `${tower.price} 金币`;
-      const role = document.createElement('small'); role.className = 'role';
-      role.textContent = tower.code === 'T06' ? '范围输出 · 减速' : roles[tower.kind];
-      const effect = document.createElement('span'); effect.className = 'tower-effect'; effect.textContent = tower.description;
-      const availability = document.createElement('small'); availability.className = 'availability';
-      card.append(image, name, price, role, effect, availability); shop.append(card);
+      card.setAttribute('aria-controls','shop-tower-preview');
+      card.append(image, name); shop.append(card);
     }
     filterShop('all');
 }
@@ -1297,7 +1408,7 @@ async function boot() {
     bindControls();
     fitBattlefield();
     touchControls=createTouchControls(canvas,{
-      canInteract:()=>view==='game'&&game.state.phase==='playing'&&!game.state.paused&&element('command-drawer').hidden&&element('build-dock').hidden,
+      canInteract:()=>view==='game'&&game.state.phase==='playing'&&!game.state.paused&&(element('command-drawer').hidden||element('command-drawer').dataset.view==='tower')&&(cardLoop()||element('build-dock').hidden),
       hasAction:()=>armedCardId!==null||!!armedCode||!!pendingGem||!!armedSkill||relocatingId!==null,
       isHero:()=>game.state.mode==='hero',
       onMove:(x,y)=>{if(game.state.mode==='hero')game.setMoveVector(x,y);},

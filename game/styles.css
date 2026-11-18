@@ -30,7 +30,6 @@ body.in-game .app-shell{max-width:none}
 .command-drawer{position:absolute;z-index:3;right:10px;top:10px;bottom:10px;width:min(350px,calc(100% - 20px));overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding:16px;background:#15241cf5;border:1px solid #7b8057;border-top:2px solid #9f83bc;box-shadow:0 10px 35px #0009}
 .drawer-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px}
 .drawer-heading h2{font-size:18px;white-space:nowrap}.drawer-heading .button{white-space:nowrap;min-height:34px;padding:6px 9px}
-#selected-slot-label{font-size:12px;color:var(--gold)}#selection-hint{font-size:14px}
 #tower-title{font-size:20px}#tower-description{font-size:14px;line-height:1.7;margin:10px 0 14px}
 .tower-stats{gap:8px 16px;font-size:14px}.tower-actions{flex-direction:column}.tower-actions .button{width:100%;overflow-wrap:anywhere}
 .research-panel{display:block;padding:0;margin:0;border:0}.research-panel h2{font-size:15px;color:var(--muted)}
@@ -41,7 +40,6 @@ body.in-game .app-shell{max-width:none}
 .build-toolbar{display:flex;align-items:center;gap:12px;min-height:30px;margin-bottom:6px}
 .build-toolbar h2{font-size:14px;white-space:nowrap;flex:none}.capacity-label{font-size:13px;flex:none}
 .loop-panel-list{display:grid;gap:8px;margin-block:8px}
-.loop-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .loop-content-card{background:#22352b;border:1px solid #516a5a;border-radius:6px;padding:10px;min-width:0}
 .loop-content-card[data-rarity="rare"]{border-color:#70a3b8}
 .loop-content-card[data-rarity="epic"]{border-color:#b894ce}
@@ -50,7 +48,6 @@ body.in-game .app-shell{max-width:none}
 .loop-content-card p,.loop-panel-list p,#loop-controls p{font-size:13px;line-height:1.5;margin:4px 0;overflow-wrap:anywhere}
 .loop-content-card .button,.loop-panel-list .button,#loop-controls>.button{min-height:44px;white-space:normal;margin:4px 4px 0 0}
 #loop-live-event{position:absolute;z-index:1;right:8px;top:8px;max-width:calc(100% - 16px);pointer-events:none;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:#15241cf5;color:var(--gold);font-size:12px;font-variant-numeric:tabular-nums}
-@media(max-width:620px){.loop-card-grid{grid-template-columns:minmax(0,1fr)}}
 .build-filters{display:flex;gap:5px;margin-left:auto}
 .build-filters button{min-height:36px;padding:4px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--text);font-size:13px}
 .build-filters button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);background:#383720}
@@ -58,12 +55,6 @@ body.in-game .app-shell{max-width:none}
 .notice.placement-status.invalid{color:#ffd3c3;border-color:var(--danger)}
 #notice:has(+ .placement-status:not([hidden])){display:none}
 .shop-list{display:flex;gap:6px;min-height:0;overflow-x:auto;scrollbar-width:thin;overscroll-behavior:contain;padding-bottom:3px}
-.tower-card{display:grid;grid-template-columns:37px minmax(0,1fr);grid-template-rows:auto auto auto 1fr auto;column-gap:7px;row-gap:1px;align-content:start;align-items:start;text-align:left;flex:0 0 186px;min-width:186px;min-height:108px;padding:7px 8px}
-.tower-card img{grid-column:1;grid-row:1/3;width:37px;height:44px}.tower-card strong{grid-column:2;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
-.tower-card .price{grid-column:2;font-size:13px}.tower-card .role{grid-column:1/-1;color:var(--text);font-weight:600}.tower-card .availability{grid-column:1/-1;font-size:12px;line-height:1.45;margin:3px 0 0;white-space:normal;overflow-wrap:anywhere;color:var(--jade)}
-.tower-card .tower-effect{grid-column:1/-1;color:var(--muted);font-size:13px;line-height:1.45}
-.tower-card[aria-disabled="true"]{cursor:not-allowed}
-.tower-card.unaffordable{opacity:1}.tower-card.unaffordable .availability{color:var(--danger)}
 @media(max-width:1150px){.status-bar{gap:12px}.kills{display:none}.game-screen{padding:5px}}
 @media(max-width:650px){.game-screen{padding:4px;gap:4px}.status-bar{padding:5px 8px;gap:12px}.wordmark{font-size:21px}.build-toolbar{flex-wrap:wrap;gap:5px 10px}.build-dock{padding:6px}.command-drawer{padding:12px}.notice{max-width:calc(100% - 16px);padding:6px 10px}}
 @media(max-height:500px){.game-screen{grid-template-rows:auto minmax(180px,1fr)}}
@@ -72,6 +63,56 @@ body.in-game .app-shell{max-width:none}
 .mode-selector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:24px;max-width:460px}.mode-card{flex:1;min-width:0;text-align:left;padding:12px 14px;border:1px solid #52604a;border-radius:5px;background:#1b2a23;color:var(--text)}.mode-card strong{display:block;font-size:16px}.mode-card span{display:block;font-size:12px;color:var(--muted);margin-top:3px}.mode-card:hover{border-color:var(--jade)}.mode-card[aria-pressed="true"]{border-color:var(--gold);background:#393c29;box-shadow:inset 0 0 0 1px var(--gold)}.mode-description{max-width:460px;min-height:48px;margin-top:10px;color:var(--muted);font-size:13px}.mode-selector+.mode-description+.menu-actions{margin-top:20px}
 .wordmark #current-mode{display:block;font-size:10px;letter-spacing:.08em}
 @media(max-width:600px){.mode-selector{max-width:100%;gap:8px}.mode-card{padding:10px}.mode-card strong{font-size:15px}.menu-art{margin-top:12px}.menu-footer{max-width:80%;letter-spacing:0}.mode-description{min-height:42px}}
+
+.build-dock[data-mode]{right:auto;width:max-content;max-width:calc(100% - 20px);max-height:55%;border-radius:10px;padding:9px}
+.build-dock[data-mode="cards"]{max-width:min(550px,calc(100% - 20px))}
+.build-dock[data-mode="shop"]{width:min(560px,calc(100% - 20px))}
+#loop-cards{display:flex;align-items:flex-start;gap:10px;margin:0}
+.card-choices{display:grid;gap:6px;min-width:0;max-width:100%}
+.card-choices:has(+ .card-preview:not([hidden])){flex:0 0 154px}
+.card-choice-strip{display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;padding:3px;overscroll-behavior-inline:contain}
+.card-choice{position:relative;display:grid;place-items:center;flex:0 0 46px;width:46px;height:46px;padding:0;border:1px solid #526b5d;border-radius:7px;background:#21352c;color:var(--muted)}
+.card-choice[data-rarity="rare"]{border-color:#70a3b8}
+.card-choice[data-rarity="epic"]{border-color:#b894ce}
+.card-choice[aria-pressed="true"]{outline:2px solid var(--gold);outline-offset:1px;background:#423c27}
+.card-choice span{align-self:end;line-height:1;font-size:9px;margin-bottom:3px}
+.card-choice img{position:absolute;width:42px;height:36px;top:0;object-fit:contain}
+.card-draw{color:var(--gold);background:#2d3224}
+.card-draw strong{font-size:12px}
+.card-preview{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0;padding:7px 8px;border:1px solid #4b6053;border-radius:7px;background:#21342b}
+.card-preview>.loop-content-card{flex:1 1 190px;border:0;background:none;padding:0}
+.card-preview h3,.card-preview h4{font-size:14px;margin:0;line-height:1.3}
+.card-preview p{color:var(--muted);font-size:12px;line-height:1.4;margin:3px 0}
+.card-preview summary{cursor:pointer;color:#d4e1d2;font-size:12px;padding:4px 0}
+.card-preview-actions{display:flex;flex-wrap:wrap;gap:5px}
+.card-preview .button{margin:0;min-height:44px;font-size:12px}
+#shop-tower-preview{justify-content:space-between;margin-top:5px}
+#shop-tower-preview>div{flex:1 1 160px}
+.shop-list .tower-card{display:flex;flex:0 0 72px;min-width:0;min-height:60px;align-items:center;justify-content:center;padding:4px;text-align:center}
+.shop-list .tower-card img,.shop-list .tower-card .wall-icon,.shop-list .tower-card .gem-portrait{width:32px;height:31px}
+.shop-list .tower-card strong{font-size:11px;color:var(--text);line-height:1.2}
+.shop-list .tower-card.locked:not([aria-pressed="true"]){opacity:.65}
+.command-drawer[data-view="tower"]{top:auto;width:min(294px,calc(100% - 20px));max-height:58%;padding:10px;scrollbar-gutter:auto}
+.command-drawer[data-view="tower"] .drawer-heading{padding-bottom:6px;margin-bottom:6px}
+#tower-title{font-size:16px}
+#tower-panel>.strategy-summary{font-size:12px;margin:3px 0}
+.tower-sections{display:flex;gap:5px;margin-top:7px}
+.tower-sections .button{flex:1;min-width:0;min-height:40px;padding:4px;font-size:12px;white-space:nowrap}
+.tower-sections .button[aria-expanded="true"]{border-color:var(--gold);color:var(--gold);background:#423c27}
+.tower-section{margin-top:6px;padding-top:4px;border-top:1px solid #4b605380}
+#tower-description,#loop-skills p{font-size:13px;line-height:1.45;margin:4px 0 7px}
+.tower-stats{font-size:12px;gap:5px 12px}
+.tower-actions{gap:5px;margin-top:6px}
+#loop-targeting select{display:block;width:100%;min-height:40px;margin:4px 0;background:#1b3027;border:1px solid #76886c;color:var(--text);padding:5px;border-radius:6px}
+@media(max-width:570px){#loop-cards{display:grid;gap:6px}.build-dock[data-mode]{max-height:58%}.build-filters{margin-left:0}}
+.has-map-gutter>.build-dock[data-mode="cards"],.has-map-gutter>.command-drawer[data-view="tower"]{width:var(--map-side-space);max-height:calc(100% - 20px)}
+.has-map-gutter>.build-dock[data-mode="cards"]{display:flex;flex-direction:column}
+.has-map-gutter #loop-cards{flex-direction:column;align-items:stretch;gap:6px;min-height:0}
+.has-map-gutter .card-choices:has(+ .card-preview:not([hidden])){flex:none}
+.has-map-gutter #loop-card-preview{flex-direction:column;align-items:stretch;flex-wrap:nowrap;min-height:0}
+.has-map-gutter #loop-card-preview>.loop-content-card{flex:0 1 auto;overflow-y:auto;scrollbar-width:thin}
+.has-map-gutter .card-preview-actions{flex:none}
+.has-map-gutter .card-preview-actions .button{padding-inline:6px}
 
 /* Task commands share the existing overlay without changing battlefield bounds. */
 #mission-button{border-color:#8c8050;color:var(--gold)}#mission-button[aria-expanded="true"]{background:#393c29}
@@ -121,7 +162,7 @@ button.wordmark{border:0;padding:0;background:transparent;text-align:left;cursor
 .command-drawer{border:1px solid #4b6053;border-radius:12px;background:#15241cfa}
 .command-drawer[data-view="settings"]{bottom:auto;max-height:calc(100% - 20px)}
 .drawer-heading{border-color:#4b605350}.drawer-heading h2{font-size:17px}
-.research-panel>h2,#selected-slot-label{display:none}
+.research-panel>h2{display:none}
 .notice{border:0;box-shadow:none;background:#15241ced;animation:notice-in .16s ease-out}
 @keyframes notice-in{from{opacity:0;translate:0 -4px}to{opacity:1;translate:0 0}}
 @media(prefers-reduced-motion:reduce){.notice{animation:none}}
