@@ -40,6 +40,17 @@ body.in-game .app-shell{max-width:none}
 .build-dock{position:absolute;z-index:3;left:10px;right:10px;bottom:10px;max-height:calc(100% - 20px);overflow-y:auto;min-width:0;background:var(--panel-deep);border:1px solid var(--line);padding:7px 9px 8px;box-shadow:0 8px 24px #0008}
 .build-toolbar{display:flex;align-items:center;gap:12px;min-height:30px;margin-bottom:6px}
 .build-toolbar h2{font-size:14px;white-space:nowrap;flex:none}.capacity-label{font-size:13px;flex:none}
+.loop-panel-list{display:grid;gap:8px;margin-block:8px}
+.loop-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.loop-content-card{background:#22352b;border:1px solid #516a5a;border-radius:6px;padding:10px;min-width:0}
+.loop-content-card[data-rarity="rare"]{border-color:#70a3b8}
+.loop-content-card[data-rarity="epic"]{border-color:#b894ce}
+.loop-content-card img{width:44px;height:40px;object-fit:contain;float:right}
+#loop-encyclopedia-filter{min-height:44px;padding:5px 12px;margin:0 0 8px 6px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--text);font:inherit}
+.loop-content-card p,.loop-panel-list p,#loop-controls p{font-size:13px;line-height:1.5;margin:4px 0;overflow-wrap:anywhere}
+.loop-content-card .button,.loop-panel-list .button,#loop-controls>.button{min-height:44px;white-space:normal;margin:4px 4px 0 0}
+#loop-live-event{position:absolute;z-index:1;right:8px;top:8px;max-width:calc(100% - 16px);pointer-events:none;padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:#15241cf5;color:var(--gold);font-size:12px;font-variant-numeric:tabular-nums}
+@media(max-width:620px){.loop-card-grid{grid-template-columns:minmax(0,1fr)}}
 .build-filters{display:flex;gap:5px;margin-left:auto}
 .build-filters button{min-height:36px;padding:4px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--text);font-size:13px}
 .build-filters button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);background:#383720}

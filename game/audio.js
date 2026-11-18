@@ -108,6 +108,16 @@ export function createAudio() {
         tone(220, 220, 0.38, 'triangle', 0.25, 0.18);
         tone(329.63, 329.63, 0.40, 'sine', 0.18, 0.18);
         break;
+      case 'boss-cast':
+        tone(150, 270, 0.35, 'triangle', 0.26);
+        break;
+      case 'interrupt':
+        tone(520, 210, 0.16, 'sine', 0.21);
+        break;
+      case 'gold-rush':
+      case 'gold-rush-end':
+        [587.33, 783.99, 1046.5].forEach((note, index) => tone(note, note, 0.19, 'sine', 0.14, index * 0.055));
+        break;
       case 'convoy-toggle':
         tone(130.81, 196, 0.4, 'triangle', 0.25);
         tone(196, 130.81, 0.4, 'triangle', 0.25, 0.22);

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 
-async function harness() {
-  const imports = Object.assign({}, ...await Promise.all(['tower-upgrades','engine','catalog','research','geometry','defense-geometry','modes','gem-catalog','gem-geometry','hero-catalog','legion-catalog'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
+async function harness(loopFixture = null) {
+  const imports = Object.assign({}, ...await Promise.all(['render','tower-upgrades','engine','catalog','research','geometry','defense-geometry','modes','gem-catalog','gem-geometry','hero-catalog','legion-catalog'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
   const nodes=new Map(), events={}; let document;
   const confirmation={answer:true,messages:[]};
   class Element {
@@ -19,6 +19,7 @@ async function harness() {
   for(const [,tag,id] of html.matchAll(/<(\w+)[^>]*\bid="([^"]+)"/g)){const el=new Element(tag);el.id=id;nodes.set(id,el);}
   document={getElementById:id=>nodes.get(id),body:{classList:{toggle(){}}},activeElement:null,createElement:tag=>new Element(tag),addEventListener:(k,fn)=>events[k]=fn};
   const context=vm.createContext({...imports,document,window:{addEventListener(){},confirm(message){confirmation.messages.push(message);return confirmation.answer;}},console,performance,createAudio:()=>({unlock:async()=>{},play(){},muted:false}),loadArtwork(){},createRenderer(){},ResizeObserver:class{},requestAnimationFrame(){}});
+  if(loopFixture)context.createGame=options=>options?.mode?imports.createGame(options):loopFixture;
   let source=fs.readFileSync(new URL('../main.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace('void boot();','');
   source+='\nrenderer={reset(){},event(){},hitTest(x,y,items){return items.find(t=>Math.hypot(t.x-x,t.y-y)<35)?.id??null}};globalThis.ui={sessions,get game(){return game},get view(){return view},get pendingGem(){return pendingGem},get armedSkill(){return armedSkill},get placement(){return placement},get legionView(){return legionView},bindControls,updateUI,returnToMenu,activatePoint,armBuild,showEnd};';
   vm.runInContext(source,context);const ui=context.ui;ui.bindControls();
@@ -30,6 +31,97 @@ async function harness() {
   const key=(type,key)=>events[type]({key,preventDefault(){}});
   return {ui,node,click,go,command,key,events,buttons,descendants,confirmation};
 }
+
+test('loop opening draft leads to a card in the bag and one confirmed deployment',async()=>{
+ const loop=(await import('../engine.js')).createGame();
+ Object.assign(loop.state,{cards:[],capacity:4,draft:{codes:['T01','T06','T13'],cost:0},inventory:[]});
+ loop.catalog=loop.catalog.map(tower=>({...tower,population:1,rarity:'common',skills:['开局攻击','中期技能','终阶技能']}));
+ loop.chooseCard=index=>{
+  const code=loop.state.draft.codes[index];
+  loop.state.cards.push({id:1,code,paid:0});
+  loop.state.draft=null;
+  return {ok:true,message:'已选留'};
+ };
+ loop.canDeploy=(id,x)=>({ok:id===1&&(x===undefined||x>0),message:x<0?'不能放在这里':''});
+ loop.deploy=(id,x,y)=>{
+  const result=loop.canDeploy(id,x);
+  if(!result.ok)return result;
+  loop.state.cards=[];
+  loop.state.towers.push({id:7,code:'T01',x,y,level:1,xp:0,equipment:[],combatUntil:0});
+  return {...result,towerId:7};
+ };
+ const {ui,node,go,buttons}=await harness(loop);go('loop');
+ assert.equal(node('build-dock').hidden,false,'open free draft immediately');
+ assert.match(node('wave-label').textContent,/选择起手卡/);
+ assert.equal(node('research-button').textContent,'装备');
+ const choices=buttons('loop-cards').filter(b=>b.textContent.includes('选留'));
+ assert.equal(choices.length,3);
+ choices[0].click();
+ buttons('loop-cards').find(b=>b.textContent==='部署').click();
+ ui.activatePoint({x:-1,y:140});
+ assert.equal(ui.placement.ok,false);
+ assert.equal(loop.state.cards.length,1);
+ ui.activatePoint({x:190,y:140});
+ assert.equal(ui.placement,null);
+ assert.equal(loop.state.cards.length,0);
+ assert.equal(loop.state.towers.length,1);
+ ui.activatePoint({x:220,y:140});
+ assert.equal(loop.state.towers.length,1);
+});
+
+test('loop equipment controls expose three slots and reject in-combat removal before allowing it after five seconds',async()=>{
+ const loop=(await import('../engine.js')).createGame();
+ Object.assign(loop.state,{cards:[],capacity:4,draft:null,inventory:[{id:8,code:'core'},{id:9,code:'gear'}]});
+ loop.chooseCard=()=>({ok:false});
+ loop.equipment={
+  core:{name:'增幅核心',cost:80,description:'伤害 +10%'},
+  gear:{name:'调速齿轮',cost:80,description:'攻击频率 +10%'},
+  scatter:{name:'散射火控',cost:60,description:'多目标 +1',components:['core','gear']},
+ };
+ const tower={id:7,code:'T01',x:190,y:140,level:3,xp:39,equipment:[],combatUntil:5};
+ loop.catalog=loop.catalog.map(def=>({...def,population:1,rarity:'common',skills:['开局攻击','中期技能','终阶技能']}));
+ loop.state.towers.push(tower);
+ loop.equip=(towerId,itemId)=>{
+  assert.equal(towerId,7);
+  tower.equipment.push(...loop.state.inventory.filter(item=>item.id===itemId));
+  loop.state.inventory=loop.state.inventory.filter(item=>item.id!==itemId);
+  return {ok:true};
+ };
+ loop.unequip=(towerId,itemId)=>{
+  assert.equal(towerId,7);
+  loop.state.inventory.push(...tower.equipment.filter(item=>item.id===itemId));
+  tower.equipment=tower.equipment.filter(item=>item.id!==itemId);
+  return {ok:true};
+ };
+ const {ui,node,go,click,buttons}=await harness(loop);go('loop');
+ click('research-button');
+ assert.equal(node('research-panel').hidden,true);
+ assert.equal(node('loop-equipment-shop').hidden,false);
+ assert.ok(buttons('loop-equipment-shop').some(button=>button.textContent.includes('合成散射火控')));
+ click('close-drawer-button');
+ ui.activatePoint({x:190,y:140});
+ assert.match(node('loop-skill-status').textContent,/39.*70.*脱战.*5/);
+ buttons('loop-controls').find(button=>button.textContent.includes('装配增幅核心')).click();
+ assert.equal(tower.equipment[0].id,8);
+ assert.equal(buttons('loop-controls').find(button=>button.textContent.includes('卸下增幅核心')).disabled,true);
+ loop.state.elapsed=5;ui.updateUI();
+ buttons('loop-controls').find(button=>button.textContent.includes('卸下增幅核心')).click();
+ assert.equal(tower.equipment.length,0);
+});
+
+test('loop encyclopedia lists every tower and enemy family before drawing any card',async()=>{
+ const {node,go,click}=await harness();go('loop');
+ click('more-button');click('mission-button');click('loop-encyclopedia-button');
+ const items=node('loop-encyclopedia-list'),filter=node('loop-encyclopedia-filter');
+ assert.equal(items.children.length,36);
+ for(const [key,count] of [['X',24],['E',10],['B',12],['C',8],['G',4]]){
+  filter.value=key;filter.events.change();assert.equal(items.children.length,count);
+  assert.ok(items.children[0].children.some(el=>el.textContent.includes('应对')));
+ }
+ click('close-drawer-button');
+ assert.equal(node('mission-panel').hidden,false);
+ go('escort');assert.equal(node('loop-encyclopedia-button').hidden,true);
+});
 
 test('seven actual sessions preserve isolation and terminal reports including legion draw',async()=>{
   const {ui,node,click,go}=await harness(); assert.equal(Object.keys(ui.sessions).length,7);
@@ -151,7 +243,7 @@ test('home and menu preserve the exact seven sessions, funds and structures on r
 
 test('building succeeds once per selection; rejected placement remains armed in every build mode',async()=>{
  const {ui,go}=await harness();
- for(const mode of ['loop','defense','escort','maze','hero','legion']){
+ for(const mode of ['defense','escort','maze','hero','legion']){
   go(mode);const state=ui.game.state;
   ui.armBuild('T01');ui.activatePoint({x:-100,y:-100});
   assert.ok(ui.placement,'invalid position keeps preview');assert.equal(state.towers.length,0);
@@ -164,7 +256,7 @@ test('building succeeds once per selection; rejected placement remains armed in 
 });
 
 test('research and tower upgrade buttons contain live progress without a separate research bar',async()=>{
- const {ui,go,click,node}=await harness();go('loop');
+ const {ui,go,click,node}=await harness();go('defense');
  assert.ok(ui.game.startResearch('reinforcement').ok);ui.updateUI();
  assert.match(node('reinforcement-research-button').textContent,/0%.*10.0秒/);
  assert.equal(node('research-progress').hidden,true);assert.equal(node('research-status').hidden,true);
@@ -176,26 +268,40 @@ test('research and tower upgrade buttons contain live progress without a separat
  ui.game.tick(3);ui.updateUI();assert.equal(ui.game.state.towers[0].level,2);assert.doesNotMatch(node('upgrade-button').textContent,/升级中/);
 });
 
-test('loop UI exposes both routes, six research levels, safe respecialization and real forecast',async()=>{
- const {ui,go,click,node,buttons}=await harness();go('loop');const g=ui.game;g.state.gold=10000;g.state.tech.reinforcement=6;
- ui.armBuild('T01');ui.activatePoint({x:190,y:140});click('upgrade-button');g.tick(5);ui.updateUI();
- assert.equal(node('upgrade-button').hidden,true);const branch=buttons('loop-controls').find(b=>b.textContent.includes('选择分流'));assert.ok(branch);branch.click();assert.equal(node('upgrade-button').hidden,false);assert.match(node('upgrade-button').textContent,/升级中/);g.tick(8);ui.updateUI();
- assert.equal(g.state.towers[0].route,'B');assert.match(node('loop-forecast').textContent,/第1波.*12只/);assert.equal(node('mission-button').hidden,false);
- // Changing gold within the affordable range must not replace touch targets during a tap.
- const stable=buttons('loop-controls')[0];g.state.gold++;ui.updateUI();assert.equal(buttons('loop-controls')[0],stable);
- click('pause-button');ui.updateUI();const respec=buttons('loop-controls').find(b=>b.textContent.includes('改选狙猎'));assert.ok(respec);assert.equal(respec.disabled,false);respec.click();assert.equal(g.state.towers[0].route,'A');
+test('loop intelligence shows challenge eligibility and gold scoring without counting gold targets as pressure',async()=>{
+ const {ui,go,click,node,buttons}=await harness();go('loop');const g=ui.game;
+ g.state.wave=3;click('more-button');click('mission-button');
+ assert.match(node('loop-forecast').textContent,/第4波.*18只/);
+ assert.match(node('loop-forecast').textContent,/破阵山魈/);
+ const challenge=buttons('loop-challenges').find(button=>button.textContent==='开启硬壳犀');
+ assert.ok(challenge && !challenge.disabled);
+ challenge.click();
+ assert.match(node('loop-event-status').textContent,/硬壳犀.*28 秒/);
+ g.state.goldRush={code:'G01',remaining:11,damage:200,reward:12,maxReward:90};
+ g.state.enemies.push({id:90,special:'gold'});
+ ui.updateUI();
+ assert.equal(node('enemy-value').textContent,'0');
+ assert.match(node('loop-live-event').textContent,/打金.*11 秒.*12 \/ 90/);
+ g.state.phase='victory';ui.updateUI();assert.equal(ui.view,'end');
+ assert.equal(node('endless-button').hidden,false);
+ click('endless-button');assert.equal(ui.view,'game');assert.equal(g.state.endless,true);
 });
 
 test('loop support details show actual aura percentages and reduced endless income',async()=>{
- const {ui,go,node}=await harness();go('loop');const g=ui.game;g.state.tech.deployment=5;g.state.gold=10000;
- ui.armBuild('T09');ui.activatePoint({x:190,y:140});const text=()=>node('tower-stats').children.map(n=>n.textContent).join(' ');
+ const {ui,go,click,node,buttons}=await harness();go('loop');const g=ui.game;
+ g.state.draft=null;
+ g.state.cards=[{id:101,code:'T09',paid:true},{id:102,code:'T11',paid:true}];
+ ui.updateUI();
+ buttons('loop-cards').find(b=>b.textContent==='部署').click();ui.activatePoint({x:190,y:140});
+ const text=()=>node('tower-stats').children.map(n=>n.textContent).join(' ');
  assert.doesNotMatch(text(),/NaN|undefined/);assert.match(text(),/12%/);
- g.sell(g.state.towers[0].id);ui.armBuild('T11');ui.activatePoint({x:190,y:140});assert.match(text(),/每 8 秒 \+12/);
+ click('focus-button');buttons('loop-cards').find(b=>b.textContent==='部署').click();ui.activatePoint({x:390,y:140});
+ assert.match(text(),/每 8 秒 \+12/);
  g.state.endless=true;ui.updateUI();assert.match(text(),/每 20 秒 \+1/);
 });
 
 test('compact menu switches secondary panels and shows live research progress',async()=>{
- const {node,go,click,key,ui}=await harness();go('loop');
+ const {node,go,click,key,ui}=await harness();go('escort');
  click('more-button');assert.equal(node('settings-panel').hidden,false);assert.equal(node('research-panel').hidden,true);assert.equal(node('more-button').getAttribute('aria-expanded'),'true');
  click('mission-button');assert.equal(node('settings-panel').hidden,true);assert.equal(node('mission-panel').hidden,false);
  key('keydown','Escape');assert.equal(node('command-drawer').hidden,true);
@@ -206,9 +312,10 @@ test('compact menu switches secondary panels and shows live research progress',a
 });
 
 test('quiet HUD keeps automatic wave timing and one-tap placement cancellation visible',async()=>{
- const {node,go,click,ui}=await harness();go('loop');
+ const {node,go,click,ui,buttons}=await harness();go('loop');
+ buttons('loop-cards').find(b=>b.textContent.includes('选留')).click();
  assert.match(node('wave-label').textContent,/备战 30s/);
- ui.armBuild('T01');assert.equal(node('focus-button').textContent,'取消放置');
- const gold=ui.game.state.gold;click('focus-button');assert.equal(node('focus-button').textContent,'建造');assert.equal(ui.game.state.gold,gold);assert.equal(ui.game.state.towers.length,0);
+ buttons('loop-cards').find(b=>b.textContent==='部署').click();assert.equal(node('focus-button').textContent,'取消放置');
+ const gold=ui.game.state.gold;click('focus-button');assert.equal(node('focus-button').textContent,'卡牌');assert.equal(ui.game.state.gold,gold);assert.equal(ui.game.state.towers.length,0);assert.equal(ui.game.state.cards.length,1);
  ui.game.tick(30);ui.updateUI();assert.match(node('wave-label').textContent,/下波 40s/);
 });

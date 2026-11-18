@@ -21,19 +21,21 @@ export function specialStats(tower,state){
  return state.mode==='loop'?loopStats(tower,state):state.mode==='gem'?gemStats(tower,state.towers):state.mode==='legion'?legionStats(tower):null;
 }
 
-export function createSpecialPainter(ctx,artwork,{text,ring,traceRoute,reduceMotion}){
+export function createSpecialPainter(ctx,artwork,{text,ring,traceRoute,drawMarker,reduceMotion}){
  function cell(image,index,cols,rows,x,y,size,anchor=.84){
   if(!image)return;
   const width=image.naturalWidth||image.width,height=image.naturalHeight||image.height;
   ctx.drawImage(image,index%cols*width/cols,Math.floor(index/cols)*height/rows,width/cols,height/rows,x-size/2,y-size*anchor,size,size);
  }
  function objective(index,x,y,size){
-  const image=artwork.objectivesAtlas;if(!image)return;
+  const image=artwork.objectivesAtlas;
+  if(!image){drawMarker(x,y,['殿','王','营','营'][index],'#e9d49a',size/6);return;}
   const [sx,sy,sw,sh]=OBJECTIVE_FRAMES[index],factor=size/Math.max(sw,sh),w=sw*factor,h=sh*factor;
   ctx.drawImage(image,sx,sy,sw,sh,x-w/2,y-h*.84,w,h);
  }
  function heroCell(row,direction,x,y,size,alive){
-  const image=artwork.heroAtlas;if(!image)return;
+  const image=artwork.heroAtlas;
+  if(!image){drawMarker(x,y,'侠',alive?'#b6efd8':'#99aaa1',22);return;}
   const sw=(image.naturalWidth||image.width)/8,sy=HERO_ROW_BOUNDS[row],sh=HERO_ROW_BOUNDS[row+1]-sy,h=size*sh/sw;
   ctx.drawImage(image,direction*sw,sy,sw,sh,x-size/2,y-h*(alive?.96:.8),size,h);
  }
@@ -80,11 +82,19 @@ export function createSpecialPainter(ctx,artwork,{text,ring,traceRoute,reduceMot
   return [];
  }
  function actor(entity,state){
-  if(['T13','T14'].includes(entity.code)){cell(artwork.gemAtlas,entity.code==='T13'?2:5,4,3,entity.x,entity.y,128);if(entity.code==='T14'){ctx.fillStyle='#ffe29b';for(const dx of [-23,0,23]){ctx.beginPath();ctx.arc(entity.x+dx,entity.y-72-Math.abs(dx)*.3,5,0,Math.PI*2);ctx.fill();}}else ring(entity.x,entity.y+2,30,'#d59bff',.8,2);text(`${entity.code==='T13'?'符焰':'三联'} · Lv.${entity.level||1}${entity.route?' · '+entity.route:''}`,entity.x,entity.y+27,entity.code==='T13'?'#d59bff':'#f6d085',12);return true;}
+  if(entity.code==='T13'||entity.code==='T14'){
+   const rune=entity.code==='T13',color=rune?'#d59bff':'#f6d085',name=rune?'符焰':'三联';
+   if(artwork.gemAtlas)cell(artwork.gemAtlas,rune?2:5,4,3,entity.x,entity.y,128);
+   else drawMarker(entity.x,entity.y,name,color,22);
+   if(rune)ring(entity.x,entity.y+2,30,color,.8,2);
+   else {ctx.fillStyle='#ffe29b';for(const dx of [-23,0,23]){ctx.beginPath();ctx.arc(entity.x+dx,entity.y-72-Math.abs(dx)*.3,5,0,Math.PI*2);ctx.fill();}}
+   text(`${name} · Lv.${entity.level||1}${entity.route?' · '+entity.route:''}`,entity.x,entity.y+27,color,12);return true;
+  }
   if(state.mode==='gem'&&/^[GF]\d\d$/.test(entity.code)){
    const stats=gemStats(entity,state.towers),index=GEM_TOWERS.findIndex(t=>t.code===entity.code);
    ring(entity.x,entity.y+3,30,stats.color,.55,1.5);
-   cell(artwork.gemAtlas,index,4,3,entity.x,entity.y,140);
+   if(artwork.gemAtlas)cell(artwork.gemAtlas,index,4,3,entity.x,entity.y,140);
+   else drawMarker(entity.x,entity.y,entity.code,stats.color,22);
    text(`${stats.name} · ${entity.level}阶`,entity.x,entity.y+28,stats.color,12);return true;
   }
   if(entity.special==='goddess'){objective(0,entity.x,entity.y,182);text('灵姬神殿',entity.x,entity.y+48,'#bcebd5',14);return true;}
