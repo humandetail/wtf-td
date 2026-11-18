@@ -6,7 +6,7 @@ import fs from 'node:fs';
 
 test('actual controls preserve four distinct sessions, drive and repair, relocate, build and sell walls, and reopen reports', async () => {
   const base = fileURLToPath(new URL('../', import.meta.url));
-  const imports = Object.assign({}, ...await Promise.all(['render','tower-upgrades','engine', 'catalog', 'research', 'geometry', 'defense-geometry', 'modes'].map(name => import(pathToFileURL(base + name + '.js')))));
+  const imports = Object.assign({}, ...await Promise.all(['battle-visuals','render','tower-upgrades','engine', 'catalog', 'research', 'geometry', 'defense-geometry', 'modes'].map(name => import(pathToFileURL(base + name + '.js')))));
   const html = fs.readFileSync(base + 'index.html', 'utf8');
   const nodes = new Map();
   class Element {

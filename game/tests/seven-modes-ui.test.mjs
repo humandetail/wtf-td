@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import fs from 'node:fs';
 
 async function harness(loopFixture = null) {
-  const imports = Object.assign({}, ...await Promise.all(['render','tower-upgrades','engine','catalog','research','geometry','defense-geometry','modes','gem-catalog','gem-geometry','hero-catalog','legion-catalog'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
+  const imports = Object.assign({}, ...await Promise.all(['battle-visuals','render','tower-upgrades','engine','catalog','research','geometry','defense-geometry','modes','gem-catalog','gem-geometry','hero-catalog','legion-catalog'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
   const nodes=new Map(), events={}; let document;
   const confirmation={answer:true,messages:[]};
   class Element {
@@ -50,7 +50,7 @@ test('loop opening draft leads to a card in the bag and one confirmed deployment
   loop.state.towers.push({id:7,code:'T01',x,y,level:1,xp:0,equipment:[],combatUntil:0});
   return {...result,towerId:7};
  };
- const {ui,node,go,buttons}=await harness(loop);go('loop');
+ const {ui,node,go,buttons,descendants}=await harness(loop);go('loop');
  assert.equal(node('build-dock').hidden,false,'open free draft immediately');
  assert.match(node('wave-label').textContent,/选择起手卡/);
  assert.equal(node('research-button').textContent,'装备');
@@ -63,11 +63,14 @@ test('loop opening draft leads to a card in the bag and one confirmed deployment
  const detail=()=>node('loop-cards').children.find(child=>child.id==='loop-card-preview');
  assert.equal(detail().children.length,2);
  assert.equal(detail().children[0].children[0].textContent,draftNames[1]);
+ assert.ok(descendants(detail()).some(node=>node.className==='skill-icon'&&node.dataset.icon));
  choices[0].click();
  assert.equal(choices[1].getAttribute('aria-pressed'),'false');
  assert.equal(choices[0].getAttribute('aria-pressed'),'true');
  assert.equal(detail().children[0].children[0].textContent,draftNames[0]);
- buttons('loop-cards').find(b=>b.textContent.includes('选留')).click();
+ const keep=buttons('loop-cards').find(b=>b.textContent.includes('选留'));
+ assert.equal(keep.dataset.icon,'bag');
+ keep.click();
  assert.equal(detail().hidden,true);
  buttons('loop-cards').find(b=>b.dataset.group==='bag').click();
  buttons('loop-cards').find(b=>b.textContent==='部署').click();

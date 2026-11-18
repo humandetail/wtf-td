@@ -97,3 +97,23 @@ test('nearby zero-damage support shares experience while distant towers do not',
  g.launchWave();g.tick(.1);
  assert.deepEqual(g.state.towers.map(t=>[t.code,t.xp]),[['T01',1],['T11',1],['T01',0]]);
 });
+
+test('skill effects follow actual attack radius and delayed mine detonation',()=>{
+ const water=start({waveSize:()=>1,enemySpeedScale:0});
+ water.state.cards[0].code='T06';
+ assert.ok(water.deploy(water.state.cards[0].id,500,300).ok);
+ Object.assign(water.state.towers[0],{level:5,cycles:4});
+ water.launchWave();water.tick(.1);
+ assert.deepEqual(water.drainEvents().filter(e=>e.type==='skill-pulse').map(e=>[e.kind,e.radius]),[['water',65],['water',100]]);
+
+ const mines=start({waveSize:()=>1,enemySpeedScale:0});
+ mines.state.cards[0].code='T17';
+ assert.ok(mines.deploy(mines.state.cards[0].id,500,300).ok);
+ mines.launchWave();mines.tick(.1);
+ const region=mines.state.regions[0];
+ assert.equal(region.kind,'mine');
+ assert.ok(!mines.drainEvents().some(e=>e.type==='skill-pulse'));
+ mines.tick(.45);
+ const [blast]=mines.drainEvents().filter(e=>e.type==='skill-pulse');
+ assert.deepEqual(blast,{type:'skill-pulse',kind:'burst',radius:55,x:region.x,y:region.y});
+});

@@ -121,10 +121,29 @@ export function createSpecialPainter(ctx,artwork,{text,ring,traceRoute,drawMarke
   if(item.type==='fusion'){cell(artwork.gemAtlas,11,4,3,item.x,item.y,100+progress*80,.6);return true;}
   if(item.type==='echo'){traceRoute([{x:item.x,y:item.y-45},{x:item.tx,y:item.ty-20}],'#f3c6ff',5);return true;}
   if(item.type==='hero-skill'){
+   const p=reduceMotion?.55:progress;
    const dx=item.tx-item.x,dy=item.ty-item.y,length=Math.hypot(dx,dy)||1;
-   if(item.key==='Q')traceRoute([{x:item.x,y:item.y-25},{x:item.x+dx/length*280,y:item.y+dy/length*280-25}],'#93f5d6',8*(1-progress)+2);
-   else if(item.key==='E'){traceRoute([{x:item.x,y:item.y-30},{x:item.tx,y:item.ty-30}],'#a4f6e3',12*(1-progress)+2);circle(item.tx,item.ty,25+progress*25,'#9aeada','#9aeada20');}
-   else circle(item.tx,item.ty,170,'#9aeada','#9aeada20');
+   if(item.key==='Q'){
+    const {range,width}=HERO_SKILLS.Q,ux=dx/length,uy=dy/length;
+    const far={x:item.x+ux*range,y:item.y+uy*range};
+    const edge=(point,side)=>({x:point.x-uy*width*side,y:point.y+ux*width*side});
+    const corners=[edge(item,-1),edge(far,-1),edge(far,1),edge(item,1)];
+    ctx.fillStyle='#84efcb25';ctx.beginPath();ctx.moveTo(corners[0].x,corners[0].y);
+    for(const point of corners.slice(1))ctx.lineTo(point.x,point.y);
+    ctx.closePath();ctx.fill();
+    traceRoute([...corners,corners[0]],'#7bdcc3',2);
+    const sweep={x:item.x+ux*range*p,y:item.y+uy*range*p};
+    traceRoute([edge(sweep,-1),edge(sweep,1)],'#c7ffe8',7);
+   }else if(item.key==='E'){
+    const from={x:item.x,y:item.y-20},to={x:item.tx,y:item.ty-20};
+    traceRoute([from,to],'#8df1de35',26);traceRoute([from,to],'#b7ffe7',5,[12,7]);
+    for(const step of [.25,.5,.75])ring(item.x+dx*step,item.y+dy*step,14,'#83e5d5',.42,2);
+    circle(item.tx,item.ty,21+p*20,'#9aeada','#9aeada20');
+   }else{
+    const {radius}=HERO_SKILLS.R;
+    circle(item.tx,item.ty,radius,'#9aeada','#9aeada16');
+    circle(item.tx,item.ty,radius*(.3+.65*p),'#c7ffe8','#9aeada09');
+   }
    return true;
   }
   if(item.type==='unit-death'){
@@ -132,7 +151,7 @@ export function createSpecialPainter(ctx,artwork,{text,ring,traceRoute,drawMarke
    if(sprite){ctx.save();ctx.translate(item.x,item.y);ctx.rotate(progress*.45);ctx.scale(1,1-progress*.75);ctx.drawImage(sprite,-54,-68,108,108);ctx.restore();}
    return true;
   }
-  if(item.type==='heal'){text(`+${Math.round(Math.abs(item.damage||0))}`,item.x,item.y-40-progress*20,'#a6e7bf',14);return true;}
+  if(item.type==='heal'){text(`+${Math.round(Math.abs(item.amount??item.damage??0))}`,item.x,item.y-40-progress*20,'#a6e7bf',14);return true;}
   return false;
  }
  return {ground,actors,actor,particle};
