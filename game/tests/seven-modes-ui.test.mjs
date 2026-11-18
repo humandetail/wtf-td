@@ -54,9 +54,22 @@ test('loop opening draft leads to a card in the bag and one confirmed deployment
  assert.equal(node('build-dock').hidden,false,'open free draft immediately');
  assert.match(node('wave-label').textContent,/选择起手卡/);
  assert.equal(node('research-button').textContent,'装备');
- const choices=buttons('loop-cards').filter(b=>b.textContent.includes('选留'));
+ const choices=buttons('loop-cards').filter(b=>b.dataset.group==='draft');
+ const draftNames=loop.state.draft.codes.map(code=>loop.catalog.find(def=>def.code===code).name);
  assert.equal(choices.length,3);
+ assert.equal(buttons('loop-cards').some(b=>b.textContent.includes('选留')),false);
+ choices[1].click();
+ assert.equal(choices[1].getAttribute('aria-pressed'),'true');
+ const detail=()=>node('loop-cards').children.find(child=>child.id==='loop-card-preview');
+ assert.equal(detail().children.length,2);
+ assert.equal(detail().children[0].children[0].textContent,draftNames[1]);
  choices[0].click();
+ assert.equal(choices[1].getAttribute('aria-pressed'),'false');
+ assert.equal(choices[0].getAttribute('aria-pressed'),'true');
+ assert.equal(detail().children[0].children[0].textContent,draftNames[0]);
+ buttons('loop-cards').find(b=>b.textContent.includes('选留')).click();
+ assert.equal(detail().hidden,true);
+ buttons('loop-cards').find(b=>b.dataset.group==='bag').click();
  buttons('loop-cards').find(b=>b.textContent==='部署').click();
  ui.activatePoint({x:-1,y:140});
  assert.equal(ui.placement.ok,false);
@@ -65,6 +78,10 @@ test('loop opening draft leads to a card in the bag and one confirmed deployment
  assert.equal(ui.placement,null);
  assert.equal(loop.state.cards.length,0);
  assert.equal(loop.state.towers.length,1);
+ ui.activatePoint({x:190,y:140});
+ assert.equal(node('tower-properties').hidden,true);
+ node('tower-properties-button').click();assert.equal(node('tower-properties').hidden,false);
+ node('tower-skills-button').click();assert.equal(node('tower-properties').hidden,true);assert.equal(node('tower-skills').hidden,false);
  ui.activatePoint({x:220,y:140});
  assert.equal(loop.state.towers.length,1);
 });
@@ -292,10 +309,11 @@ test('loop support details show actual aura percentages and reduced endless inco
  g.state.draft=null;
  g.state.cards=[{id:101,code:'T09',paid:true},{id:102,code:'T11',paid:true}];
  ui.updateUI();
+ buttons('loop-cards').find(b=>b.dataset.group==='bag').click();
  buttons('loop-cards').find(b=>b.textContent==='部署').click();ui.activatePoint({x:190,y:140});
  const text=()=>node('tower-stats').children.map(n=>n.textContent).join(' ');
  assert.doesNotMatch(text(),/NaN|undefined/);assert.match(text(),/12%/);
- click('focus-button');buttons('loop-cards').find(b=>b.textContent==='部署').click();ui.activatePoint({x:390,y:140});
+ click('focus-button');buttons('loop-cards').find(b=>b.dataset.group==='bag').click();buttons('loop-cards').find(b=>b.textContent==='部署').click();ui.activatePoint({x:390,y:140});
  assert.match(text(),/每 8 秒 \+12/);
  g.state.endless=true;ui.updateUI();assert.match(text(),/每 20 秒 \+1/);
 });
@@ -313,9 +331,10 @@ test('compact menu switches secondary panels and shows live research progress',a
 
 test('quiet HUD keeps automatic wave timing and one-tap placement cancellation visible',async()=>{
  const {node,go,click,ui,buttons}=await harness();go('loop');
+ buttons('loop-cards').find(b=>b.dataset.group==='draft').click();
  buttons('loop-cards').find(b=>b.textContent.includes('选留')).click();
  assert.match(node('wave-label').textContent,/备战 30s/);
- buttons('loop-cards').find(b=>b.textContent==='部署').click();assert.equal(node('focus-button').textContent,'取消放置');
+ buttons('loop-cards').find(b=>b.dataset.group==='bag').click();buttons('loop-cards').find(b=>b.textContent==='部署').click();assert.equal(node('focus-button').textContent,'取消放置');
  const gold=ui.game.state.gold;click('focus-button');assert.equal(node('focus-button').textContent,'卡牌');assert.equal(ui.game.state.gold,gold);assert.equal(ui.game.state.towers.length,0);assert.equal(ui.game.state.cards.length,1);
  ui.game.tick(30);ui.updateUI();assert.match(node('wave-label').textContent,/下波 40s/);
 });
