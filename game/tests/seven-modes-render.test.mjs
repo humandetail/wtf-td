@@ -81,3 +81,21 @@ test('legion effects are drawn only on the side that owns the battle event',asyn
  calls.length=0;renderer.draw({...game.state,viewSide:'ai'},null,null,0);
  assert.ok(calls.some(call=>call.method==='fillText'&&call.args[0]==='+28'));
 });
+
+test('hero renders routes and unit markers before artwork and replaces the ground when it arrives',()=>{
+ const {canvas,calls}=canvasHarness();
+ const artwork={units:new Map([['T06',{images:new Map(),masterImage:null}]]),effects:new Map(),heroGround:null};
+ const renderer=createRenderer(canvas(),artwork),game=createGame({mode:'hero'});
+ game.start();
+ assert.equal(game.build(480,550,'T06').ok,true);
+ calls.length=0;
+ renderer.draw(game.state,null,null);
+ assert.ok(calls.some(call=>call.method==='lineTo'),'hero routes are visible');
+ const labels=calls.filter(call=>call.method==='fillText').map(call=>call.args[0]);
+ for(const label of ['侠','殿','T06'])assert.ok(labels.includes(label));
+
+ artwork.heroGround={url:'hero scene'};
+ calls.length=0;
+ renderer.draw(game.state,null,null);
+ assert.ok(calls.some(call=>call.method==='drawImage'&&call.args[0]===artwork.heroGround));
+});

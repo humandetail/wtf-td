@@ -3,6 +3,52 @@ import assert from 'node:assert/strict';
 import {loadArtwork,loadImage} from '../render.js';
 import {readFileSync} from 'node:fs';
 
+test('an unavailable hero WebP does not block the menu artwork and other maps',async()=>{
+ const savedImage=globalThis.Image,savedFetch=globalThis.fetch;
+ const requests=[];
+ class ImageMock{
+  set src(value){const url=new URL(value);requests.push(url.pathname);
+   queueMicrotask(()=>url.pathname.endsWith('/hero/scene.webp')?this.onerror?.():this.onload?.());
+  }
+ }
+ try{
+  globalThis.Image=ImageMock;
+  globalThis.fetch=async url=>({ok:true,json:async()=>JSON.parse(readFileSync(url,'utf8'))});
+  const artwork=await loadArtwork();
+  assert.equal(artwork.heroGround,null);
+  assert.ok(artwork.ground);
+  assert.ok(artwork.legionGround);
+  assert.equal(requests.filter(path=>path.endsWith('/hero/scene.webp')).length,3);
+ }finally{globalThis.Image=savedImage;globalThis.fetch=savedFetch;}
+});
+
+test('progressive startup opens with the first requests still pending and installs images as they arrive',async()=>{
+ const savedImage=globalThis.Image,savedFetch=globalThis.fetch;
+ const pending=[];
+ let release=false, finish;
+ const complete=new Promise(resolve=>{finish=resolve;});
+ class ImageMock{
+  set src(value){
+   if(release)queueMicrotask(()=>this.onload());
+   else pending.push(()=>this.onload());
+  }
+ }
+ try{
+  globalThis.Image=ImageMock;
+  globalThis.fetch=async url=>({ok:true,json:async()=>JSON.parse(readFileSync(url,'utf8'))});
+  const artwork=await loadArtwork((done,total)=>{if(done===total)finish();},undefined,{progressive:true});
+  assert.equal(pending.length,3);
+  assert.equal(artwork.ground,null);
+  assert.equal(artwork.units.get('T01').masterImage,null);
+  release=true;
+  for(const loaded of pending)loaded();
+  await complete;
+  assert.ok(artwork.ground);
+  assert.ok(artwork.units.get('T01').masterImage);
+  assert.ok(artwork.heroGround);
+ }finally{globalThis.Image=savedImage;globalThis.fetch=savedFetch;}
+});
+
 test('a temporary maze scene failure retries the lightweight WebP and still completes startup',async()=>{
  const savedImage=globalThis.Image,savedFetch=globalThis.fetch,requests=[];
  class ImageMock{

@@ -436,15 +436,21 @@ function renderLoopCards() {
 }
 
 function loopPortrait(card,code,assetCode) {
-  const portrait = artworkCache?.units.get(assetCode ?? code)?.masterImage;
-  const newSprite = loopSpriteUrl(code);
-  if (newSprite || portrait?.src) {
-    const image = document.createElement('img');
-    image.src = newSprite?.href ?? portrait.src;
-    if (newSprite && portrait?.src) image.addEventListener('error',()=>{image.src=portrait.src;},{once:true});
-    image.alt = '';
-    card.append(image);
-  }
+  const unit = artworkCache?.units.get(assetCode ?? code);
+  const portrait = unit?.masterImage?.src ?? unit?.masterUrl.href;
+  const source = loopSpriteUrl(code)?.href;
+  if (!source && !portrait) return;
+  const image = document.createElement('img');
+  setPortrait(image, source, portrait);
+  card.append(image);
+}
+
+/** @param {HTMLImageElement} image */
+function setPortrait(image, source, fallback) {
+  image.alt = '';
+  image.loading = 'lazy';
+  if (source && fallback) image.addEventListener('error', () => { image.src = fallback; }, { once: true });
+  if (source || fallback) image.src = source ?? fallback;
 }
 
 function loopCardDetails(code) {
@@ -1267,7 +1273,10 @@ function renderShop() {
       const image = document.createElement(tower.code === 'WALL'||['T13','T14'].includes(tower.code) ? 'span' : 'img');
       if(['T13','T14'].includes(tower.code)){image.className='gem-portrait';image.style.backgroundPosition=tower.code==='T13'?'66.6667% 0%':'33.3333% 50%';image.style.float='none';image.setAttribute('aria-hidden','true');}
       else if (tower.code === 'WALL') { image.className = 'wall-icon'; image.textContent = '▥'; image.setAttribute('aria-hidden', 'true'); }
-      else { /** @type {HTMLImageElement} */ (image).src = artworkCache.units.get(tower.assetCode || tower.code)?.masterImage.src || ''; /** @type {HTMLImageElement} */ (image).alt = ''; }
+      else {
+        const unit = artworkCache.units.get(tower.assetCode || tower.code);
+        setPortrait(/** @type {HTMLImageElement} */ (image), unit?.masterImage?.src ?? unit?.masterUrl.href, undefined);
+      }
       const name = document.createElement('strong'); name.textContent = tower.name;
       const price = document.createElement('span'); price.className = 'price'; price.textContent = `${tower.price} 金币`;
       const role = document.createElement('small'); role.className = 'role';
@@ -1281,11 +1290,7 @@ function renderShop() {
 
 async function boot() {
   try {
-    const artwork = await loadArtwork((done, total) => {
-      element('loading-progress').textContent = `读取防御单位与地图 · ${done} / ${total}`;
-    }, (url,attempt,total) => {
-      element('loading-progress').textContent = `素材下载中断，正在重试 ${attempt}/${total}：${url.pathname}`;
-    });
+    const artwork = await loadArtwork(undefined, undefined, { progressive: true });
     renderer = createRenderer(canvas, artwork);
     artworkCache = artwork;
     renderShop();

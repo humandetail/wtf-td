@@ -1,4 +1,4 @@
-import { WORLD, FOOTPRINT, BUILD_BOUNDS, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, ENTRY } from './geometry.js';
+import { WORLD, FOOTPRINT, BUILD_BOUNDS, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, ENTRY, ROAD_SEGMENTS, ROAD_WIDTH } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 import { DEFENSE_CORE, DEFENSE_LANES, DEFENSE_BUILD_EXCLUSIONS } from './defense-geometry.js';
 import {ESCORT_POINTS,ESCORT_CHECKPOINTS,ESCORT_BUILD_EXCLUSIONS,pointOnEscortRoute} from './escort-geometry.js';
@@ -19,7 +19,7 @@ export function loopSpriteUrl(code){
   return LOOP_SPRITES.has(code)?new URL('./assets/modes/loop/'+code+'.png',import.meta.url):null;
 }
 
-// A dropped PNG request must not permanently abort the whole game startup.
+// A fresh URL lets the browser retry a dropped or cached failed request.
 export async function loadImage(url,{attempts=3,retryDelay=400,timeoutMs=120000,onRetry=(url,attempt,total)=>{}}={}) {
   const original=new URL(url);
   for(let attempt=0;attempt<attempts;attempt++){
@@ -43,10 +43,8 @@ export async function loadImage(url,{attempts=3,retryDelay=400,timeoutMs=120000,
   }
 }
 
-/** Load the original sprites without rewriting or rescaling their files. */
-export async function loadArtwork(onProgress=(done,total)=>{}, onRetry=(url,attempt,total)=>{}) {
-  let failed=false;
-  const load=(url,options={})=>loadImage(url,{...options,onRetry:(source,attempt,total)=>{if(!failed)onRetry(source,attempt,total);}});
+/** Load artwork independently so a failed image cannot prevent the other assets from appearing. */
+export async function loadArtwork(onProgress=(done,total)=>{}, onRetry=(url,attempt,total)=>{}, { progressive = false } = {}) {
   const response = await fetch(new URL('manifest.json', ORIGINALS));
   if (!response.ok) throw new Error('原素材清单无法读取，请从项目根目录启动服务。');
   const manifest = await response.json();
@@ -54,31 +52,43 @@ export async function loadArtwork(onProgress=(done,total)=>{}, onRetry=(url,atte
   const effects = new Map();
   const tasks = [];
   const result = { units, effects, ground: null, defenseGround: null,escortGround:null,mazeGround:null,gemGround:null,heroGround:null,legionGround:null,convoyImage:null,wallImage:null,ruinsImage:null,heroAtlas:null,gemAtlas:null,objectivesAtlas:null };
+  const queue = (url, store) => tasks.push({ url, store });
+  queue(new URL('scene.webp', MAPS), image => { result.ground = image; });
   for (const entry of manifest.units) {
-    const unit = { ...entry, masterImage: null, images: new Map(), requested: new Set() };
+    const masterUrl = new URL(entry.master, ORIGINALS);
+    const unit = { ...entry, masterUrl, masterImage: null, images: new Map(), requested: new Set() };
     units.set(entry.code, unit);
-    tasks.push(async () => { unit.masterImage = await load(new URL(entry.master, ORIGINALS)); });
+    queue(masterUrl, image => { unit.masterImage = image; });
+  }
+  queue(new URL('./assets/maps/core-defense/scene.webp', import.meta.url), image => { result.defenseGround = image; });
+  for (const mode of ['escort','maze','gem','hero','legion']) {
+    queue(new URL(`./assets/maps/${mode}/scene.webp`, import.meta.url), image => { result[`${mode}Ground`] = image; });
   }
   for (const entry of manifest.effects) {
-    tasks.push(async () => { effects.set(entry.code, await load(new URL(entry.path, ORIGINALS))); });
+    queue(new URL(entry.path, ORIGINALS), image => effects.set(entry.code, image));
   }
-  tasks.push(async () => { result.ground = await load(new URL('scene.webp', MAPS),{timeoutMs:15000}); });
-  tasks.push(async () => { result.defenseGround = await load(new URL('./assets/maps/core-defense/scene.webp', import.meta.url),{timeoutMs:15000}); });
-  for(const mode of ['escort','maze','gem','hero','legion'])tasks.push(async()=>{result[`${mode}Ground`]=await load(new URL(`./assets/maps/${mode}/scene.webp`,import.meta.url),{timeoutMs:15000});});
-  tasks.push(async()=>{result.convoyImage=await load(new URL('props/P01-tech-supply-crate.png',ORIGINALS));});
-  tasks.push(async()=>{result.wallImage=await load(new URL('props/P02-portable-generator.png',ORIGINALS));});
-  tasks.push(async()=>{result.ruinsImage=await load(new URL('props/P04-broken-stone-stele.png',ORIGINALS));});
-  for(const [key,path]of [['heroAtlas','hero/atlas.png'],['gemAtlas','gem/atlas.png'],['objectivesAtlas','shared/objectives.png']])tasks.push(async()=>{result[key]=await load(new URL(`./assets/modes/${path}`,import.meta.url));});
+  for (const [key, path] of [['convoyImage','P01-tech-supply-crate'],['wallImage','P02-portable-generator'],['ruinsImage','P04-broken-stone-stele']]) {
+    queue(new URL(`props/${path}.png`, ORIGINALS), image => { result[key] = image; });
+  }
+  for (const [key, path] of [['heroAtlas','hero/atlas.png'],['gemAtlas','gem/atlas.png'],['objectivesAtlas','shared/objectives.png']]) {
+    queue(new URL(`./assets/modes/${path}`, import.meta.url), image => { result[key] = image; });
+  }
   const total=tasks.length;
   let complete = 0;
   // Three concurrent requests limit mobile decode and network pressure.
   const worker = async () => {
-    while (tasks.length&&!failed) {
-      try{await tasks.shift()();}catch(error){failed=true;throw error;}
-      if(!failed)onProgress(++complete,total);
+    while (tasks.length) {
+      const { url, store } = tasks.shift();
+      try {
+        store(await loadImage(url, { timeoutMs: 15000, onRetry }));
+      } catch (error) {
+        console.warn(error.message);
+      }
+      onProgress(++complete,total);
     }
   };
-  await Promise.all(Array.from({ length: 3 }, worker));
+  const ready = Promise.all(Array.from({ length: 3 }, worker));
+  if (!progressive) await ready;
   return result;
 }
 
@@ -111,7 +121,42 @@ export function createRenderer(canvas, artwork) {
   canvas.height = WORLD.height * ratio;
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 
-  const backgrounds = {}, buildMasks = {};
+  const groundKeys = { loop:'ground', defense:'defenseGround', escort:'escortGround', maze:'mazeGround', gem:'gemGround', hero:'heroGround', legion:'legionGround' };
+  const buildMasks = {};
+  const background = document.createElement('canvas');
+  background.width = WORLD.width; background.height = WORLD.height;
+  const backdrop = background.getContext('2d');
+  let paintedMode, paintedGround;
+
+  function drawBackground(mode) {
+    const ground = artwork[groundKeys[mode]];
+    if (mode !== paintedMode || ground !== paintedGround) {
+      paintedMode = mode;
+      paintedGround = ground;
+      backdrop.fillStyle = '#263a31';
+      backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
+      if (ground) {
+        backdrop.drawImage(ground, 0, 0, WORLD.width, WORLD.height);
+      } else if (mode === 'loop' || mode === 'defense') {
+        const routes = mode === 'loop'
+          ? ROAD_SEGMENTS.map(({x1,y1,x2,y2}) => [[x1,y1],[x2,y2]])
+          : DEFENSE_LANES.map(lane => lane.points);
+        backdrop.strokeStyle = '#776b52';
+        backdrop.lineWidth = ROAD_WIDTH;
+        backdrop.lineCap = 'round';
+        backdrop.lineJoin = 'round';
+        for (const [[x,y], ...points] of routes) {
+          backdrop.beginPath();
+          backdrop.moveTo(x,y);
+          for (const [px,py] of points) backdrop.lineTo(px,py);
+          backdrop.stroke();
+        }
+      }
+      backdrop.fillStyle = '#7580671f';
+      backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
+    }
+    ctx.drawImage(background, 0, 0);
+  }
   const loopSprites = new Map();
   function loopSprite(code) {
     const url=loopSpriteUrl(code);
@@ -122,22 +167,15 @@ export function createRenderer(canvas, artwork) {
     }
     return loopSprites.get(code);
   }
-  for (const {mode, ground, exclusions, bounds = BUILD_CENTER_BOUNDS} of [
-    {mode:'loop', ground:artwork.ground, ...LOOP_BUILD_AREA},
-    {mode:'defense', ground:artwork.defenseGround, exclusions:DEFENSE_BUILD_EXCLUSIONS},
-    {mode:'escort', ground:artwork.escortGround, exclusions:ESCORT_BUILD_EXCLUSIONS},
-    {mode:'maze', ground:artwork.mazeGround, exclusions:[]},
-    {mode:'gem', ground:artwork.gemGround, exclusions:GEM_BUILD_EXCLUSIONS},
-    {mode:'hero', ground:artwork.heroGround, exclusions:[]},
-    {mode:'legion', ground:artwork.legionGround, exclusions:[]},
+  for (const {mode, exclusions, bounds = BUILD_CENTER_BOUNDS} of [
+    {mode:'loop', ...LOOP_BUILD_AREA},
+    {mode:'defense', exclusions:DEFENSE_BUILD_EXCLUSIONS},
+    {mode:'escort', exclusions:ESCORT_BUILD_EXCLUSIONS},
+    {mode:'maze', exclusions:[]},
+    {mode:'gem', exclusions:GEM_BUILD_EXCLUSIONS},
+    {mode:'hero', exclusions:[]},
+    {mode:'legion', exclusions:[]},
   ]) {
-    const background = document.createElement('canvas');
-    background.width = WORLD.width; background.height = WORLD.height;
-    const backdrop = background.getContext('2d');
-    if(ground)backdrop.drawImage(ground, 0, 0, WORLD.width, WORLD.height);
-    backdrop.fillStyle = '#7580671f';
-    backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
-    backgrounds[mode] = background;
     const buildMask = document.createElement('canvas');
     buildMask.width = WORLD.width; buildMask.height = WORLD.height;
     const mask = buildMask.getContext('2d');
@@ -159,7 +197,20 @@ export function createRenderer(canvas, artwork) {
   let particles = [];
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let frameState;
-  const special=createSpecialPainter(ctx,artwork,{text,ring,traceRoute,reduceMotion});
+  const special=createSpecialPainter(ctx,artwork,{text,ring,traceRoute,drawMarker,reduceMotion});
+
+  function drawMarker(x, y, label, color, size = 16) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y-size, size, 0, Math.PI * 2);
+    ctx.fillStyle = '#172721';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    text(label, x, y-size, color, size*.85);
+    ctx.restore();
+  }
 
   function ring(x, y, radius, color, alpha = 1, width = 2) {
     ctx.save();
@@ -201,6 +252,7 @@ export function createRenderer(canvas, artwork) {
     ring(entity.x,entity.y+3,39,'#a7f3df',.95,3);
     ctx.fillStyle='#192b2380';ctx.beginPath();ctx.ellipse(entity.x,entity.y+5,30,10,0,0,Math.PI*2);ctx.fill();
     if(artwork.convoyImage)ctx.drawImage(artwork.convoyImage,entity.x-64,entity.y-80,128,128);
+    else drawMarker(entity.x,entity.y,'车','#a7f3df',22);
   }
 
   function traceRoute(points,color,width,dash=[]){
@@ -259,8 +311,8 @@ export function createRenderer(canvas, artwork) {
     ctx.beginPath();
     ctx.ellipse(entity.x, entity.y + 3, tower ? 31 : entity.boss ? 31 : 19, tower ? 11 : entity.boss ? 9 : 8, 0, 0, Math.PI * 2);
     ctx.fill();
-    if (unit || model) {
-      const sprite = model||spriteFor(unit, entity.angle || 0);
+    const sprite = model || (unit && spriteFor(unit, entity.angle || 0));
+    if (sprite) {
       const bob = (!tower||frameState.mode==='legion') && !reduceMotion ? Math.sin((entity.progress??elapsed*40) * .13) * 1.6 : 0;
       const recoil = model&&tower&&!reduceMotion ? Math.max(0,1-(elapsed-(entity.lastAttack??-1))/.14)*5 : 0;
       const x=entity.x-Math.cos(entity.angle||0)*recoil;
@@ -270,6 +322,12 @@ export function createRenderer(canvas, artwork) {
         ctx.translate(x,0);ctx.scale(-1,1);
         ctx.drawImage(sprite,-size*.5,entity.y-size*.625+bob,size,size);
       }else ctx.drawImage(sprite, x - size * .5, entity.y - size * .625 + bob, size, size);
+      ctx.restore();
+    } else {
+      const color = tower ? '#b9ecd1' : entity.boss ? '#ffd175' : '#f3a593';
+      ctx.save();
+      if(entity.hidden)ctx.globalAlpha=.35;
+      drawMarker(entity.x, entity.y, entity.code, color, tower || entity.boss ? 22 : 17);
       ctx.restore();
     }
     if (tower) {
@@ -372,7 +430,7 @@ export function createRenderer(canvas, artwork) {
     state=projectBattleState(state);frameState=state;
     const mode = state.mode;
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
-    ctx.drawImage(backgrounds[mode], 0, 0);
+    drawBackground(mode);
     if (buildArea?.code) {
       free.clearRect(0, 0, WORLD.width, WORLD.height);
       const footprint = buildArea.code === 'WALL' ? WALL_FOOTPRINT : FOOTPRINT;
