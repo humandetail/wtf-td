@@ -107,3 +107,6 @@
 @media(orientation:landscape) and (max-height:550px){:root.touch-layout .game-controls{padding-top:4px;padding-bottom:calc(4px + env(safe-area-inset-bottom))}:root.touch-layout .game-controls>.button{min-height:46px}:root.touch-layout .game-controls .control-utilities .button{min-height:44px}:root.touch-layout .status-bar{min-height:42px;padding:3px 8px}}
 .game-controls #focus-button.cancel-placement::before{content:'×';mask:none;-webkit-mask:none;background:none;font-size:26px;line-height:22px;text-align:center}
 .status-bar .status-label{white-space:nowrap}
+:root.touch-layout .hero-skill[data-icon]{grid-template-columns:15px minmax(0,1fr)}
+:root.touch-layout .hero-skill[data-icon]::before{width:15px;height:18px}
+:root.touch-layout .hero-skill[data-icon] small{grid-column:2}

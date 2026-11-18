@@ -1,4 +1,4 @@
-import { WORLD, FOOTPRINT, BUILD_BOUNDS, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, ENTRY, ROAD_SEGMENTS, ROAD_WIDTH } from './geometry.js';
+import { WORLD, FOOTPRINT, LOOP_FOOTPRINT, BUILD_BOUNDS, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, ENTRY, ROAD_SEGMENTS, ROAD_WIDTH } from './geometry.js';
 import { TOWERS, towerStats, effectiveTowerStats } from './catalog.js';
 import { DEFENSE_CORE, DEFENSE_LANES, DEFENSE_BUILD_EXCLUSIONS } from './defense-geometry.js';
 import {ESCORT_POINTS,ESCORT_CHECKPOINTS,ESCORT_BUILD_EXCLUSIONS,pointOnEscortRoute} from './escort-geometry.js';
@@ -7,6 +7,7 @@ import {BUILD_EXCLUSIONS as GEM_BUILD_EXCLUSIONS} from './gem-geometry.js';
 import {heroPlacementStatus} from './hero-geometry.js';
 import {LEGION_DEPLOYMENT,LEGION_RADIUS} from './legion-geometry.js';
 import {createSpecialPainter,projectBattleState,specialStats} from './special-render.js';
+import {effectColor,towerVisual} from './battle-visuals.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
@@ -105,9 +106,10 @@ function spriteFor(unit, angle) {
 }
 
 // The canvas and non-browser interaction checks use the same picking boundary.
-export function hitTest(x, y, towers) {
+export function hitTest(x, y, towers, mode = '') {
+  const footprint = mode === 'loop' ? LOOP_FOOTPRINT : FOOTPRINT;
   const ordered = [...towers].sort((a,b)=>b.y-a.y);
-  const base = ordered.find(tower => tower.homeX!==undefined ? Math.hypot(tower.x-x,tower.y-y)<=LEGION_RADIUS : Math.abs(tower.x-x) <= (tower.code==='WALL'?30:FOOTPRINT.width/2) && Math.abs(tower.y-y) <= (tower.code==='WALL'?30:FOOTPRINT.height/2));
+  const base = ordered.find(tower => tower.homeX!==undefined ? Math.hypot(tower.x-x,tower.y-y)<=LEGION_RADIUS : Math.abs(tower.x-x) <= (tower.code==='WALL'?30:footprint.width/2) && Math.abs(tower.y-y) <= (tower.code==='WALL'?30:footprint.height/2));
   const sprite = base || ordered.find(tower => tower.code!=='WALL' && Math.abs(tower.x-x) <= FOOTPRINT.width/2 && y >= tower.y-65 && y <= tower.y+FOOTPRINT.height/2);
   return sprite?.id ?? null;
 }
@@ -263,6 +265,17 @@ export function createRenderer(canvas, artwork) {
 
   function drawTacticalGround(state,placement){
     special.ground(state,placement);
+    if(state.mode==='loop')for(const region of state.regions ?? []){
+      const color=region.kind==='mine'?'#ffd398':effectColor(region.kind==='suppress'?'suppress':'fire');
+      ctx.save();
+      ctx.fillStyle=color+'16';
+      ctx.strokeStyle=color+'ad';
+      ctx.lineWidth=1.6;
+      if(region.kind==='mine'||region.kind==='suppress')ctx.setLineDash([6,5]);
+      ctx.beginPath();ctx.arc(region.x,region.y,region.radius,0,Math.PI*2);ctx.fill();ctx.stroke();
+      if(region.kind==='mine')text('×',region.x,region.y,color,17);
+      ctx.restore();
+    }
     if(state.mode==='escort'){
       const points=ESCORT_POINTS.map(([x,y])=>({x,y}));
       traceRoute(points,'#4ac8ae24',48);
@@ -303,7 +316,7 @@ export function createRenderer(canvas, artwork) {
     if(special.actor(entity,frameState))return;
     if(entity.code==='WALL'){drawWall(entity.x,entity.y);return;}
     if(entity.convoy){drawConvoy(entity);return;}
-    if(entity.burnRemaining>0)ring(entity.x,entity.y+3,23,'#d59bff',.8,2);
+    if(entity.burnRemaining>0)ring(entity.x,entity.y+3,23,effectColor('fire'),.8,2);
     const unit = artwork.units.get(entity.assetCode||entity.code);
     const model = frameState.mode==='loop'?loopSprite(entity.code):null;
     const size = frameState.mode==='legion'?96:tower ? 128 : entity.boss ? 184 : 126;
@@ -353,6 +366,11 @@ export function createRenderer(canvas, artwork) {
         text([...new Set(labels)].filter(Boolean).join('·'),entity.x,top-5,'#bfdfda',10);
         if(entity.channel){
           ctx.fillStyle='#f6bc66';ctx.fillRect(entity.x-width/2,top+12,width*Math.max(0,(elapsed-entity.channel.start)/(entity.channel.until-entity.channel.start)),2);
+          const {kind,targetId}=entity.channel;
+          const target=kind==='aid'?frameState.enemies.find(enemy=>enemy.id===targetId):frameState.towers.find(tower=>tower.id===targetId);
+          const color=kind?.includes('heal')||kind==='aid'||kind==='reverse'?'#a8eed0':'#ffc391';
+          if(target)traceRoute([{x:entity.x,y:entity.y-18},{x:target.x,y:target.y-18}],color+'aa',2,[7,5]);
+          ring(entity.x,entity.y,26,color,.7,2);
         }
         if(entity.special==='gold')ring(entity.x,entity.y,23+(reduceMotion?0:2*Math.sin(elapsed*6)),'#f6cf66',.75,2);
         if(entity.special==='challenge')ring(entity.x,entity.y,24,'#ec8e67',.8,2);
@@ -366,20 +384,83 @@ export function createRenderer(canvas, artwork) {
     if(['damage','hero-hit'].includes(event.type))event={...event,type:'hit',amount:event.damage??event.amount,color:'#e89d8c'};
     const lifetimes = { shot: .16, hit: .18, kill: .8, build: .65, upgrade: .8, sell: .55, income: .8,
       'core-hit': .65,relocate:.65,fusion:.9,echo:.3,'hero-skill':.5,'unit-death':.7,heal:.7,
-      'shield-hit':.26,'boss-cast':.65,interrupt:.45 };
+      'shield-hit':.26,'boss-cast':.65,interrupt:.45,
+      'skill-pulse':.42,'skill-link':.38,'skill-sector':.35,'skill-ray':.30 };
     if (!(event.type in lifetimes)) return;
     particles.push({ ...event, age: 0, life: lifetimes[event.type] });
     if (particles.length > 240) particles = particles.slice(-240);
   }
 
+  function drawLoopEffect(item, progress) {
+    const kind = item.kind ?? towerVisual(item.code).icon;
+    const color = kind==='dual' && item.damageType==='magic' ? effectColor('beam') : effectColor(kind);
+    const t = reduceMotion ? .5 : Math.max(0, Math.min(1, progress));
+    ctx.lineWidth=2.5;
+    ctx.strokeStyle=color;
+    ctx.fillStyle=color;
+    ctx.lineCap='round';
+    if (item.type==='skill-pulse') {
+      const outer=item.radius;
+      ctx.beginPath();ctx.arc(item.x,item.y,outer,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(item.x,item.y,outer*(.25+.7*t),0,Math.PI*2);ctx.stroke();
+      if(kind==='net'||kind==='frost'){
+        ctx.beginPath();
+        for(let i=0;i<(kind==='frost'?6:4);i++){
+          const angle=i*Math.PI/(kind==='frost'?3:2);
+          ctx.moveTo(item.x,item.y);ctx.lineTo(item.x+Math.cos(angle)*outer*.7,item.y+Math.sin(angle)*outer*.7);
+        }
+        ctx.stroke();
+      }
+      return;
+    }
+    if (item.type==='skill-sector') {
+      const half=item.degrees*Math.PI/360;
+      for(const direction of item.reverse?[item.angle,item.angle+Math.PI]:[item.angle]){
+        ctx.fillStyle=color+'24';
+        ctx.beginPath();ctx.moveTo(item.x,item.y);ctx.arc(item.x,item.y,item.radius,direction-half,direction+half);ctx.closePath();ctx.fill();ctx.stroke();
+      }
+      return;
+    }
+    if (item.type==='skill-ray') {
+      const end={x:item.x+Math.cos(item.angle)*item.radius,y:item.y+Math.sin(item.angle)*item.radius};
+      traceRoute([item,end],color+'37',item.width);
+      traceRoute([item,end],color,4);
+      return;
+    }
+    if (item.code==='T25') return;
+    const a={x:item.x,y:item.y-20},b={x:item.tx,y:item.ty-15};
+    if(item.type==='skill-link'||['beam','arc','suppress','dual'].includes(kind)){
+      const points=[a];
+      if(kind==='arc'){
+        const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy)||1;
+        for(let i=1;i<5;i++){
+          const offset=(i%2?1:-1)*Math.min(10,length*.13);
+          points.push({x:a.x+dx*i/5-dy/length*offset,y:a.y+dy*i/5+dx/length*offset});
+        }
+      }
+      points.push(b);
+      traceRoute(points,color+'55',item.type==='skill-link'?12:8);
+      traceRoute(points,color,item.type==='skill-link'?3.5:2.5,kind==='radar'||kind==='charge'?[7,5]:[]);
+      return;
+    }
+    const trail={x:a.x+(b.x-a.x)*Math.max(0,t-.27),y:a.y+(b.y-a.y)*Math.max(0,t-.27)};
+    const tip={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
+    traceRoute([trail,tip],color,kind==='burst'?5:3);
+    ctx.beginPath();ctx.arc(tip.x,tip.y,kind==='burst'?4:2.8,0,Math.PI*2);ctx.fill();
+  }
+
   function drawParticles(dt) {
     for (const item of particles) {
       item.age += dt;
+      if(item.age>=item.life)continue;
       if(frameState.mode==='legion'&&item.side&&item.side!==(frameState.viewSide||'player'))continue;
       const progress = item.age / item.life;
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - progress);
       if(special.particle(item,progress)){ctx.restore();continue;}
+      if(item.loop || ['skill-pulse','skill-link','skill-sector','skill-ray'].includes(item.type)){
+        drawLoopEffect(item,progress);ctx.restore();continue;
+      }
       const color = item.color || '#e6c779';
       if (item.type === 'shot') {
         ctx.lineWidth = item.code === 'T03' ? 5 : 2.5;
@@ -429,11 +510,12 @@ export function createRenderer(canvas, artwork) {
   function draw(state, selectedTowerId, placement, dt = 0, cursor = null, buildArea = placement) {
     state=projectBattleState(state);frameState=state;
     const mode = state.mode;
+    const towerFootprint = mode === 'loop' ? LOOP_FOOTPRINT : FOOTPRINT;
     ctx.clearRect(0, 0, WORLD.width, WORLD.height);
     drawBackground(mode);
     if (buildArea?.code) {
       free.clearRect(0, 0, WORLD.width, WORLD.height);
-      const footprint = buildArea.code === 'WALL' ? WALL_FOOTPRINT : FOOTPRINT;
+      const footprint = buildArea.code === 'WALL' ? WALL_FOOTPRINT : towerFootprint;
       if(mode==='maze'){
         free.fillStyle='#fff';
         free.fillRect(BUILD_BOUNDS.x+footprint.width/2,BUILD_BOUNDS.y+footprint.height/2,BUILD_BOUNDS.width-footprint.width,BUILD_BOUNDS.height-footprint.height);
@@ -441,8 +523,8 @@ export function createRenderer(canvas, artwork) {
       for (const tower of [...state.towers,...state.walls||[]]) {
         if(buildArea.relocating&&tower.id===buildArea.towerId)continue;
         if(mode==='legion'){free.save();free.globalCompositeOperation='destination-out';free.beginPath();free.arc(tower.x,tower.y,LEGION_RADIUS*2+8,0,Math.PI*2);free.fill();free.restore();continue;}
-        const other=tower.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
-        const halfX=(footprint.width+other.width)/2+8,halfY=(footprint.height+other.height)/2+8;
+        const other=tower.code==='WALL'?WALL_FOOTPRINT:towerFootprint;
+        const halfX=(footprint.width+other.width)/2+towerFootprint.gap,halfY=(footprint.height+other.height)/2+towerFootprint.gap;
         free.clearRect(tower.x-halfX,tower.y-halfY,halfX*2,halfY*2);
       }
       if(mode==='hero')for(const entity of [state.hero,...state.enemies]){
@@ -514,7 +596,7 @@ export function createRenderer(canvas, artwork) {
       ctx.fillStyle = placement.ok ? '#71cf8b35' : '#e7786635';
       ctx.strokeStyle = color; ctx.lineWidth = 2.5;
       if (!placement.ok) ctx.setLineDash([6,4]);
-      const size=mode==='legion'?{width:LEGION_RADIUS*2,height:LEGION_RADIUS*2}:placement.code==='WALL'?WALL_FOOTPRINT:FOOTPRINT;
+      const size=mode==='legion'?{width:LEGION_RADIUS*2,height:LEGION_RADIUS*2}:placement.code==='WALL'?WALL_FOOTPRINT:towerFootprint;
       ctx.fillRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
       ctx.strokeRect(placement.x-size.width/2,placement.y-size.height/2,size.width,size.height);
       const labelX = Math.max(130, Math.min(WORLD.width - 130, placement.x));

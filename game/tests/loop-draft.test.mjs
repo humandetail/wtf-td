@@ -25,11 +25,11 @@ test('loop draft keeps a paid card until valid deployment and returns the fixed 
   assert.equal(game.state.gold, 375);
 });
 
-test('a full population leaves an unplaced card sellable and the draft independent of road randomness', () => {
+test('four starter towers fit beside the road and a full population leaves an unplaced card sellable', () => {
   const game = createGame({startingGold:600,draftRandom: () => 0,random: () => {throw Error('drawing may not advance the road generator');}});
   game.start();
   game.chooseCard(0);
-  const points = [[500,300],[780,300],[500,500],[780,500]];
+  const points = [190,262,334,406].map(x=>[x,140]);
   for(const [i,[x,y]] of points.entries()){
     if(i){assert.ok(game.draw().ok);game.chooseCard(0);}
     assert.ok(game.deploy(game.state.cards[0].id,x,y).ok);
@@ -39,7 +39,7 @@ test('a full population leaves an unplaced card sellable and the draft independe
   assert.ok(game.draw().ok);
   game.chooseCard(0);
   const card=game.state.cards[0];
-  assert.equal(game.deploy(card.id,190,140).ok,false);
+  assert.equal(game.deploy(card.id,874,140).ok,false);
   assert.deepEqual(game.state.cards.map(c=>c.id),[card.id]);
   assert.ok(game.sellCard(card.id).ok);
   assert.equal(game.state.gold,75);

@@ -3,6 +3,7 @@ export const ROAD_WIDTH = 48;
 export const ROAD_SHOULDER = 8;
 export const ENTRY = { x: 640, y: 400 };
 export const FOOTPRINT = { width: 90, height: 50, gap: 8 };
+export const LOOP_FOOTPRINT = { width: 64, height: 38, gap: 6 };
 export const BUILD_BOUNDS = { x: 110, y: 100, width: 1060, height: 600 };
 export const PLAZA = { x: 565, y: 345, width: 150, height: 110 };
 export const ROAD_SEGMENTS = [
@@ -61,21 +62,21 @@ export function advanceOnRoad(entity,distance,random=Math.random,chooseExit){
   }
 }
 
-const halfX=FOOTPRINT.width/2,halfY=FOOTPRINT.height/2;
-const centerBounds = ({x,y,width,height}) => ({
-  x:x+halfX,y:y+halfY,width:width-FOOTPRINT.width,height:height-FOOTPRINT.height,
+const centerBounds = ({x,y,width,height}, footprint=FOOTPRINT) => ({
+  x:x+footprint.width/2,y:y+footprint.height/2,width:width-footprint.width,height:height-footprint.height,
 });
-const plazaExclusion = {
-  x:PLAZA.x-halfX-ROAD_SHOULDER,y:PLAZA.y-halfY-ROAD_SHOULDER,
-  width:PLAZA.width+FOOTPRINT.width+ROAD_SHOULDER*2,height:PLAZA.height+FOOTPRINT.height+ROAD_SHOULDER*2,
-  reason:'中心枢纽不可建造',
-};
-function buildExclusions(margin) {
+function buildExclusions(margin, footprint=FOOTPRINT) {
+  const halfX=footprint.width/2,halfY=footprint.height/2;
+  const plazaExclusion = {
+    x:PLAZA.x-halfX-ROAD_SHOULDER,y:PLAZA.y-halfY-ROAD_SHOULDER,
+    width:PLAZA.width+footprint.width+ROAD_SHOULDER*2,height:PLAZA.height+footprint.height+ROAD_SHOULDER*2,
+    reason:'中心枢纽不可建造',
+  };
   return [...ROAD_SEGMENTS.map(road=>({
     x:Math.min(road.x1,road.x2)-ROAD_WIDTH/2-halfX-margin,
     y:Math.min(road.y1,road.y2)-ROAD_WIDTH/2-halfY-margin,
-    width:Math.abs(road.x2-road.x1)+ROAD_WIDTH+FOOTPRINT.width+margin*2,
-    height:Math.abs(road.y2-road.y1)+ROAD_WIDTH+FOOTPRINT.height+margin*2,
+    width:Math.abs(road.x2-road.x1)+ROAD_WIDTH+footprint.width+margin*2,
+    height:Math.abs(road.y2-road.y1)+ROAD_WIDTH+footprint.height+margin*2,
     reason:'道路和连接通道不可建造',
   })), plazaExclusion];
 }
@@ -83,19 +84,19 @@ export const BUILD_CENTER_BOUNDS = centerBounds(BUILD_BOUNDS);
 export const BUILD_EXCLUSIONS = buildExclusions(ROAD_SHOULDER);
 // Full tower bases can reach the inside edge of the outer paved ring.
 export const LOOP_BUILD_AREA = {
-  bounds: centerBounds({x:100,y:84,width:1080,height:632}),
-  exclusions: buildExclusions(2),
+  bounds: centerBounds({x:100,y:84,width:1080,height:632},LOOP_FOOTPRINT),
+  exclusions: buildExclusions(2,LOOP_FOOTPRINT),
 };
 const contains=(rect,x,y)=>x>=rect.x&&x<=rect.x+rect.width&&y>=rect.y&&y<=rect.y+rect.height;
-export function placementStatus(x,y,towers=[],exclusions=BUILD_EXCLUSIONS,bounds=BUILD_CENTER_BOUNDS) {
+export function placementStatus(x,y,towers=[],exclusions=BUILD_EXCLUSIONS,bounds=BUILD_CENTER_BOUNDS,footprint=FOOTPRINT) {
   if(!Number.isFinite(x)||!Number.isFinite(y)||!contains(bounds,x,y))return {ok:false,message:'超出可建造区域'};
   const blocked=exclusions.find(rect=>contains(rect,x,y));
   if(blocked)return {ok:false,message:blocked.reason};
-  if(towers.some(tower=>Math.abs(tower.x-x)<FOOTPRINT.width+FOOTPRINT.gap&&Math.abs(tower.y-y)<FOOTPRINT.height+FOOTPRINT.gap))return {ok:false,message:'与现有防御单位占地重叠'};
+  if(towers.some(tower=>Math.abs(tower.x-x)<footprint.width+footprint.gap&&Math.abs(tower.y-y)<footprint.height+footprint.gap))return {ok:false,message:'与现有防御单位占地重叠'};
   return {ok:true,message:'可以建造'};
 }
 export function loopPlacementStatus(x,y,towers=[]) {
-  return placementStatus(x,y,towers,LOOP_BUILD_AREA.exclusions,LOOP_BUILD_AREA.bounds);
+  return placementStatus(x,y,towers,LOOP_BUILD_AREA.exclusions,LOOP_BUILD_AREA.bounds,LOOP_FOOTPRINT);
 }
 export const ZONES = [
   {name:'外环防线',x:1110,y:100,color:'#d5dfa6'},

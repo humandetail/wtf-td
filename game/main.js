@@ -12,6 +12,7 @@ import { WORLD } from './geometry.js';
 import { DEFENSE_LANES } from './defense-geometry.js';
 import { createAudio } from './audio.js';
 import { loadArtwork, createRenderer, loopSpriteUrl } from './render.js';
+import { towerSkillIcon, towerVisual, HERO_ICONS } from './battle-visuals.js';
 
 /** @template {HTMLElement} T @param {string} id @returns {T} */
 function element(id) {
@@ -262,7 +263,7 @@ function activatePoint(point) {
     }
     resultMessage(result);
   } else {
-    selectedTowerId = renderer.hitTest(point.x, point.y, [...game.state.towers, ...game.state.walls]);
+    selectedTowerId = renderer.hitTest(point.x, point.y, [...game.state.towers, ...game.state.walls], game.state.mode);
     if (selectedTowerId) {selectedEnemyId=null;setDrawer('tower', canvas);}
     else {
       selectedEnemyId=game.state.mode==='loop'?game.state.enemies.find(e=>Math.hypot(e.x-point.x,e.y-point.y)<32)?.id:null;
@@ -394,10 +395,34 @@ function updateResearch() {
   cancel.textContent = research ? `取消研究 · 退还 ${research.cost} 金币` : '取消研究';
 }
 
-function commandButton(label, action, disabled = false) {
+/** @type {[RegExp,string][]} */
+const actionIcons = [
+  [/^选留并部署|^部署/, 'deploy'], [/^选留|^收回/, 'bag'], [/^售卡|^出售/, 'gold'],
+  [/^合成|融合/, 'merge'], [/^购买/, 'gold'], [/^卸下/, 'remove'], [/^装配|装备/, 'gear'],
+  [/^开启|^准备完毕|开战$/, 'play'], [/^强化|^国王强化/, 'upgrade'],
+  [/^取消/, 'remove'], [/^刷新/, 'refresh'], [/^鉴定/, 'cards'], [/^确认/, 'check'],
+];
+
+function commandButton(label, action, disabled = false, icon = actionIcons.find(([pattern]) => pattern.test(label))?.[1]) {
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'button compact'; button.textContent = label; button.disabled = disabled;
+  if (icon) button.dataset.icon = String(icon);
   button.addEventListener('click', action); return button;
+}
+
+function skillLine(parent, code, index, label) {
+  const line = document.createElement('p');
+  const icon = document.createElement('span');
+  const copy = document.createElement('span');
+  const visual = towerVisual(code);
+  line.className = 'skill-line';
+  icon.className = 'skill-icon';
+  icon.dataset.icon = towerSkillIcon(code, index);
+  icon.style.color = visual.color;
+  icon.setAttribute('aria-hidden','true');
+  copy.textContent = label;
+  line.append(icon,copy);
+  parent.append(line);
 }
 
 function armCard(cardId) {
@@ -496,6 +521,7 @@ function renderLoopCards() {
         resultMessage(result);
       }, disabled || gold < 150);
       drawButton.className = 'card-choice card-draw';
+      drawButton.dataset.icon = 'cards';
       drawButton.setAttribute('aria-label','抽卡 · 150 金币');
       const label = document.createElement('strong');
       label.textContent = '抽卡';
@@ -546,16 +572,16 @@ function loopCardDetails(code, compact = false) {
   card.append(title);
   paragraph(card,`${({common:'普通',rare:'稀有',epic:'史诗'})[card.dataset.rarity]} · ${tower?.population??1} 人口`);
   if (compact && tower?.skills?.length > 1) {
-    paragraph(card,`1级 · ${tower.skills[0]}`);
+    skillLine(card, code, 0, `1级 · ${tower.skills[0]}`);
     const extra = document.createElement('details');
     const label = document.createElement('summary');
     label.textContent = '后续技能';
     extra.append(label);
-    for (const [index, skill] of tower.skills.slice(1).entries()) paragraph(extra,`${2*index+3}级 · ${skill}`);
+    for (const [index, skill] of tower.skills.slice(1).entries()) skillLine(extra, code, index + 1, `${2*index+3}级 · ${skill}`);
     card.append(extra);
     return card;
   }
-  for (const [index,skill] of (tower?.skills??[]).entries()) paragraph(card,`${2*index+1}级 · ${skill}`);
+  for (const [index,skill] of (tower?.skills??[]).entries()) skillLine(card, code, index, `${2*index+1}级 · ${skill}`);
   return card;
 }
 
@@ -664,7 +690,7 @@ function updateCardLoopPanels(root, forecast, enemyInfo) {
   skills.replaceChildren();
   for(const [index,skill] of (definition?.skills??[]).entries()){
     const level=2*index+1;
-    paragraph(skills,`${level}级 · ${tower.level>=level?'已解锁':'待解锁'} · ${skill}`);
+    skillLine(skills, tower.code, index, `${level}级 · ${tower.level>=level?'已解锁':'待解锁'} · ${skill}`);
   }
   const targeting = element('loop-targeting');
   targeting.replaceChildren();
@@ -870,7 +896,7 @@ function updateSpecialMission() {
   } else if (state.mode === 'hero') {
     element('mission-objective').textContent = '守卫灵姬 · 神女存活且清空十五波；营地为可选挑战。';
     paragraph(parent, 'WASD持续移动；右键地面移动／敌人锁定；Q/E/R选技能后在地图点击目标。');
-    for (const [key, skill] of Object.entries(HERO_SKILLS)) parent.append(commandButton(`${key} ${skill.name} · Lv.${skill.level} / ${skill.mana}法力 / ${skill.cooldown}秒`, () => armHeroSkill(key), state.phase !== 'playing' || state.paused || !state.hero.alive || state.hero.level < skill.level));
+    for (const [key, skill] of Object.entries(HERO_SKILLS)) parent.append(commandButton(`${key} ${skill.name} · Lv.${skill.level} / ${skill.mana}法力 / ${skill.cooldown}秒`, () => armHeroSkill(key), state.phase !== 'playing' || state.paused || !state.hero.alive || state.hero.level < skill.level, HERO_ICONS[key]));
     for (const camp of state.camps) paragraph(parent, `${camp.id==='west'?'西侧':'东侧'}营地 · ${camp.cleared ? camp.rewardClaimed ? '奖励已领取' : '已清理，待领奖' : '尚未清理'}`);
     const reward = state.pendingCampReward;
     paragraph(parent, reward ? `营地奖励：${reward.kind === 'equipment' ? '三件装备选一' : '选择补给'}` : '靠近营地并击败精英后可领奖。');
