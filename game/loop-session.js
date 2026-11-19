@@ -2,7 +2,7 @@ import {CHALLENGES, GOLD_RUSHES, LOOP_TOWERS, LOOP_EQUIPMENT, LOOP_ENEMIES, LOOP
  loopTower, loopStats, loopWave, loopEnemy, loopWaveInterval, waveMultiplier, assignWaveBounties} from './loop-catalog.js';
 import {createLoopCombat} from './loop-combat.js';
 import {createLoopArmory} from './loop-armory.js';
-import { LOOP_CAMPAIGN_WAVES, LOOP_CREDENTIALS, LOOP_PACKS, LOOP_RARITY, LOOP_XP } from './loop-equipment.js';
+import { LOOP_CAMPAIGN_WAVES, LOOP_CREDENTIALS, LOOP_PACKS, LOOP_RARITY, LOOP_XP, LOOP_POPULATION, LOOP_SSR_GUARANTEE, LOOP_EXCHANGE_WAVE } from './loop-equipment.js';
 import {loopPlacementStatus, createRoadPosition, advanceOnRoad, ROAD_NODES} from './geometry.js';
 
 const starters=['T05','T25','T26','T27'];
@@ -14,7 +14,7 @@ export function createLoopGame(options={}){
  const waveCount=options.waveCount??LOOP_CAMPAIGN_WAVES;
  const initial=()=>({mode:'loop',phase:'menu',paused:false,speed:1,gold:options.startingGold??80,elapsed:0,
   wave:0,nextWaveIn:options.initialDelay??30,limit:options.limit??60,endless:false,kills:0,
-  towers:[],enemies:[],walls:[],convoy:null,regions:[],dust:[],pendingSpawns:0,capacity:4,populationUsed:0,
+  towers:[],enemies:[],walls:[],convoy:null,regions:[],dust:[],pendingSpawns:0,capacity:LOOP_POPULATION,populationUsed:0,
   waveCount,starter:'unopened',ssrMisses:0,cards:[],inventory:[],challenge:null,completedChallenges:[],usedChallenges:[],goldRush:null,goldRushQueued:0,
   regularKillGold:0,regularSupply:0,endlessKills:0,endlessSupply:0,supplyCursor:0,ledger:[]});
  const state=initial(),random=options.random??Math.random,draftRandom=options.draftRandom??Math.random;
@@ -59,7 +59,6 @@ export function createLoopGame(options={}){
   emit({type:'kill',x:e.x,y:e.y,code:e.code,amount:e.reward,wave:e.wave,endless:e.endless});
   if(e.endless)return;
   if(e.boss){
-   if(e.wave<=15)state.capacity=Math.max(state.capacity,4+2*e.wave/5);
    const rush=GOLD_RUSHES.find(entry=>entry.wave===e.wave);
    if(!options.noGoldRush&&rush){
     rushQueue.push({config:rush,at:state.elapsed+5});
@@ -107,7 +106,7 @@ export function createLoopGame(options={}){
  }
  function forecast(wave){
   const entries=waveEntries(wave),boss=entries.find(e=>e.boss);
-  return {wave,count:entries.length,entries,boss:!!boss,bossName:boss?LOOP_ENEMIES[boss.code].name:'',
+  return {wave,count:entries.length,entries,boss:!!boss,bossCode:boss?.code,bossName:boss?LOOP_ENEMIES[boss.code].name:'',
    types:[...new Set(entries.filter(e=>!e.boss).map(e=>e.code))],elites:entries.filter(e=>e.code.startsWith('E')).length,
    summonLimit:entries.reduce((total,e)=>total+({X20:2,E07:2,B07:4}[e.code]??0),0),
    hpMultiplier:waveMultiplier(wave,state.endless),endless:state.endless};
@@ -210,7 +209,7 @@ export function createLoopGame(options={}){
   }
  }
  const game={state,catalog:LOOP_TOWERS,enemyCatalog:LOOP_ENEMIES,priorities:LOOP_PRIORITIES,equipment:LOOP_EQUIPMENT,challenges:CHALLENGES,
-  ...armory,shopPacks:LOOP_PACKS,credentials:LOOP_CREDENTIALS,xpThresholds:LOOP_XP,
+  ...armory,shopPacks:LOOP_PACKS,ssrGuarantee:LOOP_SSR_GUARANTEE,exchangeWave:LOOP_EXCHANGE_WAVE,credentials:LOOP_CREDENTIALS,xpThresholds:LOOP_XP,
   statsFor:t=>loopStats(t,state),
   forecasts:()=>[state.wave+1,state.wave+2].filter(w=>state.endless||w<=waveCount).map(forecast),
   start(){if(state.phase==='menu')state.phase='playing';return success('开启免费起手 SR');},
@@ -246,11 +245,11 @@ export function createLoopGame(options={}){
    const tiers=Object.keys(pack.odds).filter(tier=>available.some(tower=>LOOP_RARITY[tower.rarity]===tier));
    const total=tiers.reduce((sum,tier)=>sum+pack.odds[tier],0);
    let roll=draftRandom()*total;
-   const quality=tier==='SSR'&&state.ssrMisses>=4&&tiers.includes('SSR')?'SSR'
+   const quality=tier==='SSR'&&state.ssrMisses>=LOOP_SSR_GUARANTEE-1&&tiers.includes('SSR')?'SSR'
     :tiers.find(tier=>(roll-=pack.odds[tier])<0)??tiers.at(-1);
    const code=chooseCode(available.filter(tower=>LOOP_RARITY[tower.rarity]===quality)).code;
    changeGold(-pack.price,'draft');
-   if(tier==='SSR')state.ssrMisses=quality==='SSR'?0:Math.min(4,state.ssrMisses+1);
+   if(tier==='SSR')state.ssrMisses=quality==='SSR'?0:Math.min(LOOP_SSR_GUARANTEE-1,state.ssrMisses+1);
    return success(`已获得 ${quality} · ${loopTower(code).name}`,{cardId:addCard(code,true)});
   },
   canSellCard(id){
@@ -263,7 +262,7 @@ export function createLoopGame(options={}){
    state.cards=state.cards.filter(c=>c!==card);changeGold(card.refund??0,'sell-card');return success('已出售卡片');
   },
   canExchangeR(code,cardIds){
-   if(!editable()||state.wave<25)return failure('第 25 波开放定向兑换');
+   if(!editable()||state.wave<LOOP_EXCHANGE_WAVE)return failure(`第 ${LOOP_EXCHANGE_WAVE} 波开放定向兑换`);
    if(loopTower(code)?.rarity!=='common'||!pool.some(tower=>tower.code===code)||!Array.isArray(cardIds)||cardIds.length!==5||new Set(cardIds).size!==5||
     !cardIds.every(id=>state.cards.some(card=>card.id===id&&loopTower(card.code).rarity==='common')))return failure('需要五张不同的 R 卡实例');
    return {ok:true};
@@ -320,7 +319,7 @@ export function createLoopGame(options={}){
   setSpeed(speed){if([1,2,3].includes(speed))state.speed=speed;},
   continueEndless(){
    if(state.phase!=='victory')return failure('请先完成常规关');
-   state.phase='playing';state.wave=waveCount;state.endless=true;state.capacity=12;state.paused=false;state.nextWaveIn=options.waveInterval??26;
+   state.phase='playing';state.wave=waveCount;state.endless=true;state.paused=false;state.nextWaveIn=options.waveInterval??26;
    for(const t of state.towers){t.incomeIn=20;t.dividendIn=null;}
    return success('无尽开始');
   },

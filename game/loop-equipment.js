@@ -39,7 +39,10 @@ export const LOOP_XP = [0,15,55,160,360];
 export const LOOP_PACKS = [
  {tier:'R',price:120,odds:{R:100,SR:0,SSR:0}},
  {tier:'SR',price:300,odds:{R:55,SR:45,SSR:0}},
- {tier:'SSR',price:750,odds:{R:20,SR:55,SSR:25}},
+ {tier:'SSR',price:750,odds:{R:15,SR:50,SSR:35}},
 ];
 export const LOOP_RARITY={common:'R',rare:'SR',epic:'SSR'};
 export const LOOP_CAMPAIGN_WAVES=50;
+export const LOOP_POPULATION = 100;
+export const LOOP_SSR_GUARANTEE = 3;
+export const LOOP_EXCHANGE_WAVE = 15;

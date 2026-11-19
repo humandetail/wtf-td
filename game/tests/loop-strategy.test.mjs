@@ -36,17 +36,17 @@ test('kill experience activates automatic levels, and the milestone Boss opens b
  const {towerId}=g.deploy(g.state.cards[0].id,500,300);
  play(g,30);
  assert.equal(g.state.phase,'victory');
- assert.equal(g.state.capacity,6);
+ assert.equal(g.state.capacity,100);
  assert.equal(g.state.towers.find(t=>t.id===towerId).level,2);
  assert.ok(g.state.towers[0].xp>=15);
  const gold=g.drainEvents().filter(e=>e.type==='gold-rush-end');
- assert.deepEqual(gold.map(e=>e.amount),[45]);
+ assert.deepEqual(gold.map(e=>e.amount),[120]);
  assert.ok(g.continueEndless().ok);
- assert.equal(g.state.capacity,12);
+ assert.equal(g.state.capacity,100);
  assert.equal(g.state.towers[0].level,2);
  assert.equal(g.state.nextWaveIn,.68);
  g.restart();
- assert.equal(g.state.capacity,4);
+ assert.equal(g.state.capacity,100);
  assert.equal(g.state.starter,'unopened');
  assert.deepEqual(g.state.towers,[]);
 });
@@ -121,7 +121,7 @@ test('skill effects follow actual attack radius and delayed mine detonation',()=
 });
 
 function combatFixture(codes, level, enemy, hp, shield = 0) {
- const game=start({enemySpeedScale:0});
+ const game=start({enemySpeedScale:0,startingGold:1000});
  const spots=[[552,302],[730,302],[552,500]];
  game.state.cards[0].code=codes[0];
  for(const [index,code] of codes.entries()){
@@ -136,15 +136,36 @@ function combatFixture(codes, level, enemy, hp, shield = 0) {
  return {game,target};
 }
 
-test('an SSR laser earns three population against a boss while R interceptors lead on ordinary targets',()=>{
- const damage=(codes,enemy)=>{
+test('equal-budget SR and SSR groups specialize in soaked packs and sustained boss damage',()=>{
+ const damage=(codes,enemy,count)=>{
   const {game,target}=combatFixture(codes,3,enemy,25000);
+  assert.equal(game.state.populationUsed,25);
+  for(const [index,code] of ['crystal','gear'].entries()){
+   assert.ok(game.buyEquipment(code).ok);
+   assert.ok(game.equip(game.state.towers[index].id,game.state.inventory[0].id).ok);
+  }
+  assert.equal(game.state.gold,875);
+  for(let i=1;i<count;i++)game.state.enemies.push({...target,id:target.id+i,x:640+i*6,statuses:[],burns:[],skillAt:{}});
+  const enemies=[...game.state.enemies];
   play(game,8);
-  return 25000-target.hp;
+  return enemies.reduce((sum,e)=>sum+25000-e.hp,0);
  };
- const common=['T01','T01','T01'];
- assert.ok(damage(['T04'],'B01')>damage(common,'B01'));
- assert.ok(damage(common,'X01')>damage(['T04'],'X01'));
+ const arc=['T05','T06'],laser=['T04','T06'];
+ assert.ok(damage(arc,'X01',6)>damage(laser,'X01',6));
+ assert.ok(damage(laser,'B01',1)>damage(arc,'B01',1));
+});
+
+test('a leveled SR interrupter stops the chain boss from silencing a nearby tower',()=>{
+ const scenario=code=>{
+  const {game,target}=combatFixture([code,'T06'],3,'B05',25000);
+  play(game,15);
+  return {interrupts:game.drainEvents().filter(event=>event.type==='interrupt'&&event.code===target.code).length,
+   silenced:game.state.towers.some(tower=>tower.silenceUntil>0)};
+ };
+ const disruptor=scenario('T24'),beam=scenario('T25');
+ assert.ok(disruptor.interrupts>beam.interrupts);
+ assert.equal(disruptor.silenced,false);
+ assert.equal(beam.silenced,true);
 });
 
 test('ion damage keeps its elite value at low HP and resonance marks outlive a broken shield',()=>{

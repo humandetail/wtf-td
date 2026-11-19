@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame} from '../engine.js';
-import {loopEnemy} from '../loop-catalog.js';
+import {GOLD_RUSHES,LOOP_ENEMIES,assignWaveBounties,loopEnemy,loopWave,waveMultiplier} from '../loop-catalog.js';
 
 function start(options={}){
  const game=createGame({draftRandom:()=>0,random:()=>0,...options});
@@ -123,4 +123,37 @@ test('a challenge awards an unsellable-for-profit component once',()=>{
  assert.equal(item.invested,0);
  assert.equal(game.sellEquipment(item.id).refund,0);
  assert.equal(game.startChallenge('C01').ok,false);
+});
+
+test('late escort waves retain fifty slots and shift the planned bounty into gold rushes',()=>{
+ const escorts=[['X16','X10','E06'],['X15','X04','E08'],['X20','X13','E07'],
+  ['X02','X09','E09'],['X18','X07','E03'],['X05','X06','E04']];
+ let payout=0,oldPayout=0;
+ for(let wave=1;wave<=50;wave++){
+  const entries=assignWaveBounties(loopWave(wave,false),wave);
+  const ordinaryBounty=entries.filter(e=>!e.boss).reduce((sum,e)=>sum+e.bounty,0);
+  const previousBounty=Math.min(180,45+3*(wave-1));
+  const reduction=wave<=5?0:wave<=10?15:wave>=16&&wave<=20?24:[26,36,46].some(start=>wave>=start&&wave<start+5)?30:0;
+  assert.equal(ordinaryBounty,previousBounty-reduction,`wave ${wave}`);
+  payout+=ordinaryBounty;
+  oldPayout+=previousBounty;
+  if(wave<25||wave%5)continue;
+  assert.equal(entries.length,50);
+  assert.equal(entries.filter(e=>e.boss).length,1);
+  const base=loopWave(wave,false,37);
+  escorts[(wave-25)/5].forEach((code,i)=>assert.equal(entries.filter(e=>e.code===code).length-base.filter(e=>e.code===code).length,[6,4,2][i]));
+ }
+ assert.equal(payout+GOLD_RUSHES.reduce((sum,r)=>sum+r.reward,0),oldPayout+370);
+});
+
+test('regular and elite health changes at campaign bands with boss and endless scaling intact',()=>{
+ const position={x:0,y:0};
+ for(const [wave,growth] of [[20,.60],[21,.80],[30,.80],[31,1],[40,1],[41,1.35],[50,1.35]]){
+  for(const code of ['X01','E04','B10']){
+   const boss=code==='B10';
+   assert.equal(loopEnemy({code,wave,boss},1,position).maxHp,LOOP_ENEMIES[code].hp*waveMultiplier(wave,false)*(boss?.60:growth));
+  }
+ }
+ const endless=loopEnemy({code:'E04',wave:55,endless:true},1,position);
+ assert.equal(endless.maxHp,LOOP_ENEMIES.E04.hp*waveMultiplier(55,true)*.60);
 });
