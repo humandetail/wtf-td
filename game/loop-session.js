@@ -69,7 +69,7 @@ export function createLoopGame(options={}){
   if(remainingByWave.has(e.wave)){
    const remaining=remainingByWave.get(e.wave)-1;
    if(remaining>0)remainingByWave.set(e.wave,remaining);
-   else if(playing()){remainingByWave.delete(e.wave);emit({type:'wave-clear',wave:e.wave,message:'第 '+e.wave+' 波已清完'});}
+   else if(playing()){remainingByWave.delete(e.wave);emit({type:'wave-clear',wave:e.wave,message:`本波清场 · 第 ${e.wave} / ${waveCount} 波`});}
   }
  }
  function flushExperience(){

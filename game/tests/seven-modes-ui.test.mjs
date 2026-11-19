@@ -36,7 +36,7 @@ async function harness(loopFixture = null) {
 
 test('loop shop previews tiers, opens guaranteed starter and confirms a deployment once',async()=>{
  const loop=(await import('../engine.js')).createGame({draftRandom:()=>0});
- const {ui,node,go,panelButton,descendants}=await harness(loop);go('loop');
+ const {ui,node,go,panelButton,descendants,buttons}=await harness(loop);go('loop');
  const cardButton=match=>panelButton('loop-cards',match);
  assert.equal(node('build-dock').hidden,false);
  assert.match(node('wave-label').textContent,/开启起手 SR/);
@@ -65,8 +65,67 @@ test('loop shop previews tiers, opens guaranteed starter and confirms a deployme
  assert.match(node('wave-label').textContent,/备战 30s/);
  ui.activatePoint({x:190,y:140});
  assert.equal(node('tower-properties').hidden,true);
+ assert.equal(node('tower-skills').hidden,false);
+ assert.equal(node('tower-equipment').hidden,false);
+ assert.equal(buttons('loop-skills').length,3);
+ assert.equal(buttons('loop-controls').filter(button=>button.dataset.slot).length,6);
+ assert.equal(node('loop-skill-detail').hidden,true);
  node('tower-properties-button').click();assert.equal(node('tower-properties').hidden,false);
- node('tower-skills-button').click();assert.equal(node('tower-properties').hidden,true);assert.equal(node('tower-skills').hidden,false);
+ panelButton('loop-skills',button=>button.dataset.choice==='1').click();
+ assert.equal(node('tower-properties').hidden,true);
+ assert.match(node('loop-skill-detail').textContent,/3级 · 待解锁/);
+ panelButton('loop-skills',button=>button.dataset.choice==='0').click();
+ assert.match(node('loop-skill-detail').textContent,/1级 · 已解锁/);
+ panelButton('loop-controls',button=>button.dataset.choice==='empty:0').click();
+ assert.equal(node('loop-skill-detail').hidden,true);
+ assert.equal(node('tower-bag-button').getAttribute('aria-expanded'),'true');
+});
+
+test('loop command deck keeps intelligence and deployed towers directly reachable',async()=>{
+ const loop=(await import('../engine.js')).createGame({draftRandom:()=>0});
+ const {node,go,click,ui,buttons}=await harness(loop);
+ go('loop');
+ assert.equal(node('loop-intel-button').hidden,false);
+ loop.openStarter();
+ const {towerId}=loop.deploy(loop.state.cards[0].id,190,140);
+ ui.updateUI();
+ assert.match(node('tower-capacity').textContent,/人口 [1-9] \/ 4/);
+ click('loop-intel-button');
+ assert.equal(node('mission-panel').hidden,false);
+ click('loop-encyclopedia-button');
+ click('close-drawer-button');
+ assert.equal(node('mission-panel').hidden,false);
+ click('loop-intel-button');
+ assert.equal(node('command-drawer').hidden,true);
+ buttons('loop-ready-towers')[0].click();
+ assert.equal(node('selection-panel').hidden,false);
+ assert.match(node('tower-title').textContent,/Lv\.1/);
+ loop.sell(towerId);
+ ui.updateUI();
+ assert.equal(node('command-drawer').hidden,true);
+ assert.equal(buttons('loop-ready-towers').length,0);
+ go('defense');
+ assert.equal(node('loop-intel-button').hidden,true);
+ assert.equal(node('loop-ready-panel').hidden,true);
+});
+
+test('reading a purchased tower announces the pause and keeps deployment available',async()=>{
+ const loop=(await import('../engine.js')).createGame({draftRandom:()=>0,startingGold:300});
+ const {ui,node,go,click,panelButton}=await harness(loop);
+ go('loop');
+ const cardButton=match=>panelButton('loop-cards',match);
+ cardButton(button=>button.textContent.startsWith('开启免费 SR')).click();
+ cardButton(button=>button.textContent==='部署').click();
+ ui.activatePoint({x:190,y:140});
+ click('focus-button');
+ cardButton(button=>button.dataset.tab==='shop').click();
+ cardButton(button=>button.dataset.choice==='R').click();
+ cardButton(button=>button.textContent==='购买 R 包').click();
+ assert.equal(node('wave-label').textContent,'阅卡暂停');
+ assert.equal(cardButton(button=>button.textContent==='部署').disabled,false);
+ assert.equal(loop.state.paused,false);
+ click('focus-button');
+ assert.match(node('wave-label').textContent,/备战/);
 });
 
 test('loop equipment storefront, recipe and six slots remain usable through detachment cooldown',async()=>{
@@ -97,8 +156,8 @@ test('loop equipment storefront, recipe and six slots remain usable through deta
  click('close-drawer-button');
  ui.activatePoint({x:190,y:140});
  assert.match(node('loop-skill-status').textContent,/59.*160.*脱战.*5/);
- click('tower-equipment-button');
  assert.equal(buttons('loop-controls').filter(button=>button.dataset.slot).length,6);
+ click('tower-bag-button');
  slotButton(button=>button.dataset.choice===`inventory:${loop.state.inventory[0].id}`).click();
  slotButton(button=>button.textContent==='装配导能机芯').click();
  assert.equal(tower.equipment[0].code,'focus');
@@ -147,7 +206,7 @@ test('loop tower controls activate a credential and keep targeting after an inva
  panelButton('loop-targeting',button=>button.textContent.startsWith('突破')).click();
  assert.equal(tower.awakened,true);
  assert.equal(loop.state.towers.find(t=>t.id===support.towerId).qualifiedUsed,true);
- click('tower-equipment-button');
+ click('tower-bag-button');
  slots(button=>button.dataset.choice==='inventory:103').click();
  slots(button=>button.textContent.startsWith('装配')).click();
  slots(button=>button.dataset.choice==='slot:103').click();

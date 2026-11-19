@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createGame} from '../engine.js';
 import {loopSpriteUrl} from '../render.js';
+import {loopEnemy} from '../loop-catalog.js';
+import {createRoadPosition} from '../geometry.js';
 import {readFile} from 'node:fs/promises';
 
 function start(options={}){
@@ -116,4 +118,49 @@ test('skill effects follow actual attack radius and delayed mine detonation',()=
  mines.tick(.45);
  const [blast]=mines.drainEvents().filter(e=>e.type==='skill-pulse');
  assert.deepEqual(blast,{type:'skill-pulse',kind:'burst',radius:55,x:region.x,y:region.y});
+});
+
+function combatFixture(codes, level, enemy, hp, shield = 0) {
+ const game=start({enemySpeedScale:0});
+ const spots=[[552,302],[730,302],[552,500]];
+ game.state.cards[0].code=codes[0];
+ for(const [index,code] of codes.entries()){
+  if(index)game.state.cards.push({id:100+index,code,paid:true,refund:0});
+  assert.ok(game.deploy(game.state.cards[0].id,...spots[index]).ok);
+ }
+ for(const tower of game.state.towers)Object.assign(tower,{level,xp:game.xpThresholds[level-1]});
+ const position=createRoadPosition(()=>0);
+ const target=loopEnemy({code:enemy,wave:25,boss:enemy.startsWith('B')},9999,position,{enemySpeedScale:0});
+ Object.assign(target,{hp,maxHp:hp,shield});
+ game.state.enemies.push(target);
+ return {game,target};
+}
+
+test('an SSR laser earns three population against a boss while R interceptors lead on ordinary targets',()=>{
+ const damage=(codes,enemy)=>{
+  const {game,target}=combatFixture(codes,3,enemy,25000);
+  play(game,8);
+  return 25000-target.hp;
+ };
+ const common=['T01','T01','T01'];
+ assert.ok(damage(['T04'],'B01')>damage(common,'B01'));
+ assert.ok(damage(common,'X01')>damage(['T04'],'X01'));
+});
+
+test('ion damage keeps its elite value at low HP and resonance marks outlive a broken shield',()=>{
+ const damage=hp=>{
+  const {game,target}=combatFixture(['T23'],1,'E01',1200);
+  target.hp=hp;
+  game.tick(.05);
+  return hp-target.hp;
+ };
+ assert.ok(damage(1200)>=60);
+ assert.equal(damage(300),damage(1200));
+ const {game,target}=combatFixture(['T28','T01'],3,'X05',2000,5);
+ game.tick(.05);
+ assert.equal(target.shield,0);
+ assert.ok(target.statuses.some(status=>status.kind==='vulnerable'&&status.value===.2));
+ assert.ok(2000-target.hp>100);
+ play(game,4.5);
+ assert.equal(target.statuses.some(status=>status.kind==='vulnerable'),false);
 });
