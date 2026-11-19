@@ -5,12 +5,12 @@ export {LOOP_EQUIPMENT} from './loop-equipment.js';
 
 const baseStats = {
  T01:[22,.55,205,'ranged','physical'], T02:[18,.9,195,'ranged','magic'],
- T03:[65,1.8,235,'ranged','physical'], T04:[50,.9,265,'ranged','magic'],
+ T03:[82,1.8,245,'ranged','physical'], T04:[62,.9,265,'ranged','magic'],
  T05:[46,1.1,178,'melee','magic'], T06:[26,.85,205,'ranged','physical'],
  T07:[9,2,215,'ranged','physical'], T08:[14,1.2,145,'melee','magic'],
  T09:[0,1,210,'support',null], T10:[0,1,200,'support',null],
  T11:[0,8,190,'support',null], T12:[20,.9,125,'melee','physical'],
- T13:[18,1.2,230,'ranged','magic'], T14:[16,.95,215,'ranged','physical'],
+ T13:[18,1.2,230,'ranged','magic'], T14:[27,.95,235,'ranged','physical'],
 };
 export const LOOP_TOWERS=Object.entries(CARD_ROWS).map(([code,[name,rarity,...data]])=>{
  const original=TOWERS.find(t=>t.code===code);
@@ -37,14 +37,14 @@ export function loopStats(tower,state={towers:[],elapsed:0,endless:false,dust:[]
   supplyIncome:state.endless?(level>=3?2:1):[3,4,6,7,8][level-1],
   control:gearBonus(tower,'control'),bossBonus:gearBonus(tower,'boss'),gearPeriod:gearBonus(tower,'period'),supportSources:[]};
  switch(base.code){
-  case 'T03': s.splash=r?85:65;s.targetCount=r?8:6;if(r)s.damage*=.9;break;
+  case 'T03': s.splash=r?110:85;s.targetCount=r?10:7;break;
   case 'T05': s.targetCount=r?5:3;if(r)s.damage*=.8;break;
   case 'T06': s.splash=r?65:45;s.targetCount=r?6:4;s.slow=.15;if(r)s.damage*=.85;break;
   case 'T07': s.targetCount=r?3:1;if(r)s.damage*=.5;break;
   case 'T08': s.targetCount=3;break;
   case 'T12': s.targetCount=r?3:1;if(r)s.damage*=.7;break;
   case 'T02': s.shieldMultiplier=1.5;break;
-  case 'T14': s.targetCount=level>=5?7:r?5:3;if(r)s.damage*=.8;break;
+  case 'T14': s.targetCount=level>=5?7:r?5:3;if(r)s.damage*=.9;break;
   case 'T25': s.targetCount=level>=5&&(tower.cycles||0)%4===0?6:r||level>=3?4:3;break;
   case 'T26': s.splash=50;s.targetCount=4;break;
   case 'T32': s.targetCount=level>=5&&(tower.cycles||0)%4===0?6:4;break;

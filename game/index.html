@@ -59,19 +59,9 @@
           <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
         </div>
       </header>
-      <nav class="game-controls" aria-label="对局控制">
-        <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="选择防御工事">建造</button>
-        <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
-        <div class="control-utilities">
-          <button id="pause-button" class="button compact" type="button">暂停</button>
-          <button id="speed-button" class="button compact" type="button">1× 速度</button>
-          <button id="more-button" class="button compact quiet" type="button" aria-controls="command-drawer" aria-expanded="false">菜单</button>
-        </div>
-      </nav>
       <div id="battle-stage" class="battle-stage">
         <div class="map-frame">
           <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。点“建造”选择工事，再在地图亮处选点。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
-          <div id="touch-actions" hidden><span id="touch-action-status">确认目标</span><button id="touch-confirm-button" data-icon="check" class="button primary" type="button">确认</button><button id="touch-cancel-button" data-icon="remove" class="button" type="button">取消</button></div>
           <div id="hero-move-pad" role="group" aria-label="英雄移动摇杆" hidden><span aria-hidden="true"></span><small>移动</small></div>
           <div id="hero-hud" class="mode-hud" hidden aria-label="英雄状态与技能">
             <div id="hero-status" aria-live="off"></div>
@@ -82,10 +72,15 @@
             </div>
           </div>
           <div id="legion-hud" class="mode-hud" hidden><span id="legion-kings"></span><button id="scout-button" class="button compact" type="button">侦察对手</button></div>
-          <p id="loop-live-event" aria-live="off" hidden></p>
           <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
-          <p id="build-status" class="notice placement-status" role="status" hidden></p>
         </div>
+        <div id="touch-actions" hidden><span id="touch-action-status">确认目标</span><button id="touch-confirm-button" data-icon="check" class="button primary" type="button">确认</button><button id="touch-cancel-button" data-icon="remove" class="button" type="button">取消</button></div>
+        <p id="build-status" class="notice placement-status" role="status" hidden></p>
+        <section id="loop-ready-panel" class="loop-ready-panel" aria-label="已部署的塔" hidden>
+          <h2>已部署的塔</h2>
+          <p id="loop-ready-hint">部署防御塔后，可在这里快速选中。</p>
+          <div id="loop-ready-towers"></div>
+        </section>
         <aside id="command-drawer" class="command-drawer" aria-labelledby="drawer-title" hidden>
           <div class="drawer-heading"><h2 id="drawer-title">科技指挥</h2><button id="close-drawer-button" data-icon="collapse" class="button compact" type="button">收起</button></div>
           <section id="settings-panel" aria-label="对局菜单" hidden>
@@ -107,23 +102,26 @@
             <p id="loop-enemy-info" class="strategy-summary" hidden></p>
             <div class="selected-summary">
               <div id="tower-panel" hidden>
-                <h2 id="tower-title">防御单位</h2>
-                <p id="loop-skill-status" class="strategy-summary" hidden></p>
+                <div class="tower-identity">
+                  <div id="loop-selected-portrait" hidden></div>
+                  <div><h2 id="tower-title">防御单位</h2><p id="loop-skill-status" class="strategy-summary" hidden></p></div>
+                </div>
+                <div id="tower-skills" class="tower-section" hidden>
+                  <h3>技能</h3>
+                  <div id="loop-skills" class="tower-skill-options" role="group" aria-label="塔技能"></div>
+                  <p id="loop-skill-detail" class="strategy-summary" hidden></p>
+                </div>
+                <div id="tower-equipment" class="tower-section" hidden>
+                  <div class="tower-gear-heading"><h3>装备</h3><button id="tower-bag-button" data-icon="bag" class="button compact" type="button" aria-expanded="false" aria-controls="loop-controls">背包</button></div>
+                  <div id="loop-controls" hidden></div>
+                </div>
                 <div class="tower-sections" role="group" aria-label="工事详情分区">
                   <button id="tower-properties-button" data-icon="stats" class="button compact" type="button" aria-expanded="false" aria-controls="tower-properties">属性</button>
-                  <button id="tower-skills-button" data-icon="slash" class="button compact" type="button" aria-expanded="false" aria-controls="tower-skills" hidden>技能</button>
-                  <button id="tower-equipment-button" data-icon="gear" class="button compact" type="button" aria-expanded="false" aria-controls="tower-equipment" hidden>装备</button>
                   <button id="tower-management-button" data-icon="controls" class="button compact" type="button" aria-expanded="false" aria-controls="tower-management">操作</button>
                 </div>
                 <div id="tower-properties" class="tower-section" hidden>
                   <p id="tower-description"></p>
                   <div id="tower-stats" class="tower-stats"></div>
-                </div>
-                <div id="tower-skills" class="tower-section" hidden>
-                  <div id="loop-skills"></div>
-                </div>
-                <div id="tower-equipment" class="tower-section" hidden>
-                  <div id="loop-controls" hidden></div>
                 </div>
                 <div id="tower-management" class="tower-section" hidden>
                   <div id="loop-targeting" hidden></div>
@@ -200,6 +198,17 @@
             <button id="shop-build-button" data-icon="deploy" class="button compact primary" type="button">布置</button>
           </div>
         </section>
+        <nav class="game-controls" aria-label="对局控制">
+          <p id="loop-live-event" aria-live="off" hidden></p>
+          <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="选择防御工事">建造</button>
+          <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
+          <div class="control-utilities">
+            <button id="loop-intel-button" data-icon="radar" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" title="战场情报" hidden>情报</button>
+            <button id="pause-button" class="button compact" type="button">暂停</button>
+            <button id="speed-button" class="button compact" type="button">1× 速度</button>
+            <button id="more-button" class="button compact quiet" type="button" aria-controls="command-drawer" aria-expanded="false">菜单</button>
+          </div>
+        </nav>
       </div>
     </section>
 

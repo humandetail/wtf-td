@@ -53,7 +53,7 @@ body.in-game .app-shell{max-width:none}
 .build-filters button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);background:#383720}
 .notice.placement-status{width:max-content;max-width:calc(100% - 24px);color:#ddf1d7;border:1px solid #88bf94}
 .notice.placement-status.invalid{color:#ffd3c3;border-color:var(--danger)}
-#notice:has(+ .placement-status:not([hidden])){display:none}
+.game-screen:not(.loop-console) .battle-stage:has(>.placement-status:not([hidden])) #notice{display:none}
 .shop-list{display:flex;gap:6px;min-height:0;overflow-x:auto;scrollbar-width:thin;overscroll-behavior:contain;padding-bottom:3px}
 @media(max-width:1150px){.status-bar{gap:12px}.kills{display:none}.game-screen{padding:5px}}
 @media(max-width:650px){.game-screen{padding:4px;gap:4px}.status-bar{padding:5px 8px;gap:12px}.wordmark{font-size:21px}.build-toolbar{flex-wrap:wrap;gap:5px 10px}.build-dock{padding:6px}.command-drawer{padding:12px}.notice{max-width:calc(100% - 16px);padding:6px 10px}}
@@ -280,32 +280,8 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
   .has-map-gutter .equipment-recipe-part .equipment-glyph{width:25px;height:25px}
   .has-map-gutter .equipment-actions .button{font-size:12px;padding-inline:6px}
 }
-.command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail){display:flex;flex-direction:column;overflow:hidden}
-.command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) .drawer-heading{flex:none}
-#selection-panel:has(#tower-equipment:not([hidden]) .equipment-detail),
-#selection-panel:has(#tower-equipment:not([hidden]) .equipment-detail) :is(.selected-summary,#tower-panel,#tower-equipment,#loop-controls,.equipment-panel,.equipment-detail){
-  display:flex;flex:1;min-height:0;flex-direction:column
-}
-#tower-equipment .equipment-panel:has(.equipment-detail)>:is(.card-choice-strip,.equipment-shelf-label){display:none}
 #tower-equipment .equipment-detail{padding:6px}
 #tower-equipment .equipment-detail-copy{position:relative;min-height:0;overflow:auto;padding-right:44px}
 #tower-equipment .gear-list-back{position:absolute;right:0;top:0;display:flex;width:44px;min-height:44px;justify-content:center;padding:0;font-size:0}
 #tower-equipment .gear-list-back::before{font-size:14px}
 #tower-equipment .equipment-actions{flex:none}
-@media (orientation:landscape) and (max-height:550px){
-  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail){top:6px}
-  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) .drawer-heading{
-    position:absolute;top:7px;right:8px;margin:0;padding:0;border:0;background:none
-  }
-  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) #drawer-title{
-    position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)
-  }
-  .has-map-gutter #tower-panel:has(#tower-equipment:not([hidden]) .equipment-detail) #tower-title{
-    min-height:35px;padding-right:70px;display:flex;align-items:center;font-size:13px;line-height:1.25
-  }
-  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) #loop-skill-status{display:none}
-  .has-map-gutter #tower-equipment .equipment-actions[data-active]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-  .has-map-gutter #tower-equipment .equipment-actions[data-active] .button{padding-inline:3px;gap:3px;font-size:0}
-  .has-map-gutter #tower-equipment .equipment-actions[data-active] .button::before{width:12px;height:12px}
-  .has-map-gutter #tower-equipment .equipment-actions[data-active] .button::after{content:attr(data-compact-label);font-size:12px;white-space:nowrap}
-}
