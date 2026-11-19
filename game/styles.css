@@ -242,6 +242,31 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .equipment-glyph::before{content:"";display:block;width:22px;height:22px;background:currentColor;mask:var(--ui-glyph) center/contain no-repeat;-webkit-mask:var(--ui-glyph) center/contain no-repeat}
 .equipment-art-loaded .equipment-glyph[data-sprite]{background-image:url("./assets/modes/loop/equipment.webp");background-repeat:no-repeat;background-size:600% 400%;background-position:var(--equipment-x) var(--equipment-y)}
 .equipment-art-loaded .equipment-glyph[data-sprite]::before{display:none}
+#help-dialog[open]{
+  display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:12px;
+  width:min(960px,calc(100% - 16px));height:min(760px,calc(100dvh - 16px));
+  max-width:none;max-height:none;overflow:hidden;padding:clamp(12px,3vw,24px);
+}
+#help-dialog .dialog-heading{gap:12px;margin:0}
+#help-title{font-size:clamp(18px,4vw,25px);margin:0}
+#close-help{min-height:44px}
+.help-content{overflow:auto;overscroll-behavior:contain;padding:2px 4px 10px;scrollbar-gutter:stable}
+.help-content h3{font-size:17px;margin:0 0 10px}
+.help-content .help-steps{margin:8px 0 18px;padding-inline-start:22px}
+.help-content .help-steps li{padding-inline-start:4px;margin:0 0 12px}
+.help-content .help-steps p,.help-intro{color:var(--muted);line-height:1.6;margin:4px 0}
+.help-other-modes{margin:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.help-other-modes summary{padding:12px 4px;min-height:44px;color:var(--jade);cursor:pointer}
+.help-filter{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:8px 0 12px}
+.help-filter select{min-height:44px;max-width:100%;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel-deep);color:var(--text);font:inherit}
+.help-filter p{margin:0 0 0 auto;color:var(--muted);font-size:12px}
+.help-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:8px}
+.help-cards h4{font-size:15px;margin:0 0 4px}
+.help-item-heading{display:flex;align-items:center;gap:8px}
+.help-item-heading h4{margin:0}
+.help-item[data-grade=green]{border-color:#78ae84}
+.help-item[data-grade=blue]{border-color:#70a3b8}
+.help-item[data-grade=orange]{border-color:#da914d}
 .equipment-recipe-line{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:6px 0}
 .equipment-recipe-part{display:grid;justify-items:center;align-content:start;gap:2px;padding:4px 1px;background:#254132;color:#e0e7d2;border:1px solid #527460;border-radius:4px;text-align:center;line-height:1.2}
 .equipment-recipe-part[data-missing=true]{border-style:dashed;background:#302920;color:#edd2a1}

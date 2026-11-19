@@ -719,8 +719,9 @@ function setPortrait(image, source, fallback) {
   if (source || fallback) image.src = source ?? fallback;
 }
 
-function loopCardDetails(code, compact = false) {
-  const tower = catalog().find(item=>item.code===code);
+function loopCardDetails(code, compact = false, source = game) {
+  const towers = source.catalog ?? TOWERS;
+  const tower = towers.find(item=>item.code===code);
   const card = document.createElement('article');
   card.className = 'loop-content-card';
   card.dataset.rarity = tower?.rarity ?? 'common';
@@ -729,9 +730,14 @@ function loopCardDetails(code, compact = false) {
   if (!compact) loopPortrait(card,code,tower?.assetCode);
   card.append(title);
   if (tower) paragraph(card,`${loopTier[tower.rarity]} · ${tower.population} 人口`);
-  const credential = game.credentials?.[code];
-  const qualifiesFor = Object.entries(game.credentials??{}).filter(([,item])=>item===code).map(([main])=>catalog().find(tower=>tower.code===main)?.name??main);
-  if (credential) paragraph(card,`突破凭证 · ${catalog().find(tower=>tower.code===credential)?.name??credential}`);
+  if (tower && !compact) {
+    const role = ({melee:'近战',ranged:'远程',support:'辅助'})[tower.role];
+    const type = tower.damageType === 'physical' ? '物理' : tower.damageType === 'magic' ? '法术' : '物理／法术';
+    paragraph(card, tower.damage > 0 ? `${role} · ${type} · 1 级伤害 ${tower.damage} · 射程 ${tower.range}` : role);
+  }
+  const credential = source.credentials?.[code];
+  const qualifiesFor = Object.entries(source.credentials??{}).filter(([,item])=>item===code).map(([main])=>towers.find(tower=>tower.code===main)?.name??main);
+  if (credential) paragraph(card,`突破凭证 · ${towers.find(tower=>tower.code===credential)?.name??credential}`);
   if (qualifiesFor.length) paragraph(card,`可给 ${qualifiesFor.join('、')} 提供突破资格`);
   if (compact && tower?.skills?.length > 1) {
     skillLine(card, code, 0, `1级 · ${tower.skills[0]}`);
@@ -816,6 +822,12 @@ function equipmentDetail(title,item,onBack) {
   return {detail,copy,actions};
 }
 
+function equipmentCost(code, definitions = game.equipment) {
+  const item = definitions[code];
+  if (!item?.components) return item?.cost ?? 0;
+  return equipmentCost(item.scroll, definitions) + item.components.reduce((sum,part)=>sum+equipmentCost(part, definitions),0);
+}
+
 function equipmentRecipe(code,onBack,towerId=undefined) {
   const recipe=game.equipment[code];
   const {detail,copy,actions}=equipmentDetail(recipe.name,recipe,onBack);
@@ -838,11 +850,7 @@ function equipmentRecipe(code,onBack,towerId=undefined) {
     chain.append(part);
   }
   copy.append(chain);
-  const total = itemCode => {
-    const item=game.equipment[itemCode];
-    return item?.components ? item.components.reduce((sum,part)=>sum+total(part),0)+total(item.scroll) : item?.cost??0;
-  };
-  paragraph(copy,`从零制作 ${total(code)} 金`);
+  paragraph(copy,`从零制作 ${equipmentCost(code)} 金`);
   const status=game.canCraft(code,towerId);
   if (!status.ok) paragraph(copy,status.message);
   const scroll=game.equipment[recipe.scroll];
@@ -1602,6 +1610,62 @@ function armBuild(code) {
   canvas.focus({ preventScroll: true });
 }
 
+function renderHelpTowers() {
+  const rarity = /** @type {HTMLSelectElement} */ (element('help-tower-rarity')).value || 'all';
+  const loop = sessions.loop;
+  const towers = loop.catalog.filter(tower=>rarity==='all'||tower.rarity===rarity);
+  element('help-tower-count').textContent = `共 ${towers.length} 座塔`;
+  element('help-tower-list').replaceChildren(...towers.map(tower=>loopCardDetails(tower.code,false,loop)));
+}
+
+function renderHelpEquipment() {
+  const grade = /** @type {HTMLSelectElement} */ (element('help-equipment-grade')).value || 'all';
+  const definitions = sessions.loop.equipment;
+  const entries = Object.entries(definitions).filter(([,item])=>grade==='all'||item.grade===grade);
+  element('help-equipment-count').textContent = `共 ${entries.length} 项`;
+  element('help-equipment-list').replaceChildren(...entries.map(([code,item])=>{
+    const article = document.createElement('article');
+    article.className = 'loop-content-card help-item';
+    article.dataset.grade = item.grade;
+    const heading = document.createElement('div');
+    heading.className = 'help-item-heading';
+    heading.append(equipmentGlyph(item));
+    addDetailTitle(heading,item.name);
+    article.append(heading);
+    const gradeName = item.isScroll ? `${equipmentGrade[item.grade]}卷轴` : equipmentGrade[item.grade];
+    const role = ({physical:'物理输出塔',magic:'法术输出塔',attack:'攻击塔',control:'控场塔',support:'支援塔'})[item.role];
+    const price = item.components ? `从零制作 ${equipmentCost(code,definitions)} 金` : `购买 ${item.cost} 金`;
+    const wave = item.availableWave ?? definitions[item.scroll]?.availableWave;
+    paragraph(article,[gradeName,price,wave && `第 ${wave} 波开放`].filter(Boolean).join(' · '));
+    paragraph(article,item.description);
+    if (role) paragraph(article,`适用 · ${role}`);
+    if (item.components) paragraph(article,`材料 · ${[...item.components,item.scroll].map(part=>definitions[part].name).join(' ＋ ')}`);
+    if (item.active) paragraph(article,`主动技能 · 冷却 ${item.active.cooldown} 秒${item.active.targeted?' · 需选目标':''}`);
+    return article;
+  }));
+}
+
+const helpPages = ['rules','towers','equipment'];
+
+function selectHelpPage(page) {
+  for (const name of helpPages) {
+    element(`help-${name}`).hidden = name !== page;
+    element(`help-${name}-tab`).setAttribute('aria-pressed',String(name===page));
+  }
+  if (page==='towers' && !element('help-tower-list').children.length) renderHelpTowers();
+  if (page==='equipment' && !element('help-equipment-list').children.length) renderHelpEquipment();
+  element('help-content').scrollTop = 0;
+}
+
+function openHelp() {
+  if (help.open) return;
+  stopHero();
+  helpPaused = view === 'game' && game.state.phase === 'playing' && !game.state.paused;
+  if (helpPaused) game.togglePause();
+  selectHelpPage('rules');
+  help.showModal();
+}
+
 function bindControls() {
   for (const section of towerSections) element(`tower-${section}-button`).addEventListener('click', () => {
     towerSkillSelection = '';
@@ -1697,12 +1761,11 @@ function bindControls() {
   });
   element('upgrade-button').addEventListener('click', () => resultMessage(game.upgrade(selectedTowerId)));
   element('sell-button').addEventListener('click', () => resultMessage(game.sell(selectedTowerId)));
-  element('help-button').addEventListener('click', () => {
-    stopHero();
-    helpPaused = game.state.phase === 'playing' && !game.state.paused;
-    if (helpPaused) game.togglePause();
-    help.showModal();
-  });
+  element('help-button').addEventListener('click',openHelp);
+  element('game-help-button').addEventListener('click',openHelp);
+  for (const page of helpPages) element(`help-${page}-tab`).addEventListener('click',()=>selectHelpPage(page));
+  element('help-tower-rarity').addEventListener('change',renderHelpTowers);
+  element('help-equipment-grade').addEventListener('change',renderHelpEquipment);
   element('close-help').addEventListener('click', () => help.close());
   help.addEventListener('close', () => {
     if (helpPaused && view === 'game' && game.state.paused) game.togglePause();

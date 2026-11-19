@@ -13,6 +13,7 @@ async function harness(loopFixture = null) {
     addEventListener(k,fn){this.events[k]=fn;} append(...nodes){this.children.push(...nodes);for(const node of nodes)node.parent=this;}
     replaceChildren(...nodes){this.children=[];this.append(...nodes);} contains(node){return this===node||this.children.some(child=>child.contains(node));}
     closest(){return null;} querySelectorAll(){return [];} focus(){document.activeElement=this;}
+    showModal(){this.open=true;} close(){this.open=false;this.events.close?.();}
     click(){if(!this.disabled)this.events.click?.({target:this});} getBoundingClientRect(){return {left:0,top:0,width:1280,height:800};}
   }
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
@@ -79,6 +80,35 @@ test('loop shop previews tiers, opens guaranteed starter and confirms a deployme
  panelButton('loop-controls',button=>button.dataset.choice==='empty:0').click();
  assert.equal(node('loop-skill-detail').hidden,true);
  assert.equal(node('tower-bag-button').getAttribute('aria-expanded'),'true');
+});
+
+test('the help manual uses the loop catalog from the menu and resumes only a running battle',async()=>{
+ const {node,go,click,ui,descendants}=await harness();
+ const text=id=>descendants(node(id)).map(child=>child.textContent).join(' ');
+ click('help-button');
+ assert.equal(node('help-dialog').open,true);
+ assert.equal(node('help-rules').hidden,false);
+ click('help-towers-tab');
+ assert.equal(node('help-rules').hidden,true);
+ assert.equal(node('help-tower-list').children.length,36);
+ assert.match(text('help-tower-list'),/电弧线圈.*20 人口.*5级/);
+ node('help-tower-rarity').value='epic';node('help-tower-rarity').events.change();
+ assert.equal(node('help-tower-list').children.length,9);
+ click('help-equipment-tab');
+ assert.equal(node('help-towers').hidden,true);
+ assert.equal(node('help-equipment-list').children.length,23);
+ assert.match(text('help-equipment-list'),/裂焰炉.*665 金.*第 25 波.*余烬阵列 ＋ 导能机芯 ＋ 橙装卷轴.*冷却 24 秒/);
+ node('help-equipment-grade').value='orange';node('help-equipment-grade').events.change();
+ assert.equal(node('help-equipment-list').children.length,6);
+ click('close-help');
+ go('defense');click('more-button');click('game-help-button');
+ assert.equal(ui.game.state.paused,true);
+ assert.equal(node('help-rules').hidden,false);
+ click('help-towers-tab');
+ assert.match(text('help-tower-list'),/激光跟踪塔/);
+ click('close-help');assert.equal(ui.game.state.paused,false);
+ click('pause-button');click('game-help-button');click('close-help');
+ assert.equal(ui.game.state.paused,true);
 });
 
 test('loop command deck keeps intelligence and deployed towers directly reachable',async()=>{
