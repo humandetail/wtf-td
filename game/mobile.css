@@ -110,3 +110,9 @@
 :root.touch-layout .hero-skill[data-icon]{grid-template-columns:15px minmax(0,1fr)}
 :root.touch-layout .hero-skill[data-icon]::before{width:15px;height:18px}
 :root.touch-layout .hero-skill[data-icon] small{grid-column:2}
+
+:root.touch-layout .has-map-gutter>.command-drawer[data-view=equipment]{width:var(--map-side-space);max-height:calc(100% - 12px)}
+@media(orientation:landscape) and (max-height:550px){
+  :root.touch-layout .has-map-gutter>.command-drawer[data-view=equipment]{right:6px;left:auto}
+  :root.touch-layout .loop-tabs .button{padding-inline:4px}
+}

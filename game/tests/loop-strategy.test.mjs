@@ -5,7 +5,7 @@ import {loopSpriteUrl} from '../render.js';
 import {readFile} from 'node:fs/promises';
 
 function start(options={}){
- const g=createGame({draftRandom:()=>0,random:()=>0,...options});g.start();g.chooseCard(0);return g;
+ const g=createGame({draftRandom:()=>0,random:()=>0,...options});g.start();g.openStarter();return g;
 }
 function play(g,seconds){
  for(let i=0;i<seconds*4&&g.state.phase==='playing';i++)g.tick(.25);
@@ -36,16 +36,16 @@ test('kill experience activates automatic levels, and the milestone Boss opens b
  assert.equal(g.state.phase,'victory');
  assert.equal(g.state.capacity,6);
  assert.equal(g.state.towers.find(t=>t.id===towerId).level,2);
- assert.ok(g.state.towers[0].xp>=10);
+ assert.ok(g.state.towers[0].xp>=15);
  const gold=g.drainEvents().filter(e=>e.type==='gold-rush-end');
- assert.deepEqual(gold.map(e=>e.amount),[90]);
+ assert.deepEqual(gold.map(e=>e.amount),[45]);
  assert.ok(g.continueEndless().ok);
  assert.equal(g.state.capacity,12);
  assert.equal(g.state.towers[0].level,2);
  assert.equal(g.state.nextWaveIn,.68);
  g.restart();
  assert.equal(g.state.capacity,4);
- assert.equal(g.state.draft.cost,0);
+ assert.equal(g.state.starter,'unopened');
  assert.deepEqual(g.state.towers,[]);
 });
 test('endless forecasts preserve count, wave multiplier and twelve regular boss slots',()=>{
@@ -53,18 +53,19 @@ test('endless forecasts preserve count, wave multiplier and twelve regular boss 
  const s=g.state;s.phase='victory';
  assert.ok(g.continueEndless().ok);
  const codes=[];
- for(let w=25;w<=85;w+=5){
+ for(let w=55;w<=115;w+=5){
   s.wave=w-1;
   const [f]=g.forecasts();
   assert.equal(f.count,50);
   codes.push(f.entries.at(-1).code);
-  assert.equal(f.hpMultiplier,4.04*(1+.01*(w-20)));
+  assert.equal(f.hpMultiplier,5.69*(1+.01*(w-50)));
  }
- assert.deepEqual(codes,['B05','B06','B07','B08','B09','B10','B11','B12','B01','B02','B03','B04','B05']);
+ assert.deepEqual(codes,['B11','B12','B01','B02','B03','B04','B05','B06','B07','B08','B09','B10','B11']);
 });
 test('60 pressure is the default hard end and a final state cannot keep advancing',()=>{
  const g=start();
  assert.equal(g.state.limit,60);
+ g.deploy(g.state.cards[0].id,190,140);
  g.tick(1000);
  assert.equal(g.state.phase,'defeat');
  assert.equal(g.state.enemies.length,60);
@@ -76,26 +77,25 @@ test('a low-rarity composition can clear the campaign with real gold and legal p
  const {playLoopStrategy}=await import('../qa/loop-strategy.mjs');
  const result=playLoopStrategy(1,'physical',{noEpic:true});
  assert.equal(result.outcome,'victory');
- assert.equal(result.wave,20);
+ assert.equal(result.wave,50);
  assert.ok(result.reconciled);
  assert.equal(result.game.state.towers.some(t=>result.game.catalog.find(c=>c.code===t.code).rarity==='epic'),false);
 });
 
 test('nearby zero-damage support shares experience while distant towers do not',()=>{
  let roll=0;
- const g=start({draftRandom:()=>roll,waveCount:1,waveSize:()=>1,enemySpeedScale:0,enemyHealthScale:.001});
+ const g=start({draftRandom:()=>roll,startingGold:360,waveCount:1,waveSize:()=>1,enemySpeedScale:0,enemyHealthScale:.001});
  g.deploy(g.state.cards[0].id,500,300);
  const commons=g.catalog.filter(t=>t.rarity==='common');
  roll=(commons.findIndex(t=>t.code==='T11')+.5)/commons.length;
- assert.ok(g.draw().ok);
- g.chooseCard(0);
+ assert.ok(g.draw('R').ok);
  assert.equal(g.state.cards[0].code,'T11');
  g.deploy(g.state.cards[0].id,780,300);
  roll=0;
- assert.ok(g.draw().ok);g.chooseCard(0);
+ assert.ok(g.draw('R').ok);
  g.deploy(g.state.cards[0].id,190,140);
  g.launchWave();g.tick(.1);
- assert.deepEqual(g.state.towers.map(t=>[t.code,t.xp]),[['T01',1],['T11',1],['T01',0]]);
+ assert.deepEqual(g.state.towers.map(t=>[t.code,t.xp]),[['T05',1],['T11',1],['T01',0]]);
 });
 
 test('skill effects follow actual attack radius and delayed mine detonation',()=>{

@@ -34,7 +34,7 @@ function bestPosition(game,card){
 }
 
 export function playLoopStrategy(seed=1,style='physical',options={}){
- const game=createGame({random:seeded(seed),draftRandom:seeded(seed+1000),
+ const game=createGame({random:seeded(Math.imul(seed,0x9e3779b1)),draftRandom:seeded(Math.imul(seed,0x85ebca6b)+1000),enemyHealthScale:options.enemyHealthScale,
   ...(options.noEpic?{towerFilter:t=>t.rarity!=='epic'}:{})});
  const state=game.state,milestones=[];
  const orders=preferred[style]??preferred.physical;
@@ -46,16 +46,39 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
   return (position<0?18:60-position*2)/Math.sqrt(t.population)-copies*11;
  };
  let lastDecision=-1,peak=0,endlessWave=0;
- game.start();
- for(let frame=0;frame<(options.endless?6500:4000)&&state.phase==='playing';frame++){
+ const first={};
+ game.start();game.openStarter();
+ function buyPack(tier) {
+  const purchase=game.draw(tier);
+  if(!purchase.ok)return;
+  first[tier]??=state.wave;
+  const quality=definitions.get(state.cards.find(card=>card.id===purchase.cardId).code).population;
+  first[['R','SR','SSR'][quality-1]+'Result']??=state.wave;
+ }
+ function buildEquipment(code) {
+  const definition=game.equipment[code];
+  if(!definition.components)return game.buyEquipment(code).ok;
+  for(const component of definition.components)
+   if(!state.inventory.some(item=>item.code===component)&&!buildEquipment(component))return false;
+  if(!state.inventory.some(item=>item.code===definition.scroll)&&!game.buyEquipment(definition.scroll).ok)return false;
+  return game.craftEquipment(code).ok;
+ }
+ for(let frame=0;frame<(options.endless?12000:5100)&&state.phase==='playing';frame++){
   if(state.elapsed>=lastDecision){
    lastDecision=state.elapsed+(options.decisionInterval??2);
-   if(!state.draft&&state.populationUsed<state.capacity&&state.cards.length<2&&state.gold>=150)game.draw();
-   if(state.draft){
-    const index=state.draft.codes.map((code,i)=>({i,score:score(code)})).sort((a,b)=>b.score-a.score)[0].i;
-    game.chooseCard(index);
+   const main=state.towers[0];
+   const credentialCode=main&&game.credentials[main.code];
+   let credential=state.towers.find(tower=>tower.code===credentialCode);
+   if(main&&!credential&&!main.awakened&&state.wave>=25&&!state.cards.some(card=>card.code===credentialCode)){
+    const materials=state.cards.filter(card=>definitions.get(card.code).population===1).slice(0,5);
+    if(materials.length===5)game.exchangeR(credentialCode,materials.map(card=>card.id));
    }
-   for(const card of [...state.cards].sort((a,b)=>score(b.code)-score(a.code))){
+   const room=state.capacity-state.populationUsed;
+   if(state.starter==='deployed'&&(room>0&&!state.cards.some(card=>game.canDeploy(card.id).ok)||state.wave>=18&&!credential&&!main?.awakened&&room>0&&!state.cards.some(card=>card.code===credentialCode)&&state.cards.length<5)){
+    const tier=state.wave>=22&&room>=3&&!options.noEpic&&state.gold>=750?'SSR':state.wave>=(style==='magic'?7:10)&&room>=2&&state.gold>=450?'SR':'R';
+    buyPack(tier);
+   }
+   for(const card of [...state.cards].sort((a,b)=>Number(b.code===credentialCode)-Number(a.code===credentialCode)||score(b.code)-score(a.code))){
     if(!game.canDeploy(card.id).ok)continue;
     const position=bestPosition(game,card);
     if(position)game.deploy(card.id,position.x,position.y);
@@ -70,40 +93,41 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
      if(t.priority!==priority)game.setPriority(t.id,priority);
     }
    }
-   if(state.populationUsed<state.capacity&&state.cards.length===2&&state.cards.every(card=>!game.canDeploy(card.id).ok)){
-    game.sellCard(state.cards.at(-1).id);
+   if(main&&room===0&&!main.awakened&&!credential&&state.wave>=22&&state.cards.some(card=>card.code===credentialCode)){
+    const extra=state.towers.filter(t=>t!==main&&!t.equipment.length).sort((a,b)=>score(a.code)-score(b.code))[0];
+    if(extra)game.sell(extra.id);
    }
-   if((state.populationUsed===state.capacity||state.gold>=450)&&state.gold>=80){
-    const candidates=state.towers.filter(t=>definitions.get(t.code).damage&&t.equipment.length<3)
-     .sort((a,b)=>a.equipment.length-b.equipment.length||b.level-a.level);
-    for(const tower of candidates){
-     const owned=new Set(tower.equipment.map(e=>e.code));
-     const targetCount=game.statsFor(tower).targetCount;
-     const recipe=targetCount>1?'scatter':'siege';
-     const components=game.equipment[recipe].components;
-     const targets=owned.has(recipe)?['core','gear','lens']:components;
-     const wanted=targets.find(code=>!owned.has(code));
-     if(!wanted)continue;
-     let component=state.inventory.find(e=>e.code===wanted);
-     if(!component&&game.buyEquipment(wanted).ok)component=state.inventory.at(-1);
-     if(!component||!game.equip(tower.id,component.id).ok)continue;
-     const parts=components.map(code=>tower.equipment.find(e=>e.code===code));
-     if(!owned.has(recipe)&&parts.every(Boolean)&&state.gold>=60)game.craft(parts[0].id,parts[1].id,tower.id);
-     break;
+   if(main){
+    credential=state.towers.find(tower=>tower.code===credentialCode);
+    if(credential&&game.canBreakthrough(main.id,credential.id).ok&&game.breakthrough(main.id,credential.id).ok)first.breakthrough??=state.wave;
+    const physical=definitions.get(main.code).damageType==='physical';
+    const [white,green,blue,orange]=physical?['blade','repeater','splitter','arbalest']:['crystal','focus','embers','furnace'];
+    const worn=new Set(main.equipment.map(item=>item.code));
+    if(state.wave<3&&!worn.has(white)&&state.gold>=185){
+     const bought=game.buyEquipment(white);
+     if(bought.ok)game.equip(main.id,bought.itemId);
     }
+    const target=main.awakened&&state.wave>=25&&!worn.has(orange)?orange:state.wave>=12&&!worn.has(blue)?blue:state.wave>=3&&!worn.has(green)?green:null;
+    if(target&&(state.populationUsed===state.capacity||state.gold>=300)){
+     if(!state.inventory.some(item=>item.code===target))buildEquipment(target);
+     const item=state.inventory.find(item=>item.code===target);
+     if(item&&game.equip(main.id,item.id).ok)first[game.equipment[target].grade]??=state.wave;
+    }
+    if(state.wave>=20&&state.gold>=500&&first.SR===undefined&&style==='magic')buyPack('SR');
+    if(state.wave>=32&&state.gold>=1150&&first.SSR===undefined&&style==='physical'&&!options.noEpic)buyPack('SSR');
    }
   }
   game.tick(.5);
   peak=Math.max(peak,state.enemies.filter(e=>e.special!=='gold').length);
-  for(const e of game.drainEvents())if(e.type==='wave'&&[5,10,15,20].includes(e.amount))milestones.push({wave:e.amount,gold:state.gold,population:state.populationUsed,levels:state.towers.map(t=>t.code+':'+t.level),peak});
+  for(const e of game.drainEvents())if(e.type==='wave'&&[5,10,15,20,25,30,35,40,45,50].includes(e.amount))milestones.push({wave:e.amount,gold:state.gold,population:state.populationUsed,levels:state.towers.map(t=>t.code+':'+t.level),peak});
   if(options.stopAtWave&&state.wave>=options.stopAtWave)break;
-  if(options.endless&&state.phase==='victory'){game.continueEndless();endlessWave=20;}
+  if(options.endless&&state.phase==='victory'){game.continueEndless();endlessWave=state.wave;}
   if(state.endless)endlessWave=state.wave;
-  if(state.endless&&state.wave>=85)break;
+  if(state.endless&&state.wave>=115)break;
  }
  return {seed,style,outcome:state.phase,wave:state.wave,elapsed:Math.round(state.elapsed),peak,endlessWave,gold:state.gold,
-  towers:state.towers.length,milestones,challenges:state.completedChallenges.length,
-  goldRush:state.ledger.filter(entry=>entry.reason==='gold-rush').reduce((n,entry)=>n+entry.amount,0),reconciled:450+state.ledger.reduce((sum,e)=>sum+e.amount,0)===state.gold,game};
+  towers:state.towers.length,milestones,first,challenges:state.completedChallenges.length,
+  goldRush:state.ledger.filter(entry=>entry.reason==='gold-rush').reduce((n,entry)=>n+entry.amount,0),reconciled:80+state.ledger.reduce((sum,e)=>sum+e.amount,0)===state.gold,game};
 }
 if(import.meta.url===`file://${process.argv[1]}`){
  const seeds=process.argv.includes('--quick')?[1]:Array.from({length:10},(_,i)=>i+1);

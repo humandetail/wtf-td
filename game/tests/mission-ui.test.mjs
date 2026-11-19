@@ -10,7 +10,7 @@ test('actual controls preserve four distinct sessions, drive and repair, relocat
   const html = fs.readFileSync(base + 'index.html', 'utf8');
   const nodes = new Map();
   class Element {
-    constructor(id = '') { this.id = id; this.hidden = true; this.attrs = {}; this.events = {}; this.style = { setProperty() {} }; this.dataset = {}; this.classList = { toggle() {} }; this.isConnected = true; this.tagName = 'BUTTON'; this.textContent = ''; }
+    constructor(id = '') { this.id = id; this.hidden = true; this.attrs = {}; this.events = {}; this.style = { setProperty() {} }; this.dataset = {}; this.classList = { add() {}, toggle() {} }; this.isConnected = true; this.tagName = 'BUTTON'; this.textContent = ''; }
     setAttribute(k, v) { this.attrs[k] = v; } getAttribute(k) { return this.attrs[k]; }
     addEventListener(k, fn) { this.events[k] = fn; } querySelectorAll() { return []; } contains() { return false; } closest() { return null; }
     focus() { document.activeElement = this; } append() {} replaceChildren() {} click() { if (!this.disabled) this.events.click?.({ target: this }); }

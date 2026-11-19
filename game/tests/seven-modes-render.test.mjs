@@ -102,13 +102,12 @@ test('hero renders routes and unit markers before artwork and replaces the groun
 
 test('loop tower artwork keeps its scale while placement uses the smaller base',()=>{
  const {canvas,calls}=canvasHarness();
- const sprite={url:'starter tower'},artwork={units:new Map([['T01',{images:new Map(),masterImage:sprite}]]),effects:new Map()};
- const renderer=createRenderer(canvas(),artwork),game=createGame({draftRandom:()=>0});
- game.start();game.chooseCard(0);
+ const sprite={url:'starter tower'},artwork={units:new Map([['T05',{images:new Map(),masterImage:sprite}]]),effects:new Map()};
+ const renderer=createRenderer(canvas(),artwork),game=createGame({draftRandom:()=>0,startingGold:200});
+ game.start();game.openStarter();
  const result=game.deploy(game.state.cards[0].id,190,140);
  assert.ok(result.ok);
- assert.ok(game.draw().ok);
- assert.ok(game.chooseCard(0).ok);
+ assert.ok(game.draw('R').ok);
  const card=game.state.cards[0];
  assert.equal(game.canDeploy(card.id,259,140).ok,false);
  assert.equal(game.canDeploy(card.id,260,140).ok,true);
@@ -116,7 +115,7 @@ test('loop tower artwork keeps its scale while placement uses the smaller base',
  renderer.draw(game.state,result.towerId,null);
  assert.ok(calls.some(({method,args})=>method==='drawImage'&&args[0]===sprite&&args[3]===128&&args[4]===128));
  calls.length=0;
- renderer.draw(game.state,null,{x:260,y:140,code:card.code,ok:true});
+ renderer.draw(game.state,null,{x:260,y:140,code:'T05',ok:true});
  assert.ok(calls.some(({method,args})=>method==='drawImage'&&args[0]===sprite&&args[1]===196&&args[3]===128&&args[4]===128));
  assert.ok(calls.some(({method,args})=>method==='strokeRect'&&args[2]===64&&args[3]===38));
 });
