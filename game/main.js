@@ -237,7 +237,7 @@ function refreshPlacement() {
     : eligibility && !eligibility.ok ? eligibility.message : gem && !gemHasRoom ? '部署容量已满' : '';
   const price = moving ? 25 : card ? 0 : pending?.price;
   const hint = armedEquipment ? '点选目标施放' : touchPointer?.matches ? '点按或拖动亮处预览，再确认' : '移到亮处预览，点击放置';
-  const message = name ? [name, price && `${price} 金币`, problem || (!armedEquipment && placement?.ok ? '可在此放置' : hint)].filter(Boolean).join(' · ') : '';
+  const message = name ? [name, card && pending && `${pending.population} 人口`, price && `${price} 金币`, problem || (!armedEquipment && placement?.ok ? '可在此放置' : hint)].filter(Boolean).join(' · ') : '';
   const status = element('build-status');
   status.hidden = !message;
   if (status.textContent !== message) status.textContent = message;
@@ -385,8 +385,7 @@ function updateLoopPanels() {
 function updateResearch() {
   const { state } = game;
   if (cardLoop()) {
-    const population = state.populationUsed??state.towers.reduce((total,tower)=>total+(catalog().find(def=>def.code===tower.code)?.population??1),0);
-    element('tower-capacity').textContent = `人口 ${population} / ${state.capacity}`;
+    element('tower-capacity').textContent = `人口 ${state.populationUsed} / ${state.capacity}`;
     const shortcut = element('research-button');
     shortcut.textContent = '装备';
     shortcut.title = '装备商店与背包';
@@ -548,7 +547,7 @@ function renderLoopCards() {
   const canBuy = packs.map(pack => game.canDraw(pack.tier));
   const rCards = cards.filter(card => catalog().find(tower=>tower.code===card.code)?.rarity==='common');
   loopExchangeCards = loopExchangeCards.filter(id => rCards.some(card=>card.id===id));
-  const signature = JSON.stringify([loopCardTab,loopCardSelection,loopExchangeCode,loopExchangeCards,cards,starter,ssrMisses,canBuy,paused,phase,capacity,populationUsed,wave>=25]);
+  const signature = JSON.stringify([loopCardTab,loopCardSelection,loopExchangeCode,loopExchangeCards,cards,starter,ssrMisses,canBuy,paused,phase,capacity,populationUsed,wave>=game.exchangeWave]);
   if (signature === loopCardsSignature) return;
   loopCardsSignature = signature;
 
@@ -556,7 +555,7 @@ function renderLoopCards() {
   panel.className = 'loop-card-panel';
   panel.setAttribute('data-panel',loopCardTab);
   const tabs = [['shop','卡铺'],['bag',`卡包 ${cards.length}`]];
-  if (wave >= 25) tabs.push(['exchange','换卡']);
+  if (wave >= game.exchangeWave) tabs.push(['exchange','换卡']);
   panel.append(panelTabs(tabs,loopCardTab,tab=>{loopCardTab=tab;loopCardSelection='';renderLoopCards();},'卡牌操作'));
 
   const contents = document.createElement('div');
@@ -606,11 +605,11 @@ function renderLoopCards() {
     if (selected) {
       const status = canBuy[packs.indexOf(selected)];
       const pity = selected.tier === 'SSR';
-      const guarantee = pity && ssrMisses >= 4;
+      const guarantee = pity && ssrMisses >= game.ssrGuarantee - 1;
       preview.hidden=false;
       detail.setAttribute('aria-label',`${selected.tier} 包 · ${selected.price} 金`);
       paragraph(detail,guarantee?'本包必出 SSR':Object.entries(selected.odds).filter(([,chance])=>Number(chance)>0).map(([tier,chance])=>`${tier} ${chance}%`).join('　'));
-      if (pity && !guarantee) paragraph(detail,`连续 ${ssrMisses??0} 包未出 SSR · 最多再 ${5-(ssrMisses??0)} 包`);
+      if (pity && !guarantee) paragraph(detail,`连续 ${ssrMisses??0} 包未出 SSR · 最多再 ${game.ssrGuarantee-(ssrMisses??0)} 包`);
       if (!status.ok) paragraph(detail,status.message);
       const buy=commandButton(`购买 ${selected.tier} 包`,()=>{
         const result=game.draw(selected.tier);
@@ -729,7 +728,7 @@ function loopCardDetails(code, compact = false) {
   title.textContent = tower?.name ?? code;
   if (!compact) loopPortrait(card,code,tower?.assetCode);
   card.append(title);
-  paragraph(card,`${loopTier[card.dataset.rarity]??'R'} · ${tower?.population??1} 人口`);
+  if (tower) paragraph(card,`${loopTier[tower.rarity]} · ${tower.population} 人口`);
   const credential = game.credentials?.[code];
   const qualifiesFor = Object.entries(game.credentials??{}).filter(([,item])=>item===code).map(([main])=>catalog().find(tower=>tower.code===main)?.name??main);
   if (credential) paragraph(card,`突破凭证 · ${catalog().find(tower=>tower.code===credential)?.name??credential}`);
@@ -1028,10 +1027,12 @@ function armEquipment(towerId,item,definition) {
 
 function updateCardLoopPanels(root, forecast, enemyInfo) {
   const { enemies,towers,elapsed,inventory,phase,paused } = game.state;
-  const lines = game.forecasts().map(next=>{
+  const waves = game.forecasts().sort((a,b)=>Number(b.boss)-Number(a.boss));
+  const lines = waves.map(next=>{
     const types = (next.types??[]).map(code=>game.enemyCatalog?.[code]?.name??code);
-    const boss = next.boss && Object.values(game.enemyCatalog??{}).find(item=>item.name===next.bossName);
-    return `第${next.wave}波 · ${next.count}只${next.elites?` · 精英 ${next.elites}`:''}${next.boss?` · 首领 ${next.bossName??'将出现'}`:''}${next.summonLimit?` · 最多额外召唤 ${next.summonLimit}只`:''}${types.length?`\n${types.join('、')}`:''}${boss?.description?`\n${boss.description}`:''}`;
+    const boss = game.enemyCatalog?.[next.bossCode];
+    const summary = `第${next.wave}波 · ${next.count}只${next.elites?` · 精英 ${next.elites}`:''}${boss?` · 首领 ${boss.name}`:''}${next.summonLimit?` · 最多额外召唤 ${next.summonLimit}只`:''}`;
+    return [summary,boss?.description,boss?.counter&&`应对 · ${boss.counter}`,types.join('、')].filter(Boolean).join('\n');
   });
   const forecastText = lines.join('\n') || (phase==='playing'?'最终波已投入':'对局结束');
   if (forecast.textContent!==forecastText) forecast.textContent=forecastText;
@@ -1390,7 +1391,7 @@ function updateMission() {
   const special = ['gem', 'hero', 'legion'].includes(state.mode);
   element('mission-button').hidden = !escort && !maze && !special && state.mode!=='loop';
   element('mission-button').textContent=state.mode==='loop'?'情报':'任务';
-  if(state.mode==='loop')element('mission-objective').textContent='看未来两波特性，安排破甲、破盾、控场与集火。';
+  element('mission-objective').hidden=state.mode==='loop';
   element('special-mission').hidden = !special;
   if (special) updateSpecialMission();
   element('escort-mission').hidden = !escort;

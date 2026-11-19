@@ -17,7 +17,7 @@ export const LOOP_TOWERS=Object.entries(CARD_ROWS).map(([code,[name,rarity,...da
  const [assetCode,role,damageType,damage,interval,range,...skills]=original
   ? [original.assetCode??code,baseStats[code][3],baseStats[code][4],...baseStats[code].slice(0,3),...data] : data;
  return {...original,code,name,rarity,assetCode,role,damageType,damage,interval,range,skills,
-  population:{common:1,rare:2,epic:3}[rarity],description:skills[0],
+  population:rarity==='common'?5:20,description:skills[0],
   kind:original?.kind??(role==='support'?'aura':'direct'),color:original?.color??(damageType==='physical'?'#ffe494':'#9bc9ff')};
 });
 export const LOOP_PRIORITIES={default:'默认职责',strongest:'最强目标',weakest:'最低生命',fastest:'最快目标',shield:'护盾优先',support:'支援优先',gold:'金币优先'};
@@ -94,26 +94,39 @@ export const CHALLENGES=[
 ].map(([code,wave,direction,item])=>({code:String(code),wave:Number(wave),direction:Number(direction),item:String(item),name:LOOP_ENEMIES[code].name,
  description:LOOP_ENEMIES[code].description,reward:LOOP_EQUIPMENT[item].name}));
 export const GOLD_RUSHES=[
- {wave:5,code:'G01',direction:[0],reward:45},{wave:15,code:'G02',direction:[1,1],reward:60},
- {wave:25,code:'G03',direction:[0,1,2],reward:75},{wave:35,code:'G04',direction:[3],reward:90},
- {wave:45,code:'G01',direction:[0],reward:100},
+ {wave:5,code:'G01',direction:[0],reward:120,bountyReduction:15},{wave:15,code:'G02',direction:[1,1],reward:180,bountyReduction:24},
+ {wave:25,code:'G03',direction:[0,1,2],reward:225,bountyReduction:30},{wave:35,code:'G04',direction:[3],reward:240,bountyReduction:30},
+ {wave:45,code:'G01',direction:[0],reward:250,bountyReduction:30},
 ];
+const bossEscorts={
+ 25:['X16','X10','E06'],30:['X15','X04','E08'],35:['X20','X13','E07'],
+ 40:['X02','X09','E09'],45:['X18','X07','E03'],50:['X05','X06','E04'],
+};
+const lateHealth=[.80,1.00,1.35];
 const lateWaves=[11,12,13,14,15,16,17,18,19,20,13,17,19,14,16,18,14,15,19,20,11,18,16,17,19,12,14,17,18,20];
 export const waveMultiplier=(wave,endless)=>endless
  ? 5.69*(1+.01*Math.max(0,wave-LOOP_CAMPAIGN_WAVES))
  : wave<=20 ? 1+.16*(wave-1) : 4.04+.055*(wave-20);
 export function loopWave(wave,endless=wave>LOOP_CAMPAIGN_WAVES,countOverride=null){
  const template=endless?11+Math.max(0,wave-51)%10:wave<=20?wave:lateWaves[wave-21];
- const pool=WAVE_ROWS['w'+template];
+ const pool=[...WAVE_ROWS['w'+template]];
  const bossOrder=[11,12,1,2,3,4,5,6,7,8,9,10];
  const bossIndex=endless?bossOrder[((wave/5-11)%12+12)%12]:wave/5;
  const bossCode=wave%5===0?'B'+String(bossIndex).padStart(2,'0'):null;
  const total=wave>20||endless?50-Number(!!bossCode):10+2*wave;
  const count=Math.max(0,countOverride??total);
+ const escorts=!endless&&bossEscorts[wave];
+ const reserved=escorts&&countOverride===null?12:0;
+ const baseCount=count-reserved;
  const weights=pool.map(([,n])=>Number(n)),weight=weights.reduce((a,b)=>a+b,0);
- const quotas=weights.map(n=>Math.floor(n*count/weight));
- const remainder=weights.map((n,i)=>({i,value:n*count%weight})).sort((a,b)=>b.value-a.value||a.i-b.i);
- for(const {i} of remainder.slice(0,count-quotas.reduce((a,b)=>a+b,0)))quotas[i]++;
+ const quotas=weights.map(n=>Math.floor(n*baseCount/weight));
+ const remainder=weights.map((n,i)=>({i,value:n*baseCount%weight})).sort((a,b)=>b.value-a.value||a.i-b.i);
+ for(const {i} of remainder.slice(0,baseCount-quotas.reduce((a,b)=>a+b,0)))quotas[i]++;
+ if(reserved) for(const [index,code] of escorts.entries()){
+  const quota=[6,4,2][index], existing=pool.findIndex(([kind])=>kind===code);
+  if(existing<0){pool.push([code,quota]);quotas.push(quota);}
+  else quotas[existing]+=quota;
+ }
  const entries=[];
  for(let remaining=count;remaining>0;){
   for(const [i,[code]] of pool.entries()){
@@ -127,7 +140,8 @@ export function loopWave(wave,endless=wave>LOOP_CAMPAIGN_WAVES,countOverride=nul
 }
 export function loopEnemy(entry,id,position,options={}){
  const base=LOOP_ENEMIES[entry.code],scale=entry.special==='gold'?1:waveMultiplier(entry.scaleWave??entry.wave,entry.endless);
- const maxHp=base.hp*scale*(options.enemyHealthScale??(entry.special?1:.60));
+ const growth=entry.special?1:entry.endless||entry.boss||entry.wave<=20?.60:lateHealth[Math.min(2,Math.floor((entry.wave-21)/10))];
+ const maxHp=base.hp*scale*(options.enemyHealthScale??growth);
  const shield=({X05:80}[entry.code]??0)*scale+({B02:maxHp*.12,G04:350}[entry.code]??0);
  const elite=entry.code.startsWith('E'),reward=entry.special||entry.summoned?0:entry.endless?1:Math.round((entry.bounty??base.reward)*(options.rewardScale??1));
  return {...base,...entry,...position,id,hp:maxHp,maxHp,shield,maxShield:shield,elite,reward,scale,
@@ -139,7 +153,8 @@ export function loopEnemy(entry,id,position,options={}){
 export function loopWaveInterval(wave,endless=false){return endless||wave>40?26:wave>25?28:wave>10?32:36;}
 
 export function assignWaveBounties(entries, wave) {
- const bounty = Math.min(180,45+3*(wave-1));
+ const reduction=GOLD_RUSHES.find(rush=>wave>rush.wave&&wave<=rush.wave+5)?.bountyReduction??0;
+ const bounty = Math.min(180,45+3*(wave-1))-reduction;
  const enemies = entries.filter(entry=>!entry.boss);
  const total = enemies.reduce((sum,entry)=>sum+LOOP_ENEMIES[entry.code].reward,0);
  const shares = enemies.map((entry,index)=>{
