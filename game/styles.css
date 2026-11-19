@@ -217,3 +217,95 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .hero-skill[data-icon]>span{grid-column:2}
 .card-draw::before{width:16px;height:16px}
 .card-draw strong{font-size:10px;line-height:1}
+
+/* Compact loop trays reuse the battlefield gutters and the original card-size touch targets. */
+.loop-card-panel,.equipment-panel{display:grid;gap:7px;min-width:0;align-content:start}
+.loop-card-content{display:grid;gap:7px;min-width:0}
+.loop-card-panel{min-width:min(210px,100%);width:100%}
+.loop-tabs{display:flex;gap:4px;min-width:0}
+.loop-tabs .button{margin:0;min-width:0;flex:1;min-height:44px;padding:4px 7px;white-space:nowrap;font-size:12px}
+.loop-tabs .button[aria-pressed=true]{color:var(--gold);border-color:#a8824e;background:#3c3422}
+.loop-card-content>.button{min-height:44px;justify-content:center;margin:0}
+.loop-card-content>.card-preview{max-height:38svh;overflow:auto}
+.loop-card-content .card-preview-actions .button:first-of-type{border-color:#a8824e}
+.loop-card-content select{min-width:0;width:100%;min-height:44px;color:var(--text);background:#1b3027;border:1px solid #76886c;border-radius:6px;padding:4px 6px}
+.equipment-choice.card-choice{min-width:44px;width:48px;height:48px}
+.equipment-choice[data-grade=white]{border-color:#aab4a9}
+.equipment-choice[data-grade=green]{border-color:#78ae84}
+.equipment-choice[data-grade=blue]{border-color:#70a3b8}
+.equipment-choice[data-grade=orange]{border-color:#da914d}
+.equipment-choice[data-grade=empty]{border-style:dashed;opacity:.82}
+.equipment-choice[data-cooldown]:not([data-cooldown="0"]) .equipment-glyph{filter:brightness(.55)}
+.equipment-choice .equipment-legend{position:absolute;left:2px;bottom:1px;z-index:1;margin:0;padding:2px 3px;border-radius:3px;background:#19271fe8;color:#f2e4c6;font-size:9px}
+.equipment-glyph{position:relative;display:inline-grid;place-items:center;width:34px;height:34px;flex:none;color:#d8b969}
+.equipment-choice .equipment-glyph{align-self:center;margin:0}
+.equipment-glyph::before{content:"";display:block;width:22px;height:22px;background:currentColor;mask:var(--ui-glyph) center/contain no-repeat;-webkit-mask:var(--ui-glyph) center/contain no-repeat}
+.equipment-art-loaded .equipment-glyph[data-sprite]{background-image:url("./assets/modes/loop/equipment.webp");background-repeat:no-repeat;background-size:600% 400%;background-position:var(--equipment-x) var(--equipment-y)}
+.equipment-art-loaded .equipment-glyph[data-sprite]::before{display:none}
+.equipment-recipe-line{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:6px 0}
+.equipment-recipe-part{display:grid;justify-items:center;align-content:start;gap:2px;padding:4px 1px;background:#254132;color:#e0e7d2;border:1px solid #527460;border-radius:4px;text-align:center;line-height:1.2}
+.equipment-recipe-part[data-missing=true]{border-style:dashed;background:#302920;color:#edd2a1}
+.equipment-detail{border-color:#64765a;min-width:0}
+.equipment-detail h4{margin:0;color:#f2dfb3}
+.equipment-detail .button{margin:3px 3px 0 0}
+.has-map-gutter>.command-drawer[data-view=equipment]{width:var(--map-side-space);max-height:calc(100% - 20px)}
+.has-map-gutter .loop-card-content>.card-preview{max-height:none}
+.equipment-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.equipment-actions .button{margin:0}
+.equipment-detail-copy{min-width:0}
+.command-drawer[data-view=equipment]{overflow-x:hidden}
+.command-drawer[data-view=equipment] .drawer-heading{padding-bottom:5px;margin-bottom:6px}
+@media (orientation:landscape) and (max-height:550px){
+  .has-map-gutter>.build-dock[data-mode=cards]{overflow:hidden}
+  .has-map-gutter #loop-cards,.has-map-gutter .loop-card-panel,.has-map-gutter .loop-card-content{min-height:0;display:flex;flex-direction:column}
+  .has-map-gutter .loop-card-content>.card-preview{overflow:hidden}
+  .has-map-gutter>.command-drawer[data-view=equipment]{display:flex;flex-direction:column;overflow:hidden}
+  .has-map-gutter>.command-drawer[data-view=equipment] .drawer-heading{flex:none}
+  .has-map-gutter #loop-equipment-shop{display:flex;flex:1;min-height:0;margin:0}
+  .has-map-gutter #loop-equipment-shop .equipment-panel{display:flex;flex-direction:column;min-height:0;min-width:0;width:100%}
+  .has-map-gutter #loop-equipment-shop .equipment-detail{display:flex;flex-direction:column;min-height:0;padding:6px}
+  .has-map-gutter #loop-equipment-shop .equipment-detail-copy{overflow:auto}
+  .has-map-gutter #loop-equipment-shop .equipment-actions,.has-map-gutter .loop-tabs,.has-map-gutter .card-choice-strip{flex:none}
+}
+.equipment-detail .gear-list-back{display:none}
+@media (orientation:landscape) and (max-height:550px){
+  .has-map-gutter>.build-dock[data-mode=cards][data-starter=unopened]>.build-toolbar{display:none}
+  .has-map-gutter .equipment-panel:has(.equipment-detail)>.card-choice-strip,
+  .has-map-gutter .equipment-panel:has(.equipment-detail)>.equipment-shelf-label{display:none}
+  .has-map-gutter .equipment-detail-copy{position:relative;padding-right:44px;min-height:44px}
+  .has-map-gutter .equipment-detail .gear-list-back{position:absolute;right:0;top:0;display:flex;width:44px;min-height:44px;justify-content:center;padding:0;font-size:0}
+  .has-map-gutter .equipment-detail .gear-list-back::before{font-size:14px}
+  .has-map-gutter .equipment-recipe-line{grid-template-columns:1fr}
+  .has-map-gutter .equipment-recipe-part{grid-template-columns:28px auto;align-items:center;justify-items:start;text-align:left}
+  .has-map-gutter .equipment-recipe-part .equipment-glyph{width:25px;height:25px}
+  .has-map-gutter .equipment-actions .button{font-size:12px;padding-inline:6px}
+}
+.command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail){display:flex;flex-direction:column;overflow:hidden}
+.command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) .drawer-heading{flex:none}
+#selection-panel:has(#tower-equipment:not([hidden]) .equipment-detail),
+#selection-panel:has(#tower-equipment:not([hidden]) .equipment-detail) :is(.selected-summary,#tower-panel,#tower-equipment,#loop-controls,.equipment-panel,.equipment-detail){
+  display:flex;flex:1;min-height:0;flex-direction:column
+}
+#tower-equipment .equipment-panel:has(.equipment-detail)>:is(.card-choice-strip,.equipment-shelf-label){display:none}
+#tower-equipment .equipment-detail{padding:6px}
+#tower-equipment .equipment-detail-copy{position:relative;min-height:0;overflow:auto;padding-right:44px}
+#tower-equipment .gear-list-back{position:absolute;right:0;top:0;display:flex;width:44px;min-height:44px;justify-content:center;padding:0;font-size:0}
+#tower-equipment .gear-list-back::before{font-size:14px}
+#tower-equipment .equipment-actions{flex:none}
+@media (orientation:landscape) and (max-height:550px){
+  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail){top:6px}
+  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) .drawer-heading{
+    position:absolute;top:7px;right:8px;margin:0;padding:0;border:0;background:none
+  }
+  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) #drawer-title{
+    position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)
+  }
+  .has-map-gutter #tower-panel:has(#tower-equipment:not([hidden]) .equipment-detail) #tower-title{
+    min-height:35px;padding-right:70px;display:flex;align-items:center;font-size:13px;line-height:1.25
+  }
+  .has-map-gutter .command-drawer[data-view=tower]:has(#tower-equipment:not([hidden]) .equipment-detail) #loop-skill-status{display:none}
+  .has-map-gutter #tower-equipment .equipment-actions[data-active]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .has-map-gutter #tower-equipment .equipment-actions[data-active] .button{padding-inline:3px;gap:3px;font-size:0}
+  .has-map-gutter #tower-equipment .equipment-actions[data-active] .button::before{width:12px;height:12px}
+  .has-map-gutter #tower-equipment .equipment-actions[data-active] .button::after{content:attr(data-compact-label);font-size:12px;white-space:nowrap}
+}

@@ -8,7 +8,7 @@ async function harness(loopFixture = null) {
   const nodes=new Map(), events={}; let document;
   const confirmation={answer:true,messages:[]};
   class Element {
-    constructor(tag='button') { this.tagName=tag.toUpperCase();this.hidden=true;this.style={setProperty(){}};this.dataset={};this.attrs={};this.events={};this.children=[];this.textContent='';this.classes=new Set();this.classList={toggle:(key,on)=>{if(on)this.classes.add(key);else this.classes.delete(key);}};this.isConnected=true;this.value=''; }
+    constructor(tag='button') { this.tagName=tag.toUpperCase();this.hidden=true;this.style={setProperty(){}};this.dataset={};this.attrs={};this.events={};this.children=[];this.textContent='';this.classes=new Set();this.classList={add:key=>this.classes.add(key),toggle:(key,on)=>{if(on)this.classes.add(key);else this.classes.delete(key);}};this.isConnected=true;this.value=''; }
     setAttribute(k,v){this.attrs[k]=v;} getAttribute(k){return this.attrs[k];}
     addEventListener(k,fn){this.events[k]=fn;} append(...nodes){this.children.push(...nodes);for(const node of nodes)node.parent=this;}
     replaceChildren(...nodes){this.children=[];this.append(...nodes);} contains(node){return this===node||this.children.some(child=>child.contains(node));}
@@ -27,53 +27,34 @@ async function harness(loopFixture = null) {
   const go=mode=>{ui.returnToMenu();click('mode-'+mode+'-button');click('start-button');};
   const descendants=parent=>parent.children.flatMap(child=>[child,...descendants(child)]);
   const buttons=(id='special-mission')=>descendants(node(id)).filter(el=>el.tagName==='BUTTON');
+  const panelButton=(id,match)=>{const button=buttons(id).find(match);assert.ok(button,'missing button in '+id);return button;};
   const command=label=>{const found=buttons().find(el=>el.textContent.includes(label));assert.ok(found,'missing command '+label);found.click();return found;};
   const key=(type,key)=>events[type]({key,preventDefault(){}});
-  return {ui,node,click,go,command,key,events,buttons,descendants,confirmation};
+  return {ui,node,click,go,command,key,events,buttons,panelButton,descendants,confirmation};
 }
 
-test('loop opening draft leads to a card in the bag and one confirmed deployment',async()=>{
- const loop=(await import('../engine.js')).createGame();
- Object.assign(loop.state,{cards:[],capacity:4,draft:{codes:['T01','T06','T13'],cost:0},inventory:[]});
- loop.catalog=loop.catalog.map(tower=>({...tower,population:1,rarity:'common',skills:['开局攻击','中期技能','终阶技能']}));
- loop.chooseCard=index=>{
-  const code=loop.state.draft.codes[index];
-  loop.state.cards.push({id:1,code,paid:0});
-  loop.state.draft=null;
-  return {ok:true,message:'已选留'};
- };
- loop.canDeploy=(id,x)=>({ok:id===1&&(x===undefined||x>0),message:x<0?'不能放在这里':''});
- loop.deploy=(id,x,y)=>{
-  const result=loop.canDeploy(id,x);
-  if(!result.ok)return result;
-  loop.state.cards=[];
-  loop.state.towers.push({id:7,code:'T01',x,y,level:1,xp:0,equipment:[],combatUntil:0});
-  return {...result,towerId:7};
- };
- const {ui,node,go,buttons,descendants}=await harness(loop);go('loop');
- assert.equal(node('build-dock').hidden,false,'open free draft immediately');
- assert.match(node('wave-label').textContent,/选择起手卡/);
+
+test('loop shop previews tiers, opens guaranteed starter and confirms a deployment once',async()=>{
+ const loop=(await import('../engine.js')).createGame({draftRandom:()=>0});
+ const {ui,node,go,panelButton,descendants}=await harness(loop);go('loop');
+ const cardButton=match=>panelButton('loop-cards',match);
+ assert.equal(node('build-dock').hidden,false);
+ assert.match(node('wave-label').textContent,/开启起手 SR/);
+ assert.match(node('wave-value').textContent,/0 \/ 50/);
  assert.equal(node('research-button').textContent,'装备');
- const choices=buttons('loop-cards').filter(b=>b.dataset.group==='draft');
- const draftNames=loop.state.draft.codes.map(code=>loop.catalog.find(def=>def.code===code).name);
- assert.equal(choices.length,3);
- assert.equal(buttons('loop-cards').some(b=>b.textContent.includes('选留')),false);
- choices[1].click();
- assert.equal(choices[1].getAttribute('aria-pressed'),'true');
- const detail=()=>node('loop-cards').children.find(child=>child.id==='loop-card-preview');
- assert.equal(detail().children.length,2);
- assert.equal(detail().children[0].children[0].textContent,draftNames[1]);
- assert.ok(descendants(detail()).some(node=>node.className==='skill-icon'&&node.dataset.icon));
- choices[0].click();
- assert.equal(choices[1].getAttribute('aria-pressed'),'false');
- assert.equal(choices[0].getAttribute('aria-pressed'),'true');
- assert.equal(detail().children[0].children[0].textContent,draftNames[0]);
- const keep=buttons('loop-cards').find(b=>b.textContent.includes('选留'));
- assert.equal(keep.dataset.icon,'bag');
- keep.click();
- assert.equal(detail().hidden,true);
- buttons('loop-cards').find(b=>b.dataset.group==='bag').click();
- buttons('loop-cards').find(b=>b.textContent==='部署').click();
+ cardButton(button=>button.dataset.choice==='SSR').click();
+ const preview=()=>descendants(node('loop-cards')).find(child=>child.id==='loop-card-preview');
+ assert.ok(descendants(preview()).some(node=>node.textContent.includes('SSR 25%')));
+ assert.equal(cardButton(button=>button.textContent==='购买 SSR 包').disabled,true);
+ assert.ok(descendants(preview()).some(node=>node.textContent.includes('最多再 5 包')));
+ cardButton(button=>button.textContent==='开启免费 SR 起手卡').click();
+ const [starter]=loop.state.cards;
+ assert.equal(loop.state.starter,'held');
+ assert.equal(loop.catalog.find(tower=>tower.code===starter.code).rarity,'rare');
+ assert.match(node('wave-label').textContent,/部署起手 SR/);
+ assert.ok(descendants(preview()).some(node=>node.className==='skill-icon'&&node.dataset.icon));
+ assert.equal(cardButton(button=>button.textContent.startsWith('售卡')).disabled,true);
+ cardButton(button=>button.textContent==='部署').click();
  ui.activatePoint({x:-1,y:140});
  assert.equal(ui.placement.ok,false);
  assert.equal(loop.state.cards.length,1);
@@ -81,52 +62,107 @@ test('loop opening draft leads to a card in the bag and one confirmed deployment
  assert.equal(ui.placement,null);
  assert.equal(loop.state.cards.length,0);
  assert.equal(loop.state.towers.length,1);
+ assert.match(node('wave-label').textContent,/备战 30s/);
  ui.activatePoint({x:190,y:140});
  assert.equal(node('tower-properties').hidden,true);
  node('tower-properties-button').click();assert.equal(node('tower-properties').hidden,false);
  node('tower-skills-button').click();assert.equal(node('tower-properties').hidden,true);assert.equal(node('tower-skills').hidden,false);
- ui.activatePoint({x:220,y:140});
- assert.equal(loop.state.towers.length,1);
 });
 
-test('loop equipment controls expose three slots and reject in-combat removal before allowing it after five seconds',async()=>{
- const loop=(await import('../engine.js')).createGame();
- Object.assign(loop.state,{cards:[],capacity:4,draft:null,inventory:[{id:8,code:'core'},{id:9,code:'gear'}]});
- loop.chooseCard=()=>({ok:false});
- loop.equipment={
-  core:{name:'增幅核心',cost:80,description:'伤害 +10%'},
-  gear:{name:'调速齿轮',cost:80,description:'攻击频率 +10%'},
-  scatter:{name:'散射火控',cost:60,description:'多目标 +1',components:['core','gear']},
- };
- const tower={id:7,code:'T01',x:190,y:140,level:3,xp:39,equipment:[],combatUntil:5};
- loop.catalog=loop.catalog.map(def=>({...def,population:1,rarity:'common',skills:['开局攻击','中期技能','终阶技能']}));
- loop.state.towers.push(tower);
- loop.equip=(towerId,itemId)=>{
-  assert.equal(towerId,7);
-  tower.equipment.push(...loop.state.inventory.filter(item=>item.id===itemId));
-  loop.state.inventory=loop.state.inventory.filter(item=>item.id!==itemId);
-  return {ok:true};
- };
- loop.unequip=(towerId,itemId)=>{
-  assert.equal(towerId,7);
-  loop.state.inventory.push(...tower.equipment.filter(item=>item.id===itemId));
-  tower.equipment=tower.equipment.filter(item=>item.id!==itemId);
-  return {ok:true};
- };
- const {ui,node,go,click,buttons}=await harness(loop);go('loop');
+test('loop equipment storefront, recipe and six slots remain usable through detachment cooldown',async()=>{
+ const loop=(await import('../engine.js')).createGame({draftRandom:()=>0,startingGold:800});
+ const {ui,node,go,click,panelButton,buttons,descendants}=await harness(loop);go('loop');
+ const shopButton=match=>panelButton('loop-equipment-shop',match);
+ const slotButton=match=>panelButton('loop-controls',match);
+ loop.openStarter();
+ const {towerId}=loop.deploy(loop.state.cards[0].id,190,140);
+ const tower=loop.state.towers.find(t=>t.id===towerId);
+ Object.assign(tower,{level:3,xp:59,combatUntil:5});
+ loop.state.wave=3;
  click('research-button');
  assert.equal(node('research-panel').hidden,true);
  assert.equal(node('loop-equipment-shop').hidden,false);
- assert.ok(buttons('loop-equipment-shop').some(button=>button.textContent.includes('合成散射火控')));
+ for(const code of ['crystal','lens']){
+  shopButton(button=>button.dataset.choice===code).click();
+  shopButton(button=>button.textContent.startsWith('购买')).click();
+ }
+ shopButton(button=>button.dataset.tab==='recipes').click();
+ shopButton(button=>button.dataset.choice==='focus').click();
+ const materials=descendants(node('loop-equipment-shop')).filter(node=>node.className==='equipment-recipe-part');
+ assert.equal(materials.filter(node=>node.dataset.missing==='false').length,2);
+ shopButton(button=>button.textContent.includes('买卷轴')).click();
+ shopButton(button=>button.textContent==='合成装备').click();
+ assert.equal(loop.state.inventory.length,1);
+ assert.equal(loop.state.inventory[0].code,'focus');
  click('close-drawer-button');
  ui.activatePoint({x:190,y:140});
- assert.match(node('loop-skill-status').textContent,/39.*70.*脱战.*5/);
- buttons('loop-controls').find(button=>button.textContent.includes('装配增幅核心')).click();
- assert.equal(tower.equipment[0].id,8);
- assert.equal(buttons('loop-controls').find(button=>button.textContent.includes('卸下增幅核心')).disabled,true);
+ assert.match(node('loop-skill-status').textContent,/59.*160.*脱战.*5/);
+ click('tower-equipment-button');
+ assert.equal(buttons('loop-controls').filter(button=>button.dataset.slot).length,6);
+ slotButton(button=>button.dataset.choice===`inventory:${loop.state.inventory[0].id}`).click();
+ slotButton(button=>button.textContent==='装配导能机芯').click();
+ assert.equal(tower.equipment[0].code,'focus');
+ slotButton(button=>button.dataset.choice===`slot:${tower.equipment[0].id}`).click();
+ assert.equal(slotButton(button=>button.textContent==='卸下导能机芯').disabled,true);
  loop.state.elapsed=5;ui.updateUI();
- buttons('loop-controls').find(button=>button.textContent.includes('卸下增幅核心')).click();
+ slotButton(button=>button.textContent==='卸下导能机芯').click();
  assert.equal(tower.equipment.length,0);
+});
+
+test('loop SSR opening and R exchange remain visible through their tabs',async()=>{
+ const loop=(await import('../engine.js')).createGame({draftRandom:()=>0,startingGold:900});
+ const {ui,node,go,panelButton,descendants}=await harness(loop);go('loop');
+ const cardButton=match=>panelButton('loop-cards',match);
+ loop.state.ssrMisses=4;ui.updateUI();
+ cardButton(button=>button.dataset.choice==='SSR').click();
+ assert.ok(descendants(node('loop-cards')).some(node=>node.textContent.includes('本包必出 SSR')));
+ cardButton(button=>button.textContent==='购买 SSR 包').click();
+ assert.equal(loop.state.ssrMisses,0);
+ assert.equal(loop.catalog.find(tower=>tower.code===loop.state.cards[0].code).rarity,'epic');
+ loop.state.wave=25;
+ for(let id=100;id<105;id++)loop.state.cards.push({id,code:'T01',paid:true,refund:30});
+ ui.updateUI();cardButton(button=>button.dataset.tab==='exchange').click();
+ for(let id=100;id<105;id++)cardButton(button=>button.dataset.choice===String(id)).click();
+ cardButton(button=>button.textContent==='兑换指定 R').click();
+ assert.equal(loop.state.cards.length,2);
+ assert.equal(loop.state.cards.at(-1).refund,0);
+ assert.equal(loop.state.cards.at(-1).code,'T01');
+ assert.equal(node('build-dock').hidden,false);
+});
+
+test('loop tower controls activate a credential and keep targeting after an invalid gear cast',async()=>{
+ const loop=(await import('../engine.js')).createGame({draftRandom:()=>0,startingGold:800,enemySpeedScale:0,enemyHealthScale:100});
+ const {ui,node,go,click,panelButton}=await harness(loop);go('loop');
+ const slots=match=>panelButton('loop-controls',match);
+ loop.openStarter();
+ const main=loop.deploy(loop.state.cards[0].id,500,300);
+ assert.ok(main.ok);
+ const tower=loop.state.towers.find(item=>item.id===main.towerId);
+ loop.state.cards.push({id:102,code:loop.credentials[tower.code],paid:true,refund:30});
+ const support=loop.deploy(102,190,140);
+ assert.ok(support.ok);
+ for(const unit of loop.state.towers)unit.level=5;
+ loop.state.inventory.push({id:103,code:'furnace',invested:665,readyAt:0,manual:false});
+ ui.activatePoint({x:500,y:300});click('tower-management-button');
+ panelButton('loop-targeting',button=>button.textContent.startsWith('突破')).click();
+ assert.equal(tower.awakened,true);
+ assert.equal(loop.state.towers.find(t=>t.id===support.towerId).qualifiedUsed,true);
+ click('tower-equipment-button');
+ slots(button=>button.dataset.choice==='inventory:103').click();
+ slots(button=>button.textContent.startsWith('装配')).click();
+ slots(button=>button.dataset.choice==='slot:103').click();
+ slots(button=>button.textContent==='切换为手动').click();
+ assert.equal(tower.equipment[0].manual,true);
+ slots(button=>button.textContent==='施放装备技').click();
+ assert.equal(node('focus-button').textContent,'取消施放');
+ ui.activatePoint({x:0,y:0});
+ assert.equal(ui.placement.ok,false);
+ assert.equal(tower.equipment[0].readyAt,0);
+ loop.launchWave();loop.tick(.05);
+ const {x,y}=loop.state.enemies[0];
+ ui.activatePoint({x,y});
+ assert.ok(tower.equipment[0].readyAt>loop.state.elapsed);
+ assert.equal(node('focus-button').textContent,'卡牌');
 });
 
 test('loop encyclopedia lists every tower and enemy family before drawing any card',async()=>{
@@ -290,7 +326,7 @@ test('research and tower upgrade buttons contain live progress without a separat
 
 test('loop intelligence shows challenge eligibility and gold scoring without counting gold targets as pressure',async()=>{
  const {ui,go,click,node,buttons}=await harness();go('loop');const g=ui.game;
- g.state.wave=3;click('more-button');click('mission-button');
+ g.state.starter='deployed';g.state.wave=3;click('more-button');click('mission-button');
  assert.match(node('loop-forecast').textContent,/第4波.*18只/);
  assert.match(node('loop-forecast').textContent,/破阵山魈/);
  const challenge=buttons('loop-challenges').find(button=>button.textContent==='开启硬壳犀');
@@ -308,16 +344,16 @@ test('loop intelligence shows challenge eligibility and gold scoring without cou
 });
 
 test('loop support details show actual aura percentages and reduced endless income',async()=>{
- const {ui,go,click,node,buttons}=await harness();go('loop');const g=ui.game;
- g.state.draft=null;
- g.state.cards=[{id:101,code:'T09',paid:true},{id:102,code:'T11',paid:true}];
- ui.updateUI();
+ const {ui,go,click,node,buttons,panelButton}=await harness();go('loop');const g=ui.game;
+ g.state.starter='deployed';
+ g.state.cards=[{id:101,code:'T09',paid:true,refund:75},{id:102,code:'T11',paid:true,refund:30}];
+ ui.updateUI();panelButton('loop-cards',button=>button.dataset.tab==='bag').click();
  buttons('loop-cards').find(b=>b.dataset.group==='bag').click();
  buttons('loop-cards').find(b=>b.textContent==='部署').click();ui.activatePoint({x:190,y:140});
  const text=()=>node('tower-stats').children.map(n=>n.textContent).join(' ');
  assert.doesNotMatch(text(),/NaN|undefined/);assert.match(text(),/12%/);
  click('focus-button');buttons('loop-cards').find(b=>b.dataset.group==='bag').click();buttons('loop-cards').find(b=>b.textContent==='部署').click();ui.activatePoint({x:390,y:140});
- assert.match(text(),/每 8 秒 \+12/);
+ assert.match(text(),/每 18 秒 \+3/);
  g.state.endless=true;ui.updateUI();assert.match(text(),/每 20 秒 \+1/);
 });
 
@@ -333,11 +369,23 @@ test('compact menu switches secondary panels and shows live research progress',a
 });
 
 test('quiet HUD keeps automatic wave timing and one-tap placement cancellation visible',async()=>{
- const {node,go,click,ui,buttons}=await harness();go('loop');
- buttons('loop-cards').find(b=>b.dataset.group==='draft').click();
- buttons('loop-cards').find(b=>b.textContent.includes('选留')).click();
+ const {node,go,click,ui,panelButton}=await harness();go('loop');
+ const cardButton=match=>panelButton('loop-cards',match);
+ cardButton(button=>button.textContent==='开启免费 SR 起手卡').click();
+ assert.match(node('wave-label').textContent,/部署起手 SR/);
+ cardButton(button=>button.textContent==='部署').click();
+ assert.equal(node('focus-button').textContent,'取消放置');
+ const gold=ui.game.state.gold;
+ click('focus-button');
+ assert.equal(node('focus-button').textContent,'卡牌');
+ assert.equal(ui.game.state.gold,gold);
+ assert.equal(ui.game.state.towers.length,0);
+ assert.equal(ui.game.state.cards.length,1);
+ ui.game.tick(30);ui.updateUI();assert.match(node('wave-label').textContent,/部署起手 SR/);
+ click('focus-button');
+ cardButton(button=>button.dataset.group==='bag').click();
+ cardButton(button=>button.textContent==='部署').click();
+ ui.activatePoint({x:190,y:140});
  assert.match(node('wave-label').textContent,/备战 30s/);
- buttons('loop-cards').find(b=>b.dataset.group==='bag').click();buttons('loop-cards').find(b=>b.textContent==='部署').click();assert.equal(node('focus-button').textContent,'取消放置');
- const gold=ui.game.state.gold;click('focus-button');assert.equal(node('focus-button').textContent,'卡牌');assert.equal(ui.game.state.gold,gold);assert.equal(ui.game.state.towers.length,0);assert.equal(ui.game.state.cards.length,1);
- ui.game.tick(30);ui.updateUI();assert.match(node('wave-label').textContent,/下波 40s/);
+ ui.game.tick(30);ui.updateUI();assert.match(node('wave-label').textContent,/下波 36s/);
 });

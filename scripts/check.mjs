@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {OBJECTIVE_FRAMES,HERO_ROW_BOUNDS} from '../game/special-render.js';
+import {LOOP_EQUIPMENT} from '../game/loop-equipment.js';
 import {readFile, readdir, stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {inflateSync} from 'node:zlib';
@@ -11,6 +12,18 @@ import {DEFENSE_LANES, DEFENSE_ROAD_SEGMENTS, DEFENSE_PLAZA, defensePlacementSta
 import {SLOTS as V2_SLOTS, LOOP_LENGTH as V2_LENGTH, pointOnLoop as v2Point} from '../game/assets/maps/v2/source/layout-geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFile(resolve(root, file));
+const equipmentAtlas = await read('game/assets/modes/loop/equipment.webp');
+assert.equal(equipmentAtlas.toString('ascii',8,12),'WEBP','装备图集必须是 WebP');
+assert.equal(equipmentAtlas.toString('ascii',12,16),'VP8L','装备图集必须使用无损编码');
+const atlasHeader=equipmentAtlas.readUInt32LE(21);
+assert.deepEqual([(atlasHeader&0x3fff)+1,((atlasHeader>>>14)&0x3fff)+1,(atlasHeader>>>28)&1],[576,384,1]);
+assert.deepEqual(Object.values(LOOP_EQUIPMENT).map(item=>item.icon).sort((a,b)=>a-b),Array.from({length:23},(_,i)=>i));
+for(const code of Object.keys(LOOP_EQUIPMENT)) {
+ const icon=await read(`game/assets/modes/loop/equipment-source/${code}.png`);
+ assert.equal(icon.readUInt32BE(16),96);
+ assert.equal(icon.readUInt32BE(20),96);
+ assert.equal(icon[25],6,'装备母版必须有透明通道');
+}
 async function files(directory) {
   const result = [];
   for (const entry of await readdir(resolve(root, directory), {withFileTypes:true})) {

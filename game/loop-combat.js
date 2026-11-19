@@ -1,5 +1,7 @@
-import {loopStats, loopTower, nearbyAttackers} from './loop-catalog.js';
+import {loopStats, loopTower, nearbyAttackers, gearBonus} from './loop-catalog.js';
 import {createEnemyEffects} from './loop-enemy-effects.js';
+import {LOOP_EQUIPMENT} from './loop-equipment.js';
+import {WORLD} from './geometry.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const clickOrder=(a,b)=>b.progress-a.progress||a.id-b.id;
@@ -63,6 +65,7 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   if(e.hp<=0||amount<=0||state.phase!=='playing')return;
   const opts={direct:true,...options},s=opts.stats;
   engage(t);
+  if(t?.code==='T31')amount*=1+gearBonus(t,type);
   const exposed=e.statuses.filter(x=>(x.kind==='vulnerable'||x.kind==='shieldExpose'&&e.shield>0)&&x.until>state.elapsed).sort((a,b)=>b.value-a.value||a.source-b.source)[0];
   if(exposed)engage(state.towers.find(tower=>tower.id===exposed.source));
   if(e.boss&&opts.direct)amount*=1+(opts.bossBonus??s?.bossBonus??0);
@@ -79,7 +82,8 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
    const source=e.statuses.filter(x=>x.kind==='magicBreak'&&x.until>state.elapsed).sort((a,b)=>b.value-a.value||a.source-b.source)[0];
    engage(state.towers.find(tower=>tower.id===source.source));
   }
-  amount*=1-Math.max(0,enemyEffects.defense(e,type)-(opts.pierce??0));
+  const pierce=Math.max(opts.pierce??0,t&&opts.direct&&type==='physical'?gearBonus(t,'pierce'):0);
+  amount*=1-Math.max(0,enemyEffects.defense(e,type)-pierce);
   amount=enemyEffects.amountAfterArmor(e,amount,type,t,opts);
   const oldShield=e.shield,shieldMultiplier=opts.shieldMultiplier??1;
   const shieldPart=Math.min(amount,e.shield/shieldMultiplier);
@@ -278,6 +282,10 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
    const keep=level>=5&&t.cycles%4===0;
    zone(t,primary,{duration:keep?3:2,interval:.5,kind:'heat',limit:level>=3?6:4,radius:level>=3?60:46,damage:s.damage*.35,keep},s);
   }
+  if(gearBonus(t,'embers')&&t.cycles%3===0){
+   pulse(primary,55,'fire');
+   for(const e of area(primary,55,4))doHit(e,s.damage*.30,'magic',{secondary:true,noPropagation:true});
+  }
   if(code==='T32'&&level>=3)for(const e of cone(t,t.angle+Math.PI,sectorDegrees(t),ranked,wideCycle(t)?5:3))doHit(e,s.damage*.65*multiplier);
   if(level<5)return;
   if(code==='T01'&&t.streak%6===0){link(t,primary,'projectile');doHit(primary,s.damage*.6,type,{secondary:true,pierce:1});}
@@ -305,9 +313,10 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   if(code==='T35'&&t.cycles%5===0&&primary.hp/primary.maxHp<.2){link(t,primary,'suppress');doHit(primary,s.damage*.7,type,{secondary:true});effect(primary,'suppress',.45,3,t.id);}
  }
  function pay(t,requested){
-  const amount=state.endless?Math.min(requested,Math.max(0,Math.floor(state.endlessKills/10)-state.endlessSupply)):requested;
+  const remaining=state.endless?Math.floor(state.endlessKills/10)-state.endlessSupply:Math.floor(state.regularKillGold*.12)-state.regularSupply;
+  const amount=Math.min(requested,Math.max(0,remaining));
   if(!amount)return;
-  changeGold(amount,'supply');if(state.endless)state.endlessSupply+=amount;
+  changeGold(amount,'supply');if(state.endless)state.endlessSupply+=amount;else state.regularSupply+=amount;
   emit({type:'income',x:t.x,y:t.y,amount,color:'#ffe494'});
  }
  function due(t,key,period,dt){
@@ -317,9 +326,9 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
  }
  function support(t,s,dt){
   if(t.code==='T11'){
-   if((state.endless||state.goldRush)&&!alive().some(e=>e.special!=='gold'))return;
+   if(!state.enemies.some(e=>e.hp>0&&!e.special))return;
    if(due(t,'incomeIn',s.supplyInterval,dt))pay(t,s.supplyIncome);
-   if(t.level>=5&&due(t,'dividendIn',state.endless?60:40,dt))pay(t,state.endless?1:30);
+   if(t.level>=5&&due(t,'dividendIn',60,dt))pay(t,state.endless?1:10);
   }
   const strongest=()=>area(t,s.range,Infinity,e=>!e.hidden&&e.special!=='gold').sort((a,b)=>(b.hp+b.shield)-(a.hp+a.shield)||a.id-b.id);
   if(t.code==='T09'&&t.level>=3&&due(t,'markIn',2*(1-s.gearPeriod),dt)){
@@ -367,6 +376,43 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   }
   state.regions=state.regions.filter(z=>z.nextAt<=z.until+1e-9);
  }
+ function equipmentTarget(tower,item,x=undefined,y=undefined,stats=loopStats(tower,state)){
+  const active=LOOP_EQUIPMENT[item.code]?.active;
+  if(!active||tower.silenceUntil>state.elapsed||item.readyAt>state.elapsed)return null;
+  if(active.kind==='rally'){
+   const allies=nearbyAttackers(state,tower,stats.range,4);
+   if(!allies.length||!item.manual&&allies.filter(ally=>ally.combatUntil>state.elapsed).length<2)return null;
+   return {center:tower,allies};
+  }
+  const aimed=x!==undefined||y!==undefined;
+  if(aimed&&(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>WORLD.width||y>WORLD.height||distance(tower,{x,y})>stats.range))return null;
+  const ranked=rank(tower,stats);
+  if(active.kind==='lance'){
+   const enemy=aimed?nearest({x,y},ranked.filter(enemy=>distance(enemy,{x,y})<=28))[0]
+    :ranked.find(enemy=>enemy.boss&&enemy.special!=='gold')??ranked.find(enemy=>enemy.special==='gold');
+   return enemy?{center:enemy,enemies:[enemy]}:null;
+  }
+  if(aimed){
+   const enemies=area({x,y},90,6);
+   return enemies.length?{center:{x,y},enemies}:null;
+  }
+  const center=ranked.find(enemy=>enemy.boss||area(enemy,90,4).length>=4);
+  return center?{center,enemies:area(center,90,6)}:null;
+ }
+ function useEquipment(tower,item,target,stats=loopStats(tower,state)){
+  const {kind,cooldown}=LOOP_EQUIPMENT[item.code].active;
+  item.readyAt=state.elapsed+cooldown;
+  engage(tower);
+  if(kind==='lance')link(tower,target.center,'beam');
+  else pulse(target.center,kind==='rally'?stats.range:90,kind==='slow'?'water':kind==='rally'?'charge':'fire');
+  if(kind==='rally')for(const ally of target.allies)ally.rallyUntil=state.elapsed+5;
+  for(const enemy of target.enemies??[]){
+   if(kind==='slow')slow(enemy,.35,3,tower,stats);
+   else hurt(enemy,stats.damage*(kind==='lance'?1.5:.9),kind==='fire'?'magic':stats.damageType??(tower.cycles%2?'physical':'magic'),tower,
+    {stats,secondary:true,noPropagation:true,pierce:kind==='lance'?.30:0});
+  }
+  flushExperience();
+ }
  function step(dt){
   state.dust=state.dust.filter(z=>z.until>state.elapsed);
   for(const t of state.towers){
@@ -375,16 +421,21 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   }
   statusStep(dt);
   const supplies=state.towers.filter(t=>t.code==='T11');
-  const granted=state.endlessSupply;
+  const granted=state.endlessSupply+state.regularSupply;
   for(let i=0;i<supplies.length;i++){
    const tower=supplies[(state.supplyCursor+i)%supplies.length];
    support(tower,loopStats(tower,state),dt);
   }
-  if(supplies.length&&state.endlessSupply!==granted)state.supplyCursor=(state.supplyCursor+1)%supplies.length;
+  if(supplies.length&&state.endlessSupply+state.regularSupply!==granted)state.supplyCursor=(state.supplyCursor+1)%supplies.length;
   for(const t of state.towers){
    if(state.phase!=='playing')break;
    if(t.code==='T11')continue;
    const s=loopStats(t,state);
+   for(const item of t.equipment??[]){
+    if(item.manual||!LOOP_EQUIPMENT[item.code]?.active||item.readyAt>state.elapsed)continue;
+    const target=equipmentTarget(t,item,undefined,undefined,s);
+    if(target)useEquipment(t,item,target,s);
+   }
    if(s.role==='support'){support(t,s,dt);continue;}
    t.cooldown=Math.max(0,(t.cooldown??0)-dt);
    if(t.code!=='T33'&&(t.cooldown>1e-9||t.silenceUntil>state.elapsed))continue;
@@ -401,5 +452,5 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   }
   state.enemies=alive();
  }
- return {step,strength,junction:enemyEffects.junction};
+ return {step,strength,equipmentTarget,useEquipment,junction:enemyEffects.junction};
 }
