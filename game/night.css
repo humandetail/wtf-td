@@ -1,0 +1,519 @@
+:root {
+  --bg: #0d1020;
+  --panel-deep: #14182b;
+  --panel: #1b2038;
+  --surface-raised: #242b48;
+  --line: #39425f;
+  --frame-rim: #9e7852;
+  --text: #f3ecdf;
+  --muted: #b3bbcf;
+  --jade: #aebcf0;
+  --gold: #efbe79;
+  --gold-ink: #24182a;
+  --danger: #ff997d;
+  --title-face: "Songti SC", "Noto Serif CJK SC", "SimSun", serif;
+  --number-face: "SFMono-Regular", Consolas, monospace;
+}
+
+.seal-glyph {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 2rem;
+  aspect-ratio: 1;
+  color: var(--gold);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.seal-glyph::before,
+.seal-glyph::after {
+  position: absolute;
+  content: "";
+}
+.seal-glyph::before {
+  inset: 18%;
+  border: 1px solid currentColor;
+  border-radius: inherit;
+  opacity: .6;
+}
+.seal-glyph::after {
+  inset: 41%;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+
+.title-screen {
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  padding: 72px clamp(52px, 9.5vw, 156px) 84px;
+}
+.title-art {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  background: var(--bg) url("./assets/title/night-citadel.webp") 65% 10% / cover no-repeat;
+}
+.title-screen::before,
+.title-screen::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+.title-screen::before {
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(0deg, #0d1020ee 0%, transparent 28%, transparent 83%, #0d1020a0),
+    linear-gradient(90deg, #0d1020 0%, #0d1020f0 16%, #0d1020d9 31%, #0d102055 52%, transparent 70%);
+}
+.title-screen::after {
+  inset: 24px;
+  border: 1px solid #d7ba8d35;
+}
+.title-copy {
+  display: grid;
+  justify-items: start;
+  width: min(100%, 430px);
+}
+.title-kicker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--gold);
+  letter-spacing: .18em;
+  font-size: .875rem;
+}
+.title-kicker .seal-glyph { width: 25px }
+#menu-title {
+  margin: 22px 0 17px -.065em;
+  color: #fff0d3;
+  font: 800 clamp(108px, 13.8vw, 208px)/.96 var(--title-face);
+  letter-spacing: .03em;
+  white-space: nowrap;
+  text-shadow: 0 9px 35px #0909169c;
+  animation: title-appear .42s ease-out both;
+}
+#menu-title span { color: var(--gold) }
+.title-description {
+  max-width: 23em;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.title-rules {
+  display: flex;
+  gap: 30px;
+  margin: 28px 0;
+  padding-top: 16px;
+  border-block-start: 1px solid #d6b57c55;
+}
+.title-rules div + div {
+  padding-inline-start: 30px;
+  border-inline-start: 1px solid #d6b57c40;
+}
+.title-rules dt {
+  color: var(--muted);
+  font-size: .75rem;
+}
+.title-rules dd {
+  margin: 1px 0 0;
+  color: var(--text);
+  font: 500 1.75rem/1.15 var(--number-face);
+}
+.title-rules small {
+  color: var(--gold);
+  font: 500 .75rem system-ui, sans-serif;
+}
+.title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.title-actions .button { min-height: 38px; padding-block: 4px }
+#start-button {
+  min-width: 140px;
+  min-height: 42px;
+  padding-inline: 16px;
+}
+.title-footer {
+  position: absolute;
+  inset: auto 0 34px;
+  padding-inline: clamp(52px, 9.5vw, 156px);
+  color: var(--muted);
+  font-size: .75rem;
+}
+
+.button {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--line);
+  border-radius: 5px;
+}
+.button:hover:not(:disabled) {
+  background: var(--surface-raised);
+  border-color: var(--jade);
+}
+.button.primary,
+.end-actions #endless-button {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, #ffdf9e, #d99657);
+  color: var(--gold-ink);
+}
+.button.primary:hover:not(:disabled),
+.end-actions #endless-button:hover:not(:disabled) {
+  border-color: #ffe7b2;
+  background: #ffe0a0;
+}
+.button.quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.button.quiet:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+@keyframes title-appear {
+  from { opacity: 0; translate: 0 8px }
+  to { opacity: 1; translate: 0 0 }
+}
+
+.game-screen.loop-console .status-bar {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) minmax(195px, 308px) minmax(220px, 1fr);
+  gap: 16px;
+  min-height: 54px;
+  padding: 5px 12px 7px;
+  background: linear-gradient(180deg, #161a30, var(--bg));
+  border-block-end: 1px solid var(--line);
+}
+.status-bar .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+}
+.status-bar .wordmark .wordmark-name {
+  display: block;
+  font: 700 1.5rem/1 var(--title-face);
+  white-space: nowrap;
+}
+.status-bar .seal-glyph { width: 27px }
+.status-bar .campaign-status,
+:root.touch-layout .status-bar .campaign-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: baseline;
+  margin: 0;
+}
+.status-bar .resource strong,
+.pressure-label strong,
+.end-stats strong {
+  font-family: var(--number-face);
+  font-weight: 600;
+}
+.campaign-rail {
+  grid-column: 1 / -1;
+  height: 5px;
+  background:
+    repeating-linear-gradient(to right, transparent 0 calc(10% - 2px), var(--bg) calc(10% - 2px) 10%),
+    linear-gradient(to right, var(--gold) var(--campaign-progress, 0%), var(--line) 0);
+  border-radius: 1px;
+}
+.status-economy {
+  display: flex;
+  justify-content: end;
+  align-items: baseline;
+  gap: clamp(16px, 3vw, 40px);
+}
+.status-bar .pressure-status {
+  min-width: 118px;
+  max-width: none;
+  flex: 0 1 155px;
+}
+.status-bar .pressure-label { justify-content: space-between }
+.status-bar .pressure-track {
+  height: 4px;
+  background: var(--line);
+}
+.pressure-fill {
+  background: #8da4e3;
+  transition: width .18s ease-out, background .18s ease-out;
+}
+.pressure-fill.warning { background: #edb668 }
+.pressure-fill.danger { background: var(--danger) }
+.pressure-status:has(.danger) #enemy-value { color: var(--danger) }
+
+.game-screen.loop-console .map-frame {
+  border-color: var(--line);
+  border-radius: 3px;
+  background: radial-gradient(ellipse at 50% 48%, #242947, #101425 76%);
+}
+.game-screen.loop-console .map-frame:not(.has-loop-3d) {
+  background:
+    linear-gradient(90deg, #151a2be8, #101425e8),
+    var(--bg) url("./assets/title/night-citadel.webp") 65% 56% / cover;
+}
+.game-screen.loop-console .battle-stage>:is(.loop-ready-panel,.loop-hud-overview,.command-drawer,.build-dock,.game-controls) {
+  background: linear-gradient(170deg, #191e36, var(--panel-deep) 56%);
+  border-color: var(--line);
+  border-block-start-color: var(--frame-rim);
+  border-radius: 4px;
+}
+.game-screen.loop-console .battle-stage>:is(.command-drawer,.build-dock,.loop-ready-panel) {
+  padding-inline: clamp(8px, 1.1vw, 16px);
+}
+.game-screen.loop-console .build-toolbar {
+  border-block-end: 1px solid var(--line);
+  min-height: 23px;
+  padding-bottom: 3px;
+  margin-bottom: 5px;
+}
+.game-screen.loop-console .build-toolbar h2,
+.game-screen.loop-console .drawer-heading h2 {
+  color: var(--text);
+  font: 700 17px/1.25 var(--title-face);
+}
+.build-toolbar .capacity-label {
+  margin-inline-start: auto;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+:root.touch-layout .drawer-heading { background: var(--panel-deep) }
+.game-screen .game-controls .button,
+.battle-stage:has(>.has-loop-3d) .game-controls :is(.control-utilities,.loop-hud-actions)>.button {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+}
+.game-screen .game-controls .button::before { width: 14px; height: 14px }
+.game-screen #more-button::before { font-size: 14px; line-height: 14px }
+@media (min-width: 701px) and (not (pointer: coarse)) {
+  .game-screen .game-controls .button { flex-direction: row; gap: 4px }
+}
+.game-screen .game-controls .button:hover:not(:disabled),
+.game-screen .game-controls .button[aria-expanded="true"] {
+  border-color: var(--gold);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: none;
+}
+.game-screen.loop-console .game-controls #focus-button {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--text);
+}
+.game-screen.loop-console .game-controls #focus-button:is([aria-expanded="true"],:hover) {
+  background: var(--surface-raised);
+  border-color: var(--frame-rim);
+  color: var(--gold);
+}
+.game-screen.loop-console .game-controls #equipment-button {
+  background: var(--panel);
+  border-color: var(--line);
+  color: #c8cff8;
+}
+.game-screen.loop-console .game-controls #equipment-button[aria-expanded="true"] {
+  border-color: var(--gold);
+  background: var(--surface-raised);
+}
+.game-screen.loop-console .game-controls #loop-hud-deploy:not(:disabled) {
+  background: linear-gradient(135deg, #ffdf9e, #d99657);
+  border-color: var(--gold);
+  color: var(--gold-ink);
+}
+.loop-camera-tools:not([hidden]),
+.loop-camera-settings {
+  background: #13182bee;
+  border-color: var(--line);
+  border-radius: 4px;
+}
+.notice,
+#loop-live-event,
+:root.touch-layout #touch-actions {
+  color: var(--text);
+  background: #14182bf2;
+  border-radius: 4px;
+}
+#loop-live-event { color: var(--gold) }
+:root.touch-layout #touch-actions { border-color: var(--gold) }
+.notice.placement-status { color: #ccf5d5 }
+.notice.placement-status.invalid { color: #ffcabf }
+
+.card-choice,
+.card-preview,
+.loop-content-card,
+#loop-targeting select,
+.equipment-recipe-part,
+.strategy-forecast {
+  background-color: var(--panel);
+  border-color: var(--line);
+  border-radius: 4px;
+}
+.card-draw { color: var(--gold) }
+.loop-card-content > .button { justify-self: start }
+@container (min-width: 380px) {
+  .loop-card-content:has(>.button):not(:has(>.card-preview:not([hidden]))) {
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: center;
+  }
+}
+.card-draw[data-rarity="common"] { background: linear-gradient(160deg, #352e35, var(--panel)) }
+.card-draw[data-rarity="rare"] { background: linear-gradient(160deg, #253c54, var(--panel)) }
+.card-draw[data-rarity="epic"] { background: linear-gradient(160deg, #3d2c58, var(--panel)) }
+.card-choice[aria-pressed="true"] { background: #3b3043 }
+.card-preview>.loop-content-card { background: none }
+.equipment-recipe-part[data-missing=true] { border-color: #876876; background: #282136 }
+.loop-tabs .button { background: var(--panel); border-color: var(--line); color: var(--muted) }
+.loop-tabs .button[aria-pressed="true"] {
+  background: #36293c;
+  border-color: var(--frame-rim);
+  color: var(--gold);
+}
+.ready-tower:hover { border-color: var(--jade) }
+.tower-section,
+.session-actions .button { border-color: var(--line) }
+
+#help-dialog,
+.end-card {
+  background: linear-gradient(160deg, #1e223c, #121527 58%);
+  border: 1px solid var(--line);
+  border-block-start-color: var(--frame-rim);
+  border-radius: 5px;
+}
+#help-dialog::backdrop { background: #090b17cc }
+#help-dialog .dialog-heading {
+  padding-bottom: 10px;
+  border-block-end: 1px solid var(--line);
+}
+#help-title, #end-title { font-family: var(--title-face) }
+.end-screen {
+  background:
+    radial-gradient(ellipse at center, #14182b70, #0d1020ed 77%),
+    linear-gradient(0deg, #0d1020, #0d1020b0),
+    var(--bg) url("./assets/title/night-citadel.webp") center / cover;
+}
+.end-card .seal-glyph { width: 46px; margin-inline: auto }
+.end-card .eyebrow { margin-top: 6px }
+.end-stats>div { border-color: var(--line); background: var(--panel-deep) }
+.end-actions:has(#endless-button:not([hidden])) #restart-button {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--line);
+}
+.end-actions #endless-button { order: -1 }
+.end-actions #endless-button::before { color: currentColor }
+.end-actions .button { min-height: 40px; padding: 5px 12px }
+
+.battle-stage:not(:has(>.has-loop-3d)) > .loop-hud-overview { display: none }
+
+@media (orientation: landscape) and (min-width: 900px) and (min-height: 590px) {
+  .game-screen.loop-console .game-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .game-screen.loop-console .game-controls .control-utilities { display: contents }
+  .battle-stage:not(:has(>.has-loop-3d)) > .loop-hud-overview { display: grid }
+  .loop-hud-overview dl { gap: 12px 32px; padding-inline: 12px }
+  .loop-hud-overview dd { font: 600 1.25rem/1.3 var(--number-face) }
+}
+
+@media (orientation: portrait) and (max-width: 650px) {
+  .game-screen.loop-console .battle-stage:not(:has(>.has-loop-3d)) {
+    grid-template-rows: minmax(0, 1fr) clamp(158px, 24dvh, 210px) auto;
+  }
+}
+
+@media (max-width: 440px) {
+  .battle-stage:has(>.has-loop-3d) .tower-identity:has(#loop-selected-portrait:not([hidden])) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 3px 7px;
+  }
+  .battle-stage:has(>.has-loop-3d) .tower-identity>div:last-child { display: contents }
+  .battle-stage:has(>.has-loop-3d) #loop-skill-status { grid-column: 1 / -1; font-size: 11px }
+  .battle-stage:has(>.has-loop-3d) .tower-identity img { width: 28px; height: 28px }
+}
+
+@media (max-width: 850px) {
+  .game-screen.loop-console .status-bar,
+  :root.touch-layout .game-screen.loop-console .status-bar {
+    grid-template-columns: auto minmax(74px, 1fr) minmax(117px, 1fr);
+    gap: 10px;
+    min-height: 49px;
+    padding: 4px 8px 6px;
+    align-items: center;
+  }
+  .status-bar .campaign-status,
+  :root.touch-layout .status-bar .campaign-status {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .campaign-rail { margin-top: 3px; height: 3px }
+  .status-bar .status-label,
+  :root.touch-layout .status-bar .status-label { font-size: 11px }
+  .status-bar .resource strong,
+  .status-bar .pressure-label strong { font-size: 1rem }
+  .status-bar .pressure-status,
+  :root.touch-layout .status-bar .pressure-status { min-width: 0; flex: 0 0 auto }
+  .status-economy { align-items: flex-start; gap: clamp(10px, 4vw, 28px) }
+  .status-economy .gold,
+  .status-bar .pressure-label { display: grid; gap: 0 }
+  .status-bar .seal-glyph { width: 21px }
+  .status-bar .wordmark { gap: 5px }
+  .status-bar .wordmark .wordmark-name { font-size: 1.1rem }
+}
+
+@media (max-width: 650px) {
+  .title-screen {
+    align-content: center;
+    padding: min(102vw, 48svh) max(24px, env(safe-area-inset-left)) max(24px, env(safe-area-inset-bottom));
+    min-height: 100svh;
+  }
+  .title-art {
+    height: min(112vw, 60svh);
+    background-size: auto 100%;
+    background-position: 86% top;
+  }
+  .title-screen::before {
+    background: linear-gradient(180deg, transparent 15%, #0d102022 25%, var(--bg) min(110vw, 56svh));
+  }
+  .title-screen::after { inset: 10px }
+  .title-kicker { font-size: .75rem }
+  .title-kicker .seal-glyph { width: 19px }
+  #menu-title {
+    margin-block: 12px 10px;
+    font-size: clamp(74px, 22vw, 125px);
+  }
+  .title-description { font-size: .875rem }
+  .title-rules { margin-block: 15px; padding-top: 9px }
+  .title-rules dd { font-size: 1.5rem }
+  .title-actions { gap: 4px }
+  #start-button { min-width: 130px; min-height: 42px; padding-inline: 10px }
+  .title-footer { position: static; margin-top: 17px; padding: 0 }
+}
+
+@media (max-width: 650px) and (max-height: 650px) {
+  .title-screen { padding-top: 40svh }
+}
+
+@media (orientation:landscape) and (max-height:570px) {
+  .title-screen { padding: 24px clamp(26px, 7.5vw, 100px) 46px }
+  .title-screen::after { inset: 10px }
+  #menu-title { font-size: clamp(64px, 10.8vw, 105px); margin-block: 9px }
+  .title-rules { margin-block: 12px; padding-block-start: 7px }
+  .title-footer { inset-block-end: 16px; padding-inline: clamp(26px, 7.5vw, 100px) }
+}
+
+/* The game's control grid keeps its map bounds when a panel changes. */
+@media (prefers-reduced-motion: reduce) {
+  #menu-title { animation: none }
+  .pressure-fill { transition: none }
+}

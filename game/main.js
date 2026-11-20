@@ -290,6 +290,7 @@ function cancelBuild() {
 function activatePoint(point) {
   pointerPosition = point;
   if (armedCardId !== null) {
+    const waitingForStarter = game.state.starter !== 'deployed';
     const result = game.deploy(armedCardId, point.x, point.y);
     if (result.ok && 'towerId' in result) {
       armedCardId = null;
@@ -297,7 +298,9 @@ function activatePoint(point) {
       touchControls?.clear();
       if (battle3D) setDrawer('tower');
     }
-    resultMessage(result);
+    resultMessage(result.ok && waitingForStarter && game.state.starter === 'deployed'
+      ? { ...result, message: `起手塔已部署 · ${Math.ceil(game.state.nextWaveIn)} 秒后开始首波` }
+      : result);
     return;
   }
   if (armedEquipment) {
@@ -488,11 +491,13 @@ function renderLoopCards() {
   if (loopCardTab === 'shop') {
     if (starter === 'unopened') {
       const open = game.canOpenStarter();
-      contents.append(commandButton('开启免费 SR 起手卡',()=>{
+      const starterAction = commandButton('开启免费 SR 起手卡',()=>{
         const result=game.openStarter();
         if (result.ok) {loopCardTab='bag';loopCardSelection=String(result.cardId);}
         resultMessage(result);
-      },!open.ok,'cards'));
+      },!open.ok,'cards');
+      starterAction.classList.add('primary');
+      contents.append(starterAction);
     } else if (starter === 'held') {
       paragraph(contents,'先部署起手 SR，首波才会倒计时。');
     }
@@ -1053,9 +1058,8 @@ const loopHudCommands = {
 };
 
 function updateLoopHud(towers) {
-  element('loop-hud-overview').hidden = !battle3D;
+  element('loop-hud-overview').hidden = false;
   element('loop-hud-actions').hidden = !battle3D;
-  if (!battle3D) return;
   for (const [id, value] of [
     ['loop-hud-next-wave', element('next-wave-value').textContent],
     ['loop-hud-population', `${game.state.populationUsed} / ${game.state.capacity}`],
@@ -1064,6 +1068,7 @@ function updateLoopHud(towers) {
     const field = element(id);
     if (field.textContent !== value) field.textContent = value;
   }
+  if (!battle3D) return;
   const selectingTower = !element('selection-panel').hidden && towers.some(tower=>tower.id===selectedTowerId);
   const selectingCard = !element('build-dock').hidden;
   for (const [id, selector] of Object.entries(loopHudCommands)) {
@@ -1159,6 +1164,9 @@ function updateUI() {
   const counting = Number.isFinite(state.nextWaveIn) && (state.endless || state.wave < waveCap);
   element('wave-label').textContent = waitingForCard ? (state.starter==='held'?'部署起手 SR':'开启起手 SR') : counting ? `${state.wave?'下波':'备战'} ${Math.max(0,Math.ceil(state.nextWaveIn))}s` : '波次';
   element('wave-value').textContent = state.endless ? `∞ ${state.wave}` : `${state.wave} / ${waveCap}`;
+  const rail = element('campaign-rail');
+  rail.hidden = state.endless;
+  rail.style.setProperty('--campaign-progress', `${state.wave / waveCap * 100}%`);
   const activeCount = state.enemies.filter(enemy => enemy.special !== 'gold').length;
   element('enemy-value').textContent = String(activeCount);
   element('enemy-limit').textContent = String(state.limit);

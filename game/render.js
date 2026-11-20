@@ -115,10 +115,13 @@ export function createRenderer(canvas, artwork) {
     const { ground } = artwork;
     if (ground !== paintedGround) {
       paintedGround = ground;
-      backdrop.fillStyle = '#263a31';
+      backdrop.fillStyle = '#252c43';
       backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
       if (ground) {
+        backdrop.save();
+        backdrop.filter = 'saturate(.52)';
         backdrop.drawImage(ground, 0, 0, WORLD.width, WORLD.height);
+        backdrop.restore();
       } else {
         backdrop.strokeStyle = '#776b52';
         backdrop.lineWidth = ROAD_WIDTH;
@@ -130,7 +133,7 @@ export function createRenderer(canvas, artwork) {
           backdrop.stroke();
         }
       }
-      backdrop.fillStyle = '#7580671f';
+      backdrop.fillStyle = '#27395b50';
       backdrop.fillRect(0, 0, WORLD.width, WORLD.height);
     }
     ctx.drawImage(background, 0, 0);

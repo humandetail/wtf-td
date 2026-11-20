@@ -3,49 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#17241f">
+  <meta name="theme-color" content="#0d1020">
   <title>环界 · 循环圈塔防</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./mobile.css">
+  <link rel="stylesheet" href="./night.css">
+  <link rel="preload" href="./assets/title/night-citadel.webp" as="image">
   <script>const forcedMobile=new URLSearchParams(location.search).get("mobile")==="1";const touchLayout=matchMedia("(max-width:900px), (pointer:coarse)");const applyLayout=()=>document.documentElement.classList.toggle("touch-layout",forcedMobile||touchLayout.matches);applyLayout();touchLayout.addEventListener("change",applyLayout);</script>
 </head>
 <body>
   <main class="app-shell">
     <section id="loading-screen" class="loading-screen" aria-label="加载游戏" aria-live="polite">
-      <div class="brand-mark" aria-hidden="true">环</div>
+      <div class="seal-glyph" aria-hidden="true"></div>
       <h1>正在展开战场</h1>
       <p id="loading-progress">读取防御单位与地图…</p>
     </section>
 
-    <section id="menu-screen" class="menu-screen" aria-labelledby="menu-title" hidden>
-      <div class="menu-copy">
-        <p class="eyebrow">单人塔防 · 循环圈</p>
+    <section id="menu-screen" class="title-screen" aria-labelledby="menu-title" hidden>
+      <div class="title-art" aria-hidden="true"></div>
+      <div class="title-copy">
+        <p class="title-kicker"><span class="seal-glyph" aria-hidden="true"></span>循环圈塔防</p>
         <h1 id="menu-title">环<span>界</span></h1>
-        <p class="menu-subtitle">沿环路布防，迎战 50 波异兽。</p>
-        <p class="menu-description">抽取塔卡、搭配装备，把场上的怪物压在 60 只以下。</p>
-        <div class="menu-actions">
-          <button id="start-button" data-icon="play" class="button primary large" type="button">开始布防 <span aria-hidden="true">→</span></button>
+        <p class="title-description">抽取塔卡、搭配装备，沿环路布防。</p>
+        <dl class="title-rules">
+          <div><dt>常规战役</dt><dd>50 <small>波</small></dd></div>
+          <div><dt>积怪上限</dt><dd>60 <small>只</small></dd></div>
+        </dl>
+        <div class="title-actions">
+          <button id="start-button" class="button primary large" type="button">开始布防 →</button>
           <button id="help-button" data-icon="book" class="button quiet" type="button" aria-haspopup="dialog">作战手册</button>
         </div>
-        <a class="mobile-entry" href="?mobile=1">手机版 · 触屏作战 →</a>
       </div>
-      <div class="menu-art" aria-hidden="true">
-        <div class="art-orbit orbit-outer"></div><div class="art-orbit orbit-inner"></div>
-        <img class="hero-enemy" src="../outputs/units/fantasy-bronze-stone-lion/master.png" alt="">
-        <img class="hero-tower" src="../outputs/units/tech-heavy-howitzer/master.png" alt="">
-        <span class="art-caption">科技防线 / 东方异兽</span>
-      </div>
-      <p class="menu-footer">返回主菜单可继续本局 · 刷新后重置</p>
+      <p class="title-footer">返回主菜单可继续本局 · 刷新后重置</p>
     </section>
 
     <section id="game-screen" class="game-screen loop-console" aria-label="防御战场" hidden>
       <header class="status-bar">
-        <button id="home-button" class="wordmark" type="button" aria-label="返回主菜单，保留当前对局">环界<span id="game-mode">循环圈</span></button>
-        <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
-        <div class="resource"><span id="wave-label" class="status-label">波次</span><strong id="wave-value">—</strong></div>
-        <div class="pressure-status">
-          <div class="pressure-label"><span id="pressure-label" class="status-label">环路积怪</span><strong id="loop-pressure-value"><span id="enemy-value">—</span><span class="muted"> / <span id="enemy-limit">—</span></span></strong></div>
-          <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
+        <button id="home-button" class="wordmark" type="button" aria-label="返回主菜单，保留当前对局"><i class="seal-glyph" aria-hidden="true"></i><span class="wordmark-name">环界</span></button>
+        <div class="resource campaign-status">
+          <span id="wave-label" class="status-label">波次</span><strong id="wave-value">—</strong>
+          <div id="campaign-rail" class="campaign-rail" aria-hidden="true"></div>
+        </div>
+        <div class="status-economy">
+          <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
+          <div class="pressure-status">
+            <div class="pressure-label"><span id="pressure-label" class="status-label">环路积怪</span><strong id="loop-pressure-value"><span id="enemy-value">—</span><span class="muted"> / <span id="enemy-limit">—</span></span></strong></div>
+            <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
+          </div>
         </div>
       </header>
       <div id="battle-stage" class="battle-stage">
@@ -184,7 +188,7 @@
 
     <section id="end-screen" class="end-screen" aria-labelledby="end-title" hidden>
       <div class="end-card">
-        <div class="end-emblem" aria-hidden="true">环</div>
+        <div class="seal-glyph" aria-hidden="true"></div>
         <p class="eyebrow">本局战报</p>
         <h1 id="end-title">战斗结束</h1>
         <p id="end-description"></p>

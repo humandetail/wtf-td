@@ -5,7 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 const root=fileURLToPath(new URL('../',import.meta.url)),destination=resolve(root,'_site');
-const files=new Set(['game/index.html','game/styles.css','game/mobile.css','outputs/manifest.json']);
+const files=new Set(['game/index.html','game/styles.css','game/mobile.css','game/night.css','game/assets/title/night-citadel.webp','outputs/manifest.json']);
 for(const file of await readdir(resolve(root,'game')))if(file.endsWith('.js'))files.add(`game/${file}`);
 files.add('game/assets/maps/v5/scene.webp');
 files.add('game/assets/modes/loop/equipment.webp');

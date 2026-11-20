@@ -26,7 +26,13 @@ in vec3 color;
 in vec2 uv;
 out vec4 pixel;
 void main() {
-  pixel = vec4(textured ? texture(ground, uv).rgb * color : color, 1.0);
+  if (textured) {
+    vec3 surface = texture(ground, uv).rgb;
+    float luma = dot(surface, vec3(.2126, .7152, .0722));
+    pixel = vec4(mix(vec3(luma), surface, .52) * color, 1.0);
+  } else {
+    pixel = vec4(color, 1.0);
+  }
 }`;
 
 function compile(gl, type, source) {
@@ -112,8 +118,8 @@ export function createScene(gl) {
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
   let groundImage = null;
   const floor = [], roads = [], surroundings = [];
-  add(surroundings,WORLD.width/2,WORLD.height/2,-3,WORLD.width+3600,WORLD.height+3600,1,0,[.11,.17,.13]);
-  add(floor,WORLD.width/2,WORLD.height/2,-1,WORLD.width,WORLD.height,1,0,[.33,.43,.35]);
+  add(surroundings,WORLD.width/2,WORLD.height/2,-3,WORLD.width+3600,WORLD.height+3600,1,0,rgb('#14192e'));
+  add(floor,WORLD.width/2,WORLD.height/2,-1,WORLD.width,WORLD.height,1,0,rgb('#2b3550'));
   for (const {x1,y1,x2,y2} of ROAD_SEGMENTS) {
     add(roads,(x1+x2)/2,(y1+y2)/2,0,Math.abs(x2-x1)||ROAD_WIDTH,Math.abs(y2-y1)||ROAD_WIDTH,1,0,[.46,.42,.33]);
   }
@@ -125,7 +131,7 @@ export function createScene(gl) {
       gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
       gl.depthMask(true);
       gl.enable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
-      gl.clearColor(.040,.071,.063,1);
+      gl.clearColor(.054,.062,.125,1);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.useProgram(program);
       gl.uniformMatrix4fv(transform,false,camera.combined);
@@ -140,7 +146,7 @@ export function createScene(gl) {
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
         gl.generateMipmap(gl.TEXTURE_2D);
         groundImage = image;
-        landscape.set([.93,.94,.92],8);
+        landscape.set([.76,.79,.94],8);
       }
       gl.uniform1i(sampler,0);
       gl.uniform1i(textured,0);
@@ -154,13 +160,22 @@ export function createScene(gl) {
       for (const tower of state.towers) {
         const {x,y,code,level} = tower, angle = -(tower.angle||0);
         const color = rgb(towerVisual(code).color);
-        const role = loopTower(code)?.role;
+        const {role, damageType} = loopTower(code) ?? {};
+        const forwardX = Math.cos(angle), forwardY = -Math.sin(angle);
         add(boxes,x,y,0,57,33,11,0,stone);
-        add(prisms,x,y,11,32,32,25+level*3,angle,steel);
-        if (role === 'support' || role === 'control') add(crystals,x,y,33,31,31,28,angle,color);
-        else {
-          add(boxes,x,y,32,31,23,17,angle,color);
-          add(boxes,x+Math.cos(angle)*16,y-Math.sin(angle)*16,40,36,9,8,angle,steel);
+        add(prisms,x,y,11,33,32,18+level*2,angle,steel);
+        if (role === 'support') {
+          add(prisms,x,y,25,18,18,26,angle,stone);
+          add(crystals,x,y,43,39,39,22,angle,color);
+        } else if (damageType === 'magic') {
+          add(crystals,x,y,29,16,16,32,angle,color);
+          for (const side of [-1,1]) {
+            add(prisms,x+side*forwardY*13,y-side*forwardX*13,25,10,10,26,angle,steel);
+          }
+        } else {
+          add(boxes,x,y,29,26,25,19,angle,steel);
+          add(boxes,x+forwardX*10,y+forwardY*10,39,41,10,9,angle,color);
+          add(boxes,x+forwardX*25,y+forwardY*25,37,9,13,13,angle,stone);
         }
       }
       for (const enemy of hasEnemyModel ? [] : state.enemies) {

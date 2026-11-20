@@ -63,6 +63,7 @@ test('loop shop previews tiers, opens guaranteed starter and confirms a deployme
  assert.equal(loop.state.cards.length,0);
  assert.equal(loop.state.towers.length,1);
  assert.match(node('wave-label').textContent,/备战 30s/);
+ assert.match(node('notice').textContent,/起手塔已部署.*30 秒后开始首波/);
  ui.activatePoint({x:190,y:140});
  assert.equal(node('tower-properties').hidden,false);
  assert.equal(node('tower-management').hidden,false);
