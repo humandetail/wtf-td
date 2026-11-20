@@ -35,4 +35,3 @@ const upgrades = {
   T33:['charge','burst'], T34:['burst','fire'], T35:['radar','suppress'], T36:['dual','charge'],
 };
 export const towerSkillIcon = (code, index) => upgrades[code]?.[index - 1] ?? towerVisual(code).icon;
-export const HERO_ICONS = { Q: 'slash', E: 'dash', R: 'shield' };

@@ -1,41 +1,61 @@
-import {TOWERS, ENEMIES} from './catalog.js';
-import {CARD_ROWS, ENEMY_ROWS, WAVE_ROWS} from './loop-roster.js';
+import {CARD_ROWS, ULTIMATES, ENEMY_ROWS, WAVE_ROWS} from './loop-roster.js';
 import {LOOP_EQUIPMENT, LOOP_CAMPAIGN_WAVES} from './loop-equipment.js';
 export {LOOP_EQUIPMENT} from './loop-equipment.js';
 
 const baseStats = {
- T01:[22,.55,205,'ranged','physical'], T02:[18,.9,195,'ranged','magic'],
- T03:[82,1.8,245,'ranged','physical'], T04:[62,.9,265,'ranged','magic'],
- T05:[46,1.1,178,'melee','magic'], T06:[26,.85,205,'ranged','physical'],
- T07:[9,2,215,'ranged','physical'], T08:[14,1.2,145,'melee','magic'],
- T09:[0,1,210,'support',null], T10:[0,1,200,'support',null],
- T11:[0,8,190,'support',null], T12:[20,.9,125,'melee','physical'],
- T13:[18,1.2,230,'ranged','magic'], T14:[27,.95,235,'ranged','physical'],
+ T01:['T01','ranged','physical',22,.55,205,'direct','#f5ca66'], T02:['T02','ranged','magic',18,.9,195,'slow','#ca91ff'],
+ T03:['T03','ranged','physical',82,1.8,245,'splash','#ff9970'], T04:['T04','ranged','magic',62,.9,265,'direct','#fa787c'],
+ T05:['T05','melee','magic',46,1.1,178,'chain','#82cfff'], T06:['T06','ranged','physical',26,.85,205,'splash','#68dedf'],
+ T07:['T07','ranged','physical',9,2,215,'root','#b4e37c'], T08:['T08','melee','magic',14,1.2,145,'frost','#a5edff'],
+ T09:['T09','support',null,0,1,210,'radar','#c6b7ff'], T10:['T10','support',null,0,1,200,'overclock','#96f1b8'],
+ T11:['T11','support',null,0,8,190,'supply','#ffe494'], T12:['T12','melee','physical',20,.9,125,'barrier','#edbb8a'],
+ T13:['T05','ranged','magic',18,1.2,230,'magic','#d59bff'], T14:['T01','ranged','physical',27,.95,235,'multi','#f6d085'],
 };
+const strengthTowers = new Set(['T02','T03','T06','T11','T12','T15','T17','T21','T32','T33','T34']);
+const agilityTowers = new Set(['T01','T07','T14','T16','T18','T19','T20','T22','T25','T27','T29','T35']);
+const controlTowers = new Set(['T06','T07','T08','T17','T18','T19','T21','T24','T26','T27']);
 export const LOOP_TOWERS=Object.entries(CARD_ROWS).map(([code,[name,rarity,...data]])=>{
- const original=TOWERS.find(t=>t.code===code);
- const [assetCode,role,damageType,damage,interval,range,...skills]=original
-  ? [original.assetCode??code,baseStats[code][3],baseStats[code][4],...baseStats[code].slice(0,3),...data] : data;
- return {...original,code,name,rarity,assetCode,role,damageType,damage,interval,range,skills,
+ const base=baseStats[code];
+ const [assetCode,role,damageType,damage,interval,range,...skills]=base ? [...base.slice(0,6),...data] : data;
+ const attribute=strengthTowers.has(code)?'strength':agilityTowers.has(code)?'agility':'intelligence';
+ const duty=role==='support'?'support':controlTowers.has(code)?'control':'damage';
+ if(ULTIMATES[code])skills.push(ULTIMATES[code].join(' · '));
+ return {code,name,rarity,assetCode,role,attribute,duty,damageType,damage,interval,range,skills,
   population:rarity==='common'?5:20,description:skills[0],
-  kind:original?.kind??(role==='support'?'aura':'direct'),color:original?.color??(damageType==='physical'?'#ffe494':'#9bc9ff')};
+  kind:base?.[6]??(role==='support'?'aura':'direct'),color:base?.[7]??(damageType==='physical'?'#ffe494':'#9bc9ff')};
 });
 export const LOOP_PRIORITIES={default:'默认职责',strongest:'最强目标',weakest:'最低生命',fastest:'最快目标',shield:'护盾优先',support:'支援优先',gold:'金币优先'};
 export const FIXED_ROUTES={T01:'A',T02:'B',T03:'A',T04:'A',T05:'A',T06:'B',T07:'B',T08:'A',T09:'A',T10:'B',T11:'A',T12:'B',T13:'B',T14:'A'};
 const roster=new Map(LOOP_TOWERS.map(t=>[t.code,t]));
 export const loopTower=code=>roster.get(code);
+export function affixApplies(tower,key){
+ const base=loopTower(tower.code);
+ switch(key){
+  case 'physical':case 'sunder':case 'breach':return base.damageType==='physical'||tower.code==='T31';
+  case 'magic':case 'prism':case 'embers':case 'cinders':case 'capacitor':return base.damageType==='magic'||tower.code==='T31';
+  case 'control':case 'stall':case 'bounty':return base.duty==='control';
+  case 'relay':case 'nexus':return base.role==='support';
+  case 'rate':case 'boss':case 'shieldBreaker':case 'scatter':case 'flywheel':case 'scope':case 'disruptor':case 'refraction':
+   return base.damage>0;
+  default:return true;
+ }
+}
 export function gearBonus(tower,key){
- return Math.max(0,...(Array.isArray(tower.equipment)?tower.equipment:[]).map(item=>LOOP_EQUIPMENT[item.code]?.[key]??0));
+ let strongest=0;
+ for(const item of tower.equipment??[])strongest=Math.max(strongest,LOOP_EQUIPMENT[item.code]?.[key]??0);
+ return strongest&&affixApplies(tower,key)?strongest:0;
 }
 const growth=[1,1.55,2.4,3.7,5.75], rates=[1,1.04,1.08,1.12,1.16];
 export function loopStats(tower,state={towers:[],elapsed:0,endless:false,dust:[]}){
  const base=loopTower(tower.code),level=tower.level||1,r=level>=3?FIXED_ROUTES[tower.code]:null;
- const s={...base,level,route:r,advanced:false,master:false,damage:base.damage*growth[level-1],interval:base.interval/rates[level-1],
-  range:(base.range+(base.role==='support'?0:6*(level-1)))*(1+gearBonus(tower,'range')),targetCount:1,
-  sellValue:tower.refund??0,burnDps:12*growth[level-1],burnDuration:3,boost:.1+.02*level,aura:.1+.02*level,
+ const rank=Math.min(level,5),extra=level-rank;
+ const damageScale=growth[rank-1]*(1+.012*extra);
+ const s={...base,level,route:r,advanced:false,master:level>=30,damage:base.damage*damageScale,interval:base.interval/(rates[rank-1]+.004*extra),
+  range:(base.range+(base.role==='support'?0:6*(rank-1)+.5*extra))*(1+gearBonus(tower,'range')),targetCount:1,
+  sellValue:tower.refund??0,burnDps:12*damageScale,burnDuration:3,boost:.1+.02*rank+.002*extra,aura:.1+.02*rank+.002*extra,
   conditional:0,slow:0,shieldMultiplier:1,splash:0,supplyInterval:state.endless?20:18,
-  supplyIncome:state.endless?(level>=3?2:1):[3,4,6,7,8][level-1],
-  control:gearBonus(tower,'control'),bossBonus:gearBonus(tower,'boss'),gearPeriod:gearBonus(tower,'period'),supportSources:[]};
+  supplyIncome:state.endless?(level>=3?2:1):[3,4,6,7,8][rank-1],
+  control:gearBonus(tower,'control'),bossBonus:gearBonus(tower,'boss'),supportSources:[]};
  switch(base.code){
   case 'T03': s.splash=r?110:85;s.targetCount=r?10:7;break;
   case 'T05': s.targetCount=r?5:3;if(r)s.damage*=.8;break;
@@ -55,11 +75,10 @@ export function loopStats(tower,state={towers:[],elapsed:0,endless:false,dust:[]
  let range=0,rate=0;
  const rangeSources=[],rateSources=[],conditionalSources=[];
  for(const ally of state.towers){
-  if(!['T09','T10','T22'].includes(ally.code)&&!gearBonus(ally,'auraRate'))continue;
+  if(!['T09','T10','T22'].includes(ally.code))continue;
   const reach=loopTower(ally.code).range*(1+gearBonus(ally,'range'));
   if(Math.hypot(ally.x-tower.x,ally.y-tower.y)>reach)continue;
-  const aura=.1+.02*ally.level,gearRate=gearBonus(ally,'auraRate');
-  if(gearRate)rateSources.push({value:gearRate,id:ally.id});
+  const aura=.1+.02*Math.min(5,ally.level)+.002*Math.max(0,ally.level-5);
   if(ally.code==='T09')rangeSources.push({value:aura,id:ally.id});
   if(ally.code==='T10'){rateSources.push({value:aura,id:ally.id});if(ally.level>=3)conditionalSources.push({value:.12,id:ally.id});}
   if(ally.code==='T22'){
@@ -74,7 +93,7 @@ export function loopStats(tower,state={towers:[],elapsed:0,endless:false,dust:[]
   s.supportSources.push({id:best.id,key});
   if(key==='range')range=best.value;if(key==='rate')rate=best.value;if(key==='conditional')s.conditional=best.value;
  }
- s.range*=1+range;s.interval/=(1+Math.max(rate,tower.rallyUntil>state.elapsed?.20:0))*(1+gearBonus(tower,'rate'));
+ s.range*=1+range;s.interval/=(1+Math.max(rate,tower.relayUntil>state.elapsed?.18:0))*(1+gearBonus(tower,'rate'));
  if(state.dust?.some(z=>z.until>state.elapsed&&Math.hypot(z.x-tower.x,z.y-tower.y)<=65))s.range*=.85;
  if(tower.hostileRateUntil>state.elapsed)s.interval/=1-tower.hostileRate;
  return s;
@@ -84,9 +103,14 @@ export function nearbyAttackers(state,source,range,limit){
  return state.towers.filter(t=>loopTower(t.code)?.role!=='support'&&distance(t)<=range)
   .sort((a,b)=>distance(a)-distance(b)||a.id-b.id).slice(0,limit);
 }
+const enemyColors = {
+ X01:'#f6e8bd',X02:'#b8c6a2',X03:'#d6b1ed',X04:'#b9a1d8',
+ X05:'#e9bd69',X06:'#c3db8c',X07:'#ff947c',X08:'#a0d6b6',
+ X09:'#d7ab92',X10:'#cbd9ed',X11:'#ecb6df',X12:'#d3b18e',
+};
 export const LOOP_ENEMIES=Object.fromEntries(Object.entries(ENEMY_ROWS).map(([code,[name,assetCode,hp,speed,reward,description,counter,armor]])=>[
  code,{code,name,assetCode,hp:Number(hp),speed:Number(speed),reward:Number(reward),description,counter,armor:Number(armor??({X02:.35,X08:.35,E01:.25,C01:.4}[code]??0)),
-  color:ENEMIES.find(item=>item.code===assetCode)?.color??'#f5d79b'}
+  color:enemyColors[assetCode]??'#f5d79b'}
 ]));
 export const CHALLENGES=[
  ['C01',3,0,'blade'],['C02',8,1,'gear'],['C03',13,2,'coil'],['C04',18,3,'lens'],

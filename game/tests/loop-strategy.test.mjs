@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame} from '../engine.js';
+import {createLoopGame} from '../loop-session.js';
 import {loopSpriteUrl} from '../render.js';
 import {loopEnemy} from '../loop-catalog.js';
 import {createRoadPosition} from '../geometry.js';
 import {readFile} from 'node:fs/promises';
 
 function start(options={}){
- const g=createGame({draftRandom:()=>0,random:()=>0,...options});g.start();g.openStarter();return g;
+ const g=createLoopGame({draftRandom:()=>0,random:()=>0,...options});g.start();g.openStarter();return g;
 }
 function play(g,seconds){
  for(let i=0;i<seconds*4&&g.state.phase==='playing';i++)g.tick(.25);
@@ -17,14 +17,14 @@ test('implemented card and monster catalogues expose every documented identifier
  const g=start();
  assert.equal(g.catalog.length,36);
  assert.deepEqual(['common','rare','epic'].map(r=>g.catalog.filter(c=>c.rarity===r).length),[14,13,9]);
- assert.ok(g.catalog.every(t=>t.skills.length===3));
+ assert.ok(g.catalog.every(t=>t.skills.length===(g.credentials[t.code]?4:3)));
  assert.equal(Object.keys(g.enemyCatalog).length,58);
  assert.deepEqual(g.forecasts().map(f=>[f.wave,f.count]),[[1,12],[2,14]]);
 });
 test('every independent artwork entry is a real alpha PNG in the runtime asset directory',async()=>{
  const g=start(), units=[...g.catalog,...Object.values(g.enemyCatalog)];
  const urls=units.map(unit=>loopSpriteUrl(unit.code)).filter(Boolean);
- assert.equal(urls.length,54);
+ assert.equal(urls.length,56);
  for(const url of urls){
   const data=await readFile(url);
   assert.equal(data.subarray(1,4).toString(),'PNG');
@@ -82,6 +82,20 @@ test('a low-rarity composition can clear the campaign with real gold and legal p
  assert.equal(result.wave,50);
  assert.ok(result.reconciled);
  assert.equal(result.game.state.towers.some(t=>result.game.catalog.find(c=>c.code===t.code).rarity==='epic'),false);
+});
+
+test('the level 30 electric coil closes the arc at the end of its fourth attack',()=>{
+ function arcLinks(level){
+  const game=start({initialDelay:1000,enemyHealthScale:100,enemySpeedScale:0});
+  const {towerId}=game.deploy(game.state.cards[0].id,500,300);
+  const tower=game.state.towers.find(t=>t.id===towerId);
+  Object.assign(tower,{level,cycles:3,awakened:true});
+  game.state.enemies=[550,575].map((x,index)=>loopEnemy({code:'X08',wave:1},100+index,{x,y:300,roadFrom:0,roadTo:1},{enemyHealthScale:100,enemySpeedScale:0}));
+  game.tick(.05);
+  return game.drainEvents().filter(event=>event.type==='skill-link'&&event.kind==='arc');
+ }
+ assert.equal(arcLinks(29).length,0);
+ assert.equal(arcLinks(30).length,1);
 });
 
 test('nearby zero-damage support shares experience while distant towers do not',()=>{

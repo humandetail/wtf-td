@@ -3,75 +3,74 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#17241f">
-  <title>环界 · 七模式塔防</title>
+  <meta name="theme-color" content="#0d1020">
+  <title>环界 · 循环圈塔防</title>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./mobile.css">
+  <link rel="stylesheet" href="./night.css">
+  <link rel="preload" href="./assets/title/night-citadel.webp" as="image">
   <script>const forcedMobile=new URLSearchParams(location.search).get("mobile")==="1";const touchLayout=matchMedia("(max-width:900px), (pointer:coarse)");const applyLayout=()=>document.documentElement.classList.toggle("touch-layout",forcedMobile||touchLayout.matches);applyLayout();touchLayout.addEventListener("change",applyLayout);</script>
 </head>
 <body>
   <main class="app-shell">
     <section id="loading-screen" class="loading-screen" aria-label="加载游戏" aria-live="polite">
-      <div class="brand-mark" aria-hidden="true">环</div>
+      <div class="seal-glyph" aria-hidden="true"></div>
       <h1>正在展开战场</h1>
       <p id="loading-progress">读取防御单位与地图…</p>
     </section>
 
-    <section id="menu-screen" class="menu-screen" aria-labelledby="menu-title" hidden>
-      <div class="menu-copy">
-        <p class="eyebrow">单人策略 · 七模式塔防</p>
+    <section id="menu-screen" class="title-screen" aria-labelledby="menu-title" hidden>
+      <div class="title-art" aria-hidden="true"></div>
+      <div class="title-copy">
+        <p class="title-kicker"><span class="seal-glyph" aria-hidden="true"></span>循环圈塔防</p>
         <h1 id="menu-title">环<span>界</span></h1>
-        <p class="menu-subtitle">守住一圈，迎战万象。</p>
-        <p class="menu-description">用科技构筑防线，阻击玄幻异兽。选择你的战场。</p>
-        <div class="mode-selector" role="group" aria-label="选择玩法">
-          <button id="mode-loop-button" class="mode-card" type="button" aria-pressed="true"><strong>循环圈</strong><span>循环游走 · 控制积怪</span></button>
-          <button id="mode-defense-button" class="mode-card" type="button" aria-pressed="false"><strong>核心保卫战</strong><span>四路轮攻 · 守住耐久</span></button>
-          <button id="mode-escort-button" class="mode-card" type="button" aria-pressed="false"><strong>灵枢护送</strong><span>启停载具 · 搬迁防线</span></button>
-          <button id="mode-maze-button" class="mode-card" type="button" aria-pressed="false"><strong>自由迷宫</strong><span>任意布障 · 改写路线</span></button>
-          <button id="mode-gem-button" class="mode-card" type="button" aria-pressed="false"><strong>万象宝石</strong><span>鉴定选留 · 五种融合配方</span></button>
-          <button id="mode-hero-button" class="mode-card" type="button" aria-pressed="false"><strong>守卫灵姬</strong><span>英雄走位 · Q / E / R</span></button>
-          <button id="mode-legion-button" class="mode-card" type="button" aria-pressed="false"><strong>机关军团 · 对战AI</strong><span>双边攻防 · 派兵与经济</span></button>
-        </div>
-        <p id="mode-description" class="mode-description" aria-live="polite">敌人在环路中持续游走，积怪达到上限即失败。下一波按时到来。</p>
-        <div class="menu-actions">
-          <button id="start-button" data-icon="play" class="button primary large" type="button">开始布防 <span aria-hidden="true">→</span></button>
+        <p class="title-description">抽取塔卡、搭配装备，沿环路布防。</p>
+        <dl class="title-rules">
+          <div><dt>常规战役</dt><dd>50 <small>波</small></dd></div>
+          <div><dt>积怪上限</dt><dd>60 <small>只</small></dd></div>
+        </dl>
+        <div class="title-actions">
+          <button id="start-button" class="button primary large" type="button">开始布防 →</button>
           <button id="help-button" data-icon="book" class="button quiet" type="button" aria-haspopup="dialog">作战手册</button>
         </div>
-        <a class="mobile-entry" href="?mobile=1">手机版 · 触屏作战 →</a>
-        <div class="campaign-facts"><span>七种作战目标</span><span>阶段首领</span><span>科技构筑防线</span></div>
       </div>
-      <div class="menu-art" aria-hidden="true">
-        <div class="art-orbit orbit-outer"></div><div class="art-orbit orbit-inner"></div>
-        <img class="hero-enemy" src="../outputs/units/fantasy-bronze-stone-lion/master.png" alt="">
-        <img class="hero-tower" src="../outputs/units/tech-heavy-howitzer/master.png" alt="">
-        <span class="art-caption">科技防线 / 东方异兽</span>
-      </div>
-      <p class="menu-footer">七种玩法独立保留本页对局 · 刷新后重置</p>
+      <p class="title-footer">返回主菜单可继续本局 · 刷新后重置</p>
     </section>
 
-    <section id="game-screen" class="game-screen" aria-label="防御战场" hidden>
+    <section id="game-screen" class="game-screen loop-console" aria-label="防御战场" hidden>
       <header class="status-bar">
-        <button id="home-button" class="wordmark" type="button" aria-label="返回主菜单，保留当前对局">环界<span id="current-mode">循环圈</span></button>
-        <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
-        <div class="resource"><span id="wave-label" class="status-label">波次</span><strong id="wave-value">—</strong></div>
-        <div class="pressure-status">
-          <div class="pressure-label"><span id="pressure-label" class="status-label">环路积怪</span><strong id="loop-pressure-value"><span id="enemy-value">—</span><span class="muted"> / <span id="enemy-limit">—</span></span></strong><strong id="core-pressure-value" hidden><span id="core-health-value">20</span><span class="muted"> / <span id="core-health-limit">20</span></span></strong></div>
-          <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
+        <button id="home-button" class="wordmark" type="button" aria-label="返回主菜单，保留当前对局"><i class="seal-glyph" aria-hidden="true"></i><span class="wordmark-name">环界</span></button>
+        <div class="resource campaign-status">
+          <span id="wave-label" class="status-label">波次</span><strong id="wave-value">—</strong>
+          <div id="campaign-rail" class="campaign-rail" aria-hidden="true"></div>
+        </div>
+        <div class="status-economy">
+          <div class="resource gold"><span class="status-label">金币</span><strong id="gold-value">—</strong></div>
+          <div class="pressure-status">
+            <div class="pressure-label"><span id="pressure-label" class="status-label">环路积怪</span><strong id="loop-pressure-value"><span id="enemy-value">—</span><span class="muted"> / <span id="enemy-limit">—</span></span></strong></div>
+            <div class="pressure-track"><div id="pressure-fill" class="pressure-fill"></div></div>
+          </div>
         </div>
       </header>
       <div id="battle-stage" class="battle-stage">
         <div class="map-frame">
-          <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。点“建造”选择工事，再在地图亮处选点。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
-          <div id="hero-move-pad" role="group" aria-label="英雄移动摇杆" hidden><span aria-hidden="true"></span><small>移动</small></div>
-          <div id="hero-hud" class="mode-hud" hidden aria-label="英雄状态与技能">
-            <div id="hero-status" aria-live="off"></div>
-            <div id="hero-skills" class="hero-skills" role="group" aria-label="英雄技能，点击后在地图选择目标">
-              <button id="hero-q-button" data-icon="slash" class="hero-skill" type="button" aria-keyshortcuts="Q"><kbd aria-hidden="true">Q</kbd><span>破阵斩</span><small id="hero-q-state">就绪</small></button>
-              <button id="hero-e-button" data-icon="dash" class="hero-skill" type="button" aria-keyshortcuts="E"><kbd aria-hidden="true">E</kbd><span>瞬步</span><small id="hero-e-state">2级解锁</small></button>
-              <button id="hero-r-button" data-icon="shield" class="hero-skill" type="button" aria-keyshortcuts="R"><kbd aria-hidden="true">R</kbd><span>共鸣护罩</span><small id="hero-r-state">6级解锁</small></button>
-            </div>
+          <canvas id="game-canvas" width="1280" height="800" tabindex="0" aria-label="循环圈战场。打开卡牌并选择部署，再在地图亮处选点。方向键移动光标，Shift 加方向键微调，Enter 放置，Esc 取消。">浏览器需要支持画布才能运行游戏。</canvas>
+          <div id="loop-camera-tools" class="loop-camera-tools" role="group" aria-label="3D 镜头控制" hidden>
+            <button class="button compact" type="button" data-camera="left" aria-label="镜头左转 30 度">左转</button>
+            <button class="button compact" type="button" data-camera="right" aria-label="镜头右转 30 度">右转</button>
+            <button class="button compact" type="button" data-camera="zoom-out" aria-label="拉远镜头">拉远</button>
+            <button class="button compact" type="button" data-camera="zoom-in" aria-label="拉近镜头">拉近</button>
+            <button class="button compact" type="button" data-camera="overview">全图</button>
+            <details class="loop-camera-options">
+              <summary class="button compact">俯角</summary>
+              <div class="loop-camera-settings" role="group" aria-label="镜头俯角">
+                <button class="button compact" type="button" data-camera="lower" aria-label="降低俯角">压低</button>
+                <output id="loop-camera-pitch" aria-label="镜头俯角">56°</output>
+                <button class="button compact" type="button" data-camera="higher" aria-label="提高俯角">抬高</button>
+                <button class="button compact" type="button" data-camera="reset">重置</button>
+              </div>
+            </details>
           </div>
-          <div id="legion-hud" class="mode-hud" hidden><span id="legion-kings"></span><button id="scout-button" class="button compact" type="button">侦察对手</button></div>
           <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
         </div>
         <div id="touch-actions" hidden><span id="touch-action-status">确认目标</span><button id="touch-confirm-button" data-icon="check" class="button primary" type="button">确认</button><button id="touch-cancel-button" data-icon="remove" class="button" type="button">取消</button></div>
@@ -81,19 +80,30 @@
           <p id="loop-ready-hint">部署防御塔后，可在这里快速选中。</p>
           <div id="loop-ready-towers"></div>
         </section>
+        <section id="loop-hud-overview" class="loop-hud-overview" aria-label="循环圈概况" hidden>
+          <dl>
+            <div><dt>下一波</dt><dd id="loop-hud-next-wave"></dd></div>
+            <div><dt>部署人口</dt><dd id="loop-hud-population"></dd></div>
+            <div><dt>卡包</dt><dd id="loop-hud-card-count"></dd></div>
+          </dl>
+        </section>
         <aside id="command-drawer" class="command-drawer" aria-labelledby="drawer-title" hidden>
-          <div class="drawer-heading"><h2 id="drawer-title">科技指挥</h2><button id="close-drawer-button" data-icon="collapse" class="button compact" type="button">收起</button></div>
+          <div class="drawer-heading"><h2 id="drawer-title">战场指挥</h2><button id="close-drawer-button" data-icon="collapse" class="button compact" type="button">收起</button></div>
           <section id="settings-panel" aria-label="对局菜单" hidden>
             <div class="session-summary">
-              <div id="defense-enemy-status" class="resource" hidden><span class="status-label">在场敌人</span><strong id="defense-enemy-value">0</strong></div>
               <div class="resource next-wave"><span id="next-wave-label" class="status-label">下一波</span><strong id="next-wave-value">—</strong></div>
               <div class="resource kills"><span class="status-label">已击杀</span><strong id="kill-value">—</strong></div>
             </div>
             <div class="map-tools" aria-label="地图视野">
               <button id="map-zoom-button" type="button" title="放大地图">1×</button><button id="map-pan-button" type="button" aria-pressed="false">拖动地图</button><button id="map-reset-button" type="button">全图</button>
             </div>
+            <div id="loop-3d-settings" class="loop-3d-settings" hidden>
+              <button class="button compact" id="loop-3d-toggle" type="button">开启 3D</button>
+              <label for="loop-3d-model">四糸乃模型与两张贴图</label>
+              <input id="loop-3d-model" type="file" accept=".mdx,.blp" multiple>
+              <p id="loop-3d-status" role="status">当前使用低模怪物。</p>
+            </div>
             <div class="session-actions">
-              <button id="mission-button" data-icon="radar" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" hidden>任务</button>
               <button id="mute-button" data-icon="audio" class="button compact" type="button" aria-pressed="false">声音开</button>
               <button id="game-help-button" data-icon="book" class="button compact" type="button" aria-haspopup="dialog">作战手册</button>
               <button id="menu-button" data-icon="home" class="button compact quiet" type="button" title="确认后暂停并保留本局，返回后可继续">主菜单</button>
@@ -103,72 +113,38 @@
             <p id="loop-enemy-info" class="strategy-summary" hidden></p>
             <div class="selected-summary">
               <div id="tower-panel" hidden>
-                <div class="tower-identity">
-                  <div id="loop-selected-portrait" hidden></div>
-                  <div><h2 id="tower-title">防御单位</h2><p id="loop-skill-status" class="strategy-summary" hidden></p></div>
-                </div>
-                <div id="tower-skills" class="tower-section" hidden>
-                  <h3>技能</h3>
-                  <div id="loop-skills" class="tower-skill-options" role="group" aria-label="塔技能"></div>
+                <div class="tower-profile">
+                  <div class="tower-identity">
+                    <div id="loop-selected-portrait"></div>
+                    <div><h2 id="tower-title">防御单位</h2><p id="loop-skill-status" class="strategy-summary" hidden></p></div>
+                  </div>
+                  <div id="tower-properties" class="tower-section">
+                    <div id="tower-stats" class="tower-stats"></div>
+                  </div>
                   <p id="loop-skill-detail" class="strategy-summary" hidden></p>
+                  <div id="tower-equipment" class="tower-section">
+                    <div class="tower-gear-heading"><h3>装备</h3><button id="tower-bag-button" data-icon="bag" class="button compact" type="button" aria-expanded="false" aria-controls="loop-controls">背包</button></div>
+                    <div id="loop-controls" hidden></div>
+                  </div>
                 </div>
-                <div id="tower-equipment" class="tower-section" hidden>
-                  <div class="tower-gear-heading"><h3>装备</h3><button id="tower-bag-button" data-icon="bag" class="button compact" type="button" aria-expanded="false" aria-controls="loop-controls">背包</button></div>
-                  <div id="loop-controls" hidden></div>
-                </div>
-                <div class="tower-sections" role="group" aria-label="工事详情分区">
-                  <button id="tower-properties-button" data-icon="stats" class="button compact" type="button" aria-expanded="false" aria-controls="tower-properties">属性</button>
-                  <button id="tower-management-button" data-icon="controls" class="button compact" type="button" aria-expanded="false" aria-controls="tower-management">操作</button>
-                </div>
-                <div id="tower-properties" class="tower-section" hidden>
-                  <p id="tower-description"></p>
-                  <div id="tower-stats" class="tower-stats"></div>
-                </div>
-                <div id="tower-management" class="tower-section" hidden>
-                  <div id="loop-targeting" hidden></div>
-                  <div id="gem-selection-actions" hidden></div>
-                  <div class="tower-actions"><button id="upgrade-button" data-icon="upgrade" class="button primary" type="button">升级</button><button id="relocate-button" data-icon="deploy" class="button" type="button" hidden>搬迁 · 25 金币</button><button id="sell-button" data-icon="gold" class="button" type="button">出售</button></div>
+                <div class="tower-order-card">
+                  <div id="tower-skills" class="tower-section">
+                    <h3>技能</h3>
+                    <div id="loop-skills" class="tower-skill-options" role="group" aria-label="塔技能"></div>
+                  </div>
+                  <div id="tower-management" class="tower-section">
+                    <div id="loop-targeting"></div>
+                    <div class="tower-actions"><button id="sell-button" data-icon="gold" class="button" type="button">出售</button><div id="loop-breakthrough" hidden></div></div>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
-          <section id="mission-panel" class="mission-panel" aria-label="当前任务" hidden>
-            <p id="mission-objective"></p>
-            <div id="loop-forecast" class="strategy-forecast" hidden></div>
-            <button id="loop-encyclopedia-button" data-icon="book" class="button compact" type="button" hidden>查看塔卡与怪物图鉴</button>
-            <p id="loop-event-status" class="strategy-summary" hidden></p>
-            <div id="loop-challenges" class="loop-panel-list" hidden></div>
-            <div id="special-mission" hidden></div>
-            <div id="escort-mission" hidden>
-              <h3 id="convoy-status">已停车 · 0 / 2480</h3>
-              <progress id="convoy-progress" aria-label="护送路线进度" max="2480" value="0"></progress>
-              <button id="convoy-toggle-button" data-icon="play" class="button primary" type="button">启程 / 继续前进</button>
-              <button id="convoy-repair-button" data-icon="gear" class="button" type="button">停车维修 · 60 金币 / +6 耐久</button>
-              <p>敌人从前后伏击，近身后会持续攻击。800 / 1600 距离自动停车并补给 100 金币，需要主动继续。</p>
-              <p>选择已有塔可搬迁：25 金币，保留等级与投资，停机 3 游戏秒。提前把火力布置在下一段路线。</p>
-            </div>
-            <div id="maze-mission" hidden>
-              <h3 id="maze-route-status">当前路线</h3>
-              <button id="maze-wall-button" data-icon="shield" class="button primary" type="button">布置能量路障 · 20 金币</button>
-              <p>塔与路障均可任意位置建造，实际改变敌人的路线；绿色预览显示新的通路。不能封死入口或场上敌人的退路，也不能盖住敌人。</p>
-              <p>路障最多 24 块，不占塔容量，无需研究。点击选中后可拆除，返还 15 金币，不能升级。守住出口，清空 12 波后可进入无尽。</p>
-            </div>
-          </section>
-          <section id="research-panel" class="research-panel" aria-label="科技研究">
-            <h2>科技研究</h2>
-            <div class="research-card">
-              <h3 id="deployment-level">部署科技 · Lv.0</h3>
-              <p id="deployment-details"></p>
-              <button id="deployment-research-button" data-icon="deploy" class="button compact" type="button">研究部署科技</button>
-            </div>
-            <div class="research-card">
-              <h3 id="reinforcement-level">强化科技 · Lv.0</h3>
-              <p id="reinforcement-details"></p>
-              <button id="reinforcement-research-button" data-icon="upgrade" class="button compact" type="button">研究强化科技</button>
-            </div>
-            <p id="research-status">研究位空闲 · 同时研究一项</p>
-            <progress id="research-progress" aria-label="当前研究进度" max="1" value="0" hidden></progress>
-            <button id="cancel-research-button" data-icon="remove" class="button compact" type="button" hidden>取消研究</button>
+          <section id="mission-panel" class="mission-panel" aria-label="战场情报" hidden>
+            <div id="loop-forecast" class="strategy-forecast"></div>
+            <button id="loop-encyclopedia-button" data-icon="book" class="button compact" type="button">查看塔卡与怪物图鉴</button>
+            <p id="loop-event-status" class="strategy-summary"></p>
+            <div id="loop-challenges" class="loop-panel-list"></div>
           </section>
           <section id="loop-equipment-shop" class="loop-panel-list" aria-label="装备商店与背包" hidden></section>
           <section id="loop-encyclopedia" aria-label="循环圈图鉴" hidden>
@@ -182,32 +158,29 @@
             <div id="loop-encyclopedia-list" class="loop-panel-list"></div>
           </section>
         </aside>
-        <section id="build-dock" class="build-dock" aria-labelledby="build-heading" hidden>
+        <section id="build-dock" class="build-dock" data-mode="cards" aria-labelledby="build-heading" hidden>
           <div class="build-toolbar">
-            <h2 id="build-heading">防御工事</h2><span id="tower-capacity" class="capacity-label">容量 0 / 4</span>
-            <div id="build-filters" class="build-filters" role="group" aria-label="按工事职责筛选">
-              <button type="button" data-category="all" aria-pressed="true">全部</button>
-              <button type="button" data-category="damage" aria-pressed="false">输出</button>
-              <button type="button" data-category="control" aria-pressed="false">控制</button>
-              <button type="button" data-category="support" aria-pressed="false">辅助</button>
-            </div>
+            <h2 id="build-heading">卡牌</h2><span id="tower-capacity" class="capacity-label">人口 0 / 100</span>
           </div>
-          <div id="loop-cards" class="loop-panel-list" hidden></div>
-          <div id="shop-list" class="shop-list" aria-label="十四种防御单位；迷宫额外提供路障，横向滚动查看更多"></div>
-          <div id="shop-tower-preview" class="card-preview" hidden>
-            <div><h3 id="shop-tower-name"></h3><p id="shop-tower-description"></p></div>
-            <button id="shop-build-button" data-icon="deploy" class="button compact primary" type="button">布置</button>
-          </div>
+          <div id="loop-cards" class="loop-panel-list"></div>
         </section>
         <nav class="game-controls" aria-label="对局控制">
           <p id="loop-live-event" aria-live="off" hidden></p>
-          <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="选择防御工事">建造</button>
-          <button id="research-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false">科技</button>
+          <button id="focus-button" class="button compact" type="button" aria-controls="build-dock" aria-pressed="true" aria-expanded="false" title="打开卡牌面板">卡牌</button>
+          <button id="equipment-button" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" title="装备商店与背包">装备</button>
+          <button id="loop-towers-button" data-icon="stats" class="button compact" type="button" aria-label="已部署的塔" aria-controls="loop-ready-panel" aria-expanded="false" hidden>塔</button>
           <div class="control-utilities">
-            <button id="loop-intel-button" data-icon="radar" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" title="战场情报" hidden>情报</button>
+            <button id="loop-intel-button" data-icon="radar" class="button compact" type="button" aria-controls="command-drawer" aria-expanded="false" title="战场情报">情报</button>
             <button id="pause-button" class="button compact" type="button">暂停</button>
             <button id="speed-button" class="button compact" type="button">1× 速度</button>
             <button id="more-button" class="button compact quiet" type="button" aria-controls="command-drawer" aria-expanded="false">菜单</button>
+          </div>
+          <div id="loop-hud-actions" class="loop-hud-actions" hidden>
+            <button id="loop-hud-deploy" data-icon="deploy" class="button compact" type="button" hidden>部署</button>
+            <button id="loop-hud-bag" data-icon="bag" class="button compact" type="button" aria-controls="loop-controls" hidden>背包</button>
+            <button id="loop-hud-cast" data-icon="slash" class="button compact" type="button" hidden>施放</button>
+            <button id="loop-hud-sell" data-icon="gold" class="button compact" type="button" hidden>出售</button>
+            <button id="loop-hud-cancel" data-icon="remove" class="button compact" type="button" hidden>取消</button>
           </div>
         </nav>
       </div>
@@ -215,12 +188,12 @@
 
     <section id="end-screen" class="end-screen" aria-labelledby="end-title" hidden>
       <div class="end-card">
-        <div class="end-emblem" aria-hidden="true">环</div>
+        <div class="seal-glyph" aria-hidden="true"></div>
         <p class="eyebrow">本局战报</p>
         <h1 id="end-title">战斗结束</h1>
         <p id="end-description"></p>
         <div id="end-stats" class="end-stats"></div>
-        <div class="end-actions"><button id="restart-button" data-icon="refresh" class="button primary large" type="button">重新开始</button><button id="endless-button" data-icon="loop" class="button large" type="button" hidden>进入无尽模式</button><button id="choose-mode-button" data-icon="home" class="button large quiet" type="button">选择玩法</button></div>
+        <div class="end-actions"><button id="restart-button" data-icon="refresh" class="button primary large" type="button">重新开始</button><button id="endless-button" data-icon="loop" class="button large" type="button" hidden>进入无尽模式</button><button id="return-menu-button" data-icon="home" class="button large quiet" type="button">主菜单</button></div>
       </div>
     </section>
   </main>
@@ -235,25 +208,11 @@
       <section id="help-rules" aria-labelledby="help-rules-tab">
         <h3>循环圈</h3>
         <ol class="help-steps">
-          <li><strong>开局与胜负</strong><p>开局有 80 金，卡铺免费开一张 SR。部署起手塔后开始 30 秒备战。怪会反复绕圈，场上积怪达到 60 只即失败。清完第 50 波可带着现有阵容、卡牌和装备进入无尽。</p></li>
-          <li><strong>抽卡与人口</strong><p>R／SR／SSR 包分别为 120／300／750 金。R 包必出 R，SR 包有 45% 概率出 SR。SSR 包的 R／SR／SSR 概率为 15%／50%／35%，连续两包未出 SSR 后第三包保底。卡牌部署后才占用人口，出售塔立即释放人口。开局上限 100，R／SR／SSR 分别占 5／20／20。</p></li>
-          <li><strong>升级与突破</strong><p>附近击杀提供经验，塔在 1／3／5 级解锁技能。第 15 波起可用五张 R 卡定向换一张凭证塔。主力和指定凭证塔均到 5 级后，花 180 金突破主力，解锁橙装。</p></li>
+          <li><strong>开局与胜负</strong><p>开局有 80 金，卡铺免费开起手 SR 包，三选一。部署起手塔后开始 30 秒备战。怪会反复绕圈，场上积怪达到 60 只即失败。清完第 50 波可带着现有阵容、卡牌和装备进入无尽。</p></li>
+          <li><strong>抽卡与人口</strong><p>R／SR／SSR 包分别为 120／300／750 金。购买时支付金币，开包后免费三选一。最高候选品质按包的概率决定。连续两个 SSR 包没有 SSR 候选时，第三包保底。卡牌部署后才占用人口，出售塔立即释放人口。开局上限 100，R／SR／SSR 分别占 5／20／20。</p></li>
+          <li><strong>升级与突破</strong><p>附近击杀提供经验。主塔达到 20 级、指定副塔达到三阶且在场时可突破，继续升到 30 级解锁终极技能。副塔花 30／60／90 金升阶。第 15 波起可用五张 R 卡定向换一张副塔卡。</p></li>
           <li><strong>首领、打金与挑战</strong><p>每五波出首领，战场情报提前两波显示机制和应对。击杀第 5／15／25／35／45 波首领后开启打金，可设「金币优先」，在 18 秒内按实际扣血赚取奖金。主动挑战计入积怪，限时击杀可拿装备奖励。</p></li>
         </ol>
-        <details class="help-other-modes">
-          <summary>其他六种玩法</summary>
-          <ol class="help-steps">
-            <li><strong>选择工事，自由布防</strong><p>点“建造”查看工事的用途。选中工事后在地图亮处选点。触屏可点按或拖动预览，再点确认。每次选定建造一座，完成后自动退出放置。遇到不可放置的位置，地图上方会显示原因。右键、Esc 或“取消放置”退出后，点击已有工事升级或出售。金币来自击杀。</p></li>
-            <li><strong>核心保卫战：守住终点</strong><p>每波按北、东、南、西轮换入口，敌人沿单向道路抵达中央后消失。核心共 20 点耐久，普通怪漏过扣 1，Boss 扣 5，漏怪不获得击杀奖励。核心归零即失败。首波准备 18 秒；每波清场获得 40 + 波次 × 5 金币，随后准备 12 秒。清场前不会开启下一波。</p></li>
-            <li><strong>灵枢护送：移动的防线</strong><p>载具初始停车，耐久 100；打开“任务”主动启程或停车，沿 S 路线到达终点即胜利。敌人每 18 秒从路线前后伏击，接近后持续攻击，停车也不会停止敌人或波次。到 800 / 1600 距离自动停车，各补给 100 金币，需主动继续。仅停车时可花 60 金币恢复 6 耐久。选择已有塔可用 25 金币搬迁至任意合法位置，保留 ID、等级与投资，但停机 3 游戏秒；期间不攻击、不提供辅助与收入，不能重复搬迁。右键或 Esc 取消。载具归零即失败，无无尽。</p></li>
-            <li><strong>自由迷宫：建造改变路线</strong><p>没有预设道路。敌人从左侧入口寻找右侧出口，塔与能量路障都能改变实际可达路径。位置连续自由，不吸附塔位；绿色预览显示待建造后的路线，红色显示失败原因。不能封死入口或任一在途敌人的通路，不能盖住敌人及其下一行走目标。路障 20 金币，最多 24 块，不占科技塔容量；选中可拆返 15，不能升级。建造和拆除立即重算路线，在途敌人也会连续转向。出口 20 耐久，普通漏怪扣 1、Boss 扣 5。首波 18 秒准备，清场后准备 10 秒并补给 40 + 波次 × 5 金币；共 12 波，第 4 / 8 / 12 波有首领。清场且出口存活即胜利，可保留迷宫进入无尽。</p></li>
-            <li><strong>万象宝石：准备后主动开战</strong><p>“任务”中花60金币鉴定五选一，点击候选后在地图部署，或收入两格备选；每次鉴定可按20／40／80金币刷新。普通宝石同系同阶合成需先研究强化科技。配方图鉴逐项显示材料，明确选择主宝石与实际材料，预览后确认才消耗。准备阶段才可收塔、合成、出售和开战；战斗推进科技。守住20波结束，无无尽。</p></li>
-            <li><strong>守卫灵姬：英雄与防线协作</strong><p>手机可拖动左下摇杆移动，点技能再点目标并确认；地图工具可放大与拖动。WASD持续移动；右键地面移动，右键敌人指定普攻目标。Q破阵斩、E瞬步、R共鸣护罩：按键后在地图点击目标。Q一级、E二级、R六级开放，消耗法力并有冷却。英雄自动攻击近敌，死亡10秒复活，神女死亡才失败。前往左右精英营地，战胜后在“任务”领取一次性装备／补给；三件装备选一，可花金币强化。守住15波，无无尽。</p></li>
-            <li><strong>机关军团：单人对战AI</strong><p>“建造”部署有生命的守军，“任务”购买工人、安排雇佣兵或强化国王，准备阶段不产资源。主动开战后双方锁阵；雇佣兵进入对手战场，成交才增加永久收入。未成交订单可取消全退军需。侦察按钮切换真实敌方地图，侦察时不能建造。波后守军复原、国王损伤保留，报告解释双方战果。一方国王死亡结束，同时死亡为平局，无无尽。</p></li>
-            <li><strong>其他战场：研究科技</strong><p>打开“科技”查看本模式的研究。部署科技提高全场塔容量并解锁种类。强化科技开放更高塔等级。两项科技各自逐级研究，共用一个研究位，开始时扣金币，完成后才生效。取消未完成研究全额退款。</p></li>
-            <li><strong>暂停、战报与无尽挑战</strong><p>核心保卫战和自由迷宫通关后可继续无尽。暂停、返回菜单和结算冻结计时，倍速同步推进。七种对局独立保留，重新开始只重置当前对局，刷新页面会丢失本页进度。</p></li>
-          </ol>
-        </details>
         <p class="help-footer">方向键移动光标 · Shift 微调 · Enter 放置或选择 · 空格暂停或恢复 · 右键或 Esc 取消当前操作</p>
       </section>
       <section id="help-towers" aria-labelledby="help-towers-tab" hidden>
@@ -264,7 +223,7 @@
         <div id="help-tower-list" class="help-cards"></div>
       </section>
       <section id="help-equipment" aria-labelledby="help-equipment-tab" hidden>
-        <p class="help-intro">R 塔有 3 个装备槽，SR 和 SSR 有 6 个。成品由指定组件和对应品阶的卷轴合成。橙装仅供已突破的 SR／SSR 使用，主动技能可切换自动或手动。无人机补给站无法装配装备。</p>
+        <p class="help-intro">R 塔有 3 个装备槽，SR 和 SSR 有 6 个。成品可以直购，合成只消耗所列材料。橙装穿戴时须主塔已突破且指定三阶副塔在场。卖副塔后，已经穿上的橙装继续生效。</p>
         <div class="help-filter"><label for="help-equipment-grade">循环圈装备</label>
           <select id="help-equipment-grade"><option value="all">全部品阶</option><option value="white">白装</option><option value="green">绿装</option><option value="blue">蓝装</option><option value="orange">橙装</option></select>
           <p id="help-equipment-count" role="status"></p>

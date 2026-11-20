@@ -18,6 +18,12 @@ export function createEnemyEffects(state,{alive,effect,strength,heal,summon,emit
   e.shield=Math.min(limit,e.shield+value);e.maxShield=Math.max(e.shield,e.maxShield);
   if(Number.isFinite(seconds))e.shieldUntil=state.elapsed+seconds;
  }
+ function supportOutput(e){
+  if(strength(e,'blockOut')>0)return 0;
+  if(!e.supportDampened)return 1;
+  e.supportDampened=false;
+  return .5;
+ }
  function cast(e,kind,duration,target=null){
   e.channel={kind,until:state.elapsed+duration,start:state.elapsed,targetId:target?.id??null,startHp:e.hp};
   e.castUntil=e.channel.until;
@@ -31,10 +37,14 @@ export function createEnemyEffects(state,{alive,effect,strength,heal,summon,emit
   if(kind==='heal')heal(e,e.maxHp*.08,out);
   if(kind==='aid'){
    const target=alive().find(a=>a.id===targetId);
-   if(target)heal(target,target.maxHp*(target.boss?.04:.12),out);
+   if(target)heal(target,target.maxHp*(target.boss?.04:.12)*supportOutput(e),out);
   }
   if(kind==='reverse')heal(e,Math.min(e.maxHp*.12,Math.max(0,startHp-e.hp)*.5),out);
-  if(kind==='guard-heal')for(const ally of alive().filter(a=>a.special==='challenge'&&!a.boss))heal(ally,ally.maxHp*.25,out);
+  if(kind==='guard-heal'){
+   const allies=alive().filter(a=>a.special==='challenge'&&!a.boss);
+   const multiplier=allies.length?supportOutput(e):0;
+   for(const ally of allies)heal(ally,ally.maxHp*.25*multiplier,out);
+  }
   if(kind==='chain'||kind==='thunder'){
    const target=state.towers.find(t=>t.id===targetId);
    if(target){
@@ -127,7 +137,9 @@ export function createEnemyEffects(state,{alive,effect,strength,heal,summon,emit
    case 'X15': e.hiddenUntil=age>=2&&(age-2)%5<2?now+.06:0;break;
    case 'X18': for(const a of nearby(e,120,a=>!a.elite&&!a.boss&&!a.special).slice(0,4))effect(a,'haste',.18,.1,e.id);break;
    case 'X21': if(every(e,'shield',5)){
-    const a=nearby(e,125,a=>!a.boss&&!a.elite&&!a.special&&a.shield<=0)[0];if(a)addShield(a,45*e.scale,4);
+    const a=nearby(e,125,a=>!a.boss&&!a.elite&&!a.special&&a.shield<=0)[0];
+    const multiplier=a?supportOutput(e):0;
+    if(multiplier>0)addShield(a,45*e.scale*multiplier,4);
    }break;
    case 'E02': for(const a of nearby(e,130,a=>!a.boss&&!a.special).slice(0,4))effect(a,'guard',.2,.1,e.id);break;
    case 'E05': if(every(e,'jam',5))for(const t of towerNear(e,155,2)){t.hostileRate=.20;t.hostileRateUntil=now+2;}break;
@@ -139,11 +151,15 @@ export function createEnemyEffects(state,{alive,effect,strength,heal,summon,emit
     const twin=nearby(e,120,a=>a.code==='C08')[0];if(twin)effect(e,e.variant?'magicArmor':'guard',.35,.1);break;
    }
   }
-  const reveal=state.towers.some(t=>distance(e,t)<=(t.code==='T09'?t.revealRange:t.attack?75:0));
+  const reveal=strength(e,'reveal')>0||state.towers.some(t=>distance(e,t)<=(t.code==='T09'?t.revealRange:t.attack?75:0));
   e.hidden=e.hiddenUntil>now&&!reveal;
   const damaged=(range)=>nearby(e,range,a=>a.hp<a.maxHp&&a.special===e.special).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id);
   const out=strength(e,'outSuppress');
-  if((e.code==='X03'||e.code==='X11')&&every(e,'heal',e.code==='X03'?3:4))for(const a of damaged(160).slice(0,e.code==='X03'?1:3))heal(a,a.maxHp*(a.boss?.01:.03),out);
+  if((e.code==='X03'||e.code==='X11')&&every(e,'heal',e.code==='X03'?3:4)){
+   const allies=damaged(160).slice(0,e.code==='X03'?1:3);
+   const multiplier=allies.length?supportOutput(e):0;
+   for(const a of allies)heal(a,a.maxHp*(a.boss?.01:.03)*multiplier,out);
+  }
   if(e.channel||e.rootUntil>now)return;
   if(e.code==='E06'&&every(e,'heal',8)&&damaged(160)[0])cast(e,'aid',1,damaged(160)[0]);
   if(e.code==='B01'&&!e.skillAt.charge&&state.towers.some(t=>t.attack&&distance(e,t)<=t.revealRange)){e.skillAt.charge=true;cast(e,'charge',1);}

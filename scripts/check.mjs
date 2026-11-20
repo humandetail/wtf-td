@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import {OBJECTIVE_FRAMES,HERO_ROW_BOUNDS} from '../game/special-render.js';
 import {LOOP_EQUIPMENT} from '../game/loop-equipment.js';
 import {readFile, readdir, stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -8,7 +7,6 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import {FOOTPRINT, LOOP_FOOTPRINT, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, PLAZA, ROAD_SEGMENTS, ROAD_NODES, loopPlacementStatus, placementStatus} from '../game/geometry.js';
-import {DEFENSE_LANES, DEFENSE_ROAD_SEGMENTS, DEFENSE_PLAZA, defensePlacementStatus} from '../game/defense-geometry.js';
 import {SLOTS as V2_SLOTS, LOOP_LENGTH as V2_LENGTH, pointOnLoop as v2Point} from '../game/assets/maps/v2/source/layout-geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFile(resolve(root, file));
@@ -16,8 +14,8 @@ const equipmentAtlas = await read('game/assets/modes/loop/equipment.webp');
 assert.equal(equipmentAtlas.toString('ascii',8,12),'WEBP','装备图集必须是 WebP');
 assert.equal(equipmentAtlas.toString('ascii',12,16),'VP8L','装备图集必须使用无损编码');
 const atlasHeader=equipmentAtlas.readUInt32LE(21);
-assert.deepEqual([(atlasHeader&0x3fff)+1,((atlasHeader>>>14)&0x3fff)+1,(atlasHeader>>>28)&1],[576,384,1]);
-assert.deepEqual(Object.values(LOOP_EQUIPMENT).map(item=>item.icon).sort((a,b)=>a-b),Array.from({length:23},(_,i)=>i));
+assert.deepEqual([(atlasHeader&0x3fff)+1,((atlasHeader>>>14)&0x3fff)+1,(atlasHeader>>>28)&1],[576,480,1]);
+assert.deepEqual(Object.values(LOOP_EQUIPMENT).map(item=>item.icon).sort((a,b)=>a-b),Array.from({length:Object.keys(LOOP_EQUIPMENT).length},(_,i)=>i));
 for(const code of Object.keys(LOOP_EQUIPMENT)) {
  const icon=await read(`game/assets/modes/loop/equipment-source/${code}.png`);
  assert.equal(icon.readUInt32BE(16),96);
@@ -201,44 +199,7 @@ console.log(`✓ ${directory} 实际场景 ${paintedSamples} 个路面色彩采�
 }
 const loopSegments=ROAD_NODES.flatMap((node,index)=>node.neighbors.filter(n=>n>index).map(n=>({x1:node.x,y1:node.y,x2:ROAD_NODES[n].x,y2:ROAD_NODES[n].y})));
 await checkPaintedScene('game/assets/maps/v5',loopSegments,ROAD_NODES,PLAZA,loopPlacementStatus,700,LOOP_BUILD_AREA.bounds,LOOP_FOOTPRINT);
-await checkPaintedScene('game/assets/maps/core-defense',DEFENSE_ROAD_SEGMENTS,DEFENSE_LANES.flatMap(lane=>lane.points.map(([x,y])=>({x,y}))),DEFENSE_PLAZA,defensePlacementStatus,300);
-for(const mode of ['escort','maze','gem','hero','legion']){
- const directory=`game/assets/maps/${mode}`,bytes=await read(`${directory}/scene.png`);
- assert(bytes.equals(await read(`${directory}/source/scene-imagegen-original.png`)),`${mode} 场景原图未保留`);
- const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
- assert(width>=1280&&height>=800&&Math.abs(width/height-1.6)<.025,`${mode} 场地尺寸或比例错误`);
- await checkPng(`${directory}/scene.png`,width,height,false);
-}
-// New sprites are generated sheets with fractional cell boundaries permitted by
-// canvas clipping (the hero sheet is 1586px wide, not divisible by eight).
-for(const [path,columns,rows,original] of [
- ['game/assets/modes/hero/atlas.png',8,5,'atlas-imagegen-original.png'],
- ['game/assets/modes/gem/atlas.png',4,3,'atlas-imagegen-original.png'],
- ['game/assets/modes/shared/objectives.png',2,2,'objectives-imagegen-original.png'],
-]){
- const bytes=await read(path),directory=path.slice(0,path.lastIndexOf('/'));
- assert(bytes.equals(await read(`${directory}/source/${original}`)),`${path} 与保留生成原图不一致`);
- assert((await read(`${directory}/source/prompts.md`)).length>100,`${path} 缺少生成提示词`);
- const width=bytes.readUInt32BE(16),height=bytes.readUInt32BE(20);
- assert(Math.abs(width/height-columns/rows)<.025,`${path} 图集行列比例错误`);
- assert(width/columns>=128&&height/rows>=128,`${path} 单元格分辨率不足`);
- const sheet=await checkPng(path,width,height,true);
- const frames=path.includes('shared/objectives')?OBJECTIVE_FRAMES:Array.from({length:rows*columns},(_,i)=>{
-  const row=Math.floor(i/columns),top=path.includes('/hero/')?HERO_ROW_BOUNDS[row]:row*height/rows,bottom=path.includes('/hero/')?HERO_ROW_BOUNDS[row+1]:(row+1)*height/rows;
-  return [i%columns*width/columns,top,width/columns,bottom-top];
- });
- for(const [index,[x,y,w,h]]of frames.entries()){
-  const left=Math.floor(x),right=Math.floor(x+w),top=Math.floor(y),bottom=Math.floor(y+h);
-  assert(left>=0&&top>=0&&right<=width&&bottom<=height,`${path} 帧 ${index} 超出图集`);
-  let visible=0,clear=0;
-  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){const alpha=sheet.alpha[y*width+x];visible+=Number(alpha>16);clear+=Number(alpha<16);}
-  const pixels=(right-left)*(bottom-top);
-  assert(visible/pixels>.01&&visible/pixels<.9&&clear/pixels>.05,`${path} 帧 ${index} 缺少完整可见角色或透明留白`);
- }
- console.log(`✓ ${path}：${frames.length} 个生产取样帧均在边界内且有可见内容和透明留白`);
-}
-for(const mode of ['gem','hero','legion'])assert((await read(`game/assets/maps/${mode}/source/prompts.md`)).length>100,`${mode} 地图缺少生成提示词`);
-assert((await stat(resolve(root,'game/assets/maps/hero/source/scene-revision-2-imagegen-original.png'))).isFile(),'英雄地图修订原图未保留');
+for (const code of ['T13','T14']) await checkPng(`game/assets/modes/loop/${code}.png`,362,362,true);
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());
 assert(required?.length, 'UI 契约缺少 ID 清单');
@@ -246,9 +207,7 @@ const html = (await read('game/index.html')).toString();
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match=>match[1]);
 assert.equal(new Set(ids).size, ids.length, 'UI 存在重复 ID');
 for (const id of required) assert(ids.includes(id), `缺少 UI ID：${id}`);
-const newModeIds=['mode-gem-button','mode-hero-button','mode-legion-button','hero-hud','legion-hud','legion-kings','scout-button','gem-selection-actions','special-mission','hero-status','hero-skills','hero-q-button','hero-q-state','hero-e-button','hero-e-state','hero-r-button','hero-r-state'];
-for(const id of newModeIds){assert(required.includes(id),`七模式契约缺少新增 UI ID：${id}`);assert(ids.includes(id),`七模式界面缺少新增 UI ID：${id}`);}
-console.log(`✓ ${required.length} 个必需 UI ID（含${newModeIds.length}个新增模式控件）存在且无重复`);
+console.log(`✓ ${required.length} 个必需 UI ID 存在且无重复`);
 for (const directory of ['game','scripts']) {
   for (const file of await readdir(resolve(root,directory))) {
     if ((directory==='game' && file.endsWith('.js')) || (directory==='scripts' && file.endsWith('.mjs'))) execFileSync(process.execPath,['--check',resolve(root,directory,file)],{stdio:'pipe'});
