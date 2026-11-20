@@ -36,6 +36,10 @@
 :root.touch-layout .command-drawer .button{min-height:var(--command-height)}
 :root.touch-layout .drawer-heading{position:sticky;top:-14px;background:#15241c;z-index:1;padding-top:6px}
 :root.touch-layout .build-dock{bottom:6px;left:6px;right:6px;padding:10px;border-radius:16px 16px 8px 8px;max-height:70%;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;animation:sheet-in .18s ease-out}
+:root.touch-layout .loop-card-content>.card-preview{max-height:none;overflow:visible}
+:root.touch-layout .card-preview-actions{order:0;flex-basis:100%}
+:root.touch-layout #tower-equipment .equipment-detail-copy{overflow:visible}
+:root.touch-layout .card-choice-strip{overflow-y:hidden}
 :root.touch-layout .build-toolbar{gap:8px;flex-wrap:wrap}
 :root.touch-layout .battle-stage:has(>#touch-actions:not([hidden])) .placement-status{display:none}
 :root.touch-layout #touch-actions{position:absolute;z-index:5;left:8px;right:8px;top:62px;display:flex;align-items:center;gap:6px;padding:8px;border-radius:10px;border:1px solid #ad9a63;background:#192e27f5}

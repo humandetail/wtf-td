@@ -35,3 +35,25 @@ const upgrades = {
   T33:['charge','burst'], T34:['burst','fire'], T35:['radar','suppress'], T36:['dual','charge'],
 };
 export const towerSkillIcon = (code, index) => upgrades[code]?.[index - 1] ?? towerVisual(code).icon;
+
+export const ICON_ATLAS = {
+  path: 'assets/modes/loop/icon-atlas.webp',
+  columns: 14,
+  cellSize: 72,
+  towerCount: 36,
+  skillsPerTower: 4,
+  equipmentStart: 144,
+  hudStart: 174,
+  hudButtons: [
+    'focus-button', 'equipment-button', 'loop-towers-button', 'loop-intel-button',
+    'pause-button', 'speed-button', 'more-button', 'loop-hud-deploy',
+    'loop-hud-bag', 'loop-hud-cast', 'loop-hud-sell', 'loop-hud-cancel',
+  ],
+};
+
+export function towerSkillCell(code, index) {
+  const tower = Number(code.slice(1));
+  if (!/^T\d{2}$/.test(code) || tower < 1 || tower > ICON_ATLAS.towerCount ||
+      !Number.isInteger(index) || index < 0 || index >= ICON_ATLAS.skillsPerTower) return;
+  return (tower - 1) * ICON_ATLAS.skillsPerTower + index;
+}

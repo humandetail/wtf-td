@@ -52,7 +52,7 @@ export function createLoopArmory(state,{editable,newId,changeGold,combat,emit}) 
    if(tower.equipment.some(item=>item.code===code))return fail('已装同名装备');
    if(tower.equipment.filter(item=>!parts.includes(item)).length>=equippedLimit(tower))return fail('装备槽已满');
   }
-  return ok;
+  return state.gold<recipe.craftFee?fail('金币不足'):ok;
  }
  function canEquip(towerId,itemId) {
   const tower=towerById(towerId),item=inBag(itemId);
@@ -89,14 +89,15 @@ export function createLoopArmory(state,{editable,newId,changeGold,combat,emit}) 
    const status=canCraft(code,towerId);if(!status.ok)return status;
    const {tower,parts,recipe}=craftParts(code,towerId);
    const used=new Set(parts.map(item=>item.id));
-   const invested=parts.reduce((sum,item)=>sum+(item.invested??0),0);
+   const invested=parts.reduce((sum,item)=>sum+(item.invested??0),recipe.craftFee);
    const output=itemInstance(code,invested);
    state.inventory=state.inventory.filter(item=>!used.has(item.id));
    if(tower){
     tower.equipment=tower.equipment.filter(item=>!used.has(item.id));
     attach(tower,output);
    }else state.inventory.push(output);
-   return done('已合成'+recipe.name,{itemId:output.id});
+   changeGold(-recipe.craftFee,'craft-equipment');
+   return done(`已合成${recipe.name} · 支付 ${recipe.craftFee} 金`,{itemId:output.id});
   },
   canEquip,
   equip(towerId,itemId) {

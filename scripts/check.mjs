@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {LOOP_EQUIPMENT} from '../game/loop-equipment.js';
+import {LOOP_TOWERS} from '../game/loop-catalog.js';
+import {ICON_ATLAS, towerSkillCell} from '../game/battle-visuals.js';
 import {readFile, readdir, stat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {inflateSync} from 'node:zlib';
@@ -10,6 +12,18 @@ import {FOOTPRINT, LOOP_FOOTPRINT, BUILD_CENTER_BOUNDS, LOOP_BUILD_AREA, PLAZA, 
 import {SLOTS as V2_SLOTS, LOOP_LENGTH as V2_LENGTH, pointOnLoop as v2Point} from '../game/assets/maps/v2/source/layout-geometry.js';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = file => readFile(resolve(root, file));
+const iconAtlas = await read(`game/${ICON_ATLAS.path}`);
+const iconAtlasSide = ICON_ATLAS.columns * ICON_ATLAS.cellSize;
+assert.equal(iconAtlas.toString('ascii',8,16),'WEBPVP8X','MOBA 图集必须是带透明通道的 WebP');
+assert.equal(iconAtlas[20] & 16,16,'MOBA 图集缺少透明通道');
+assert.deepEqual([iconAtlas.readUIntLE(24,3)+1,iconAtlas.readUIntLE(27,3)+1],[iconAtlasSide,iconAtlasSide]);
+const skillCells = LOOP_TOWERS.flatMap(tower => tower.skills.map((_, index) => towerSkillCell(tower.code, index)));
+assert(skillCells.every(cell => Number.isInteger(cell) && cell >= 0 && cell < ICON_ATLAS.equipmentStart));
+assert.equal(new Set(skillCells).size, skillCells.length,'技能图集单元重叠');
+assert(ICON_ATLAS.equipmentStart + Object.keys(LOOP_EQUIPMENT).length <= ICON_ATLAS.hudStart,'装备与底栏图标重叠');
+assert(ICON_ATLAS.hudStart + ICON_ATLAS.hudButtons.length < ICON_ATLAS.columns ** 2,'底栏图标超出图集');
+const iconMarkup = await read('game/index.html');
+for (const id of ICON_ATLAS.hudButtons) assert(iconMarkup.includes(`id="${id}"`),`底栏图标缺少对应按钮：${id}`);
 const equipmentAtlas = await read('game/assets/modes/loop/equipment.webp');
 assert.equal(equipmentAtlas.toString('ascii',8,12),'WEBP','装备图集必须是 WebP');
 assert.equal(equipmentAtlas.toString('ascii',12,16),'VP8L','装备图集必须使用无损编码');

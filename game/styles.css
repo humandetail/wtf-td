@@ -91,7 +91,7 @@ body.in-game .app-shell{max-width:none}
 .card-preview h3,.card-preview h4{font-size:14px;margin:0;line-height:1.3}
 .card-preview p{color:var(--muted);font-size:12px;line-height:1.4;margin:3px 0}
 .card-preview summary{cursor:pointer;color:#d4e1d2;font-size:12px;padding:4px 0}
-.card-preview-actions{display:flex;flex-wrap:wrap;gap:5px}
+.card-preview-actions{display:flex;flex-wrap:wrap;gap:5px;order:1}
 .card-preview .button{margin:0;min-height:var(--command-height);font-size:12px}
 .command-drawer[data-view="tower"]{top:auto;width:min(294px,calc(100% - 20px));max-height:58%;padding:10px;scrollbar-gutter:auto}
 .command-drawer[data-view="tower"] .drawer-heading{padding-bottom:6px;margin-bottom:6px}
@@ -206,8 +206,16 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .equipment-glyph{position:relative;display:inline-grid;place-items:center;width:34px;height:34px;flex:none;color:#d8b969}
 .equipment-choice .equipment-glyph{align-self:center;margin:0}
 .equipment-glyph::before{content:"";display:block;width:22px;height:22px;background:currentColor;mask:var(--ui-glyph) center/contain no-repeat;-webkit-mask:var(--ui-glyph) center/contain no-repeat}
-.equipment-art-loaded .equipment-glyph[data-sprite]{background-image:url("./assets/modes/loop/equipment.webp");background-repeat:no-repeat;background-size:600% 500%;background-position:var(--equipment-x) var(--equipment-y)}
-.equipment-art-loaded .equipment-glyph[data-sprite]::before{display:none}
+.icon-art-loaded .skill-icon[data-sprite],
+.icon-art-loaded .equipment-glyph[data-sprite],
+.icon-art-loaded #game-screen .game-controls .button[data-sprite]::before {
+  background: var(--icon-atlas) var(--icon-x) var(--icon-y) / var(--icon-atlas-size) var(--icon-atlas-size) no-repeat;
+  -webkit-mask: none;
+  mask: none;
+}
+.icon-art-loaded .skill-icon[data-sprite] { border-radius: 2px }
+.icon-art-loaded .equipment-glyph[data-sprite]::before { display: none }
+.icon-art-loaded #game-screen .game-controls .button[data-sprite]::before { content: ""; width: 14px; height: 14px; flex: none }
 #help-dialog[open]{
   display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:12px;
   width:min(960px,calc(100% - 16px));height:min(760px,calc(100dvh - 16px));

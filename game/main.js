@@ -3,9 +3,9 @@ import { createLoopGame } from './loop-session.js';
 import { WORLD } from './geometry.js';
 import { createAudio } from './audio.js';
 import { loadArtwork, createRenderer, loopSpriteUrl } from './render.js';
-import { towerSkillIcon, towerVisual } from './battle-visuals.js';
+import { ICON_ATLAS, towerSkillCell, towerSkillIcon, towerVisual } from './battle-visuals.js';
 import { affixApplies } from './loop-catalog.js';
-import { equipmentMaterialCost, equipmentPurchasePrice, LOOP_DEPUTY_LEVELS } from './loop-equipment.js';
+import { equipmentCraftCost, equipmentPurchasePrice, LOOP_DEPUTY_LEVELS } from './loop-equipment.js';
 
 /** @template {HTMLElement} T @param {string} id @returns {T} */
 function element(id) {
@@ -33,6 +33,7 @@ let readyTowerSignature = '';
 let selectedTowerId = null;
 let selectedEnemyId = null;
 let loopPanelSignature = '';
+let refreshTowerEquipment = null;
 let loopCardsSignature = '';
 let loopCardSelection = '';
 let loopCardTab = 'shop';
@@ -328,7 +329,7 @@ function updateSelection() {
     selectedEnemyId = null;
     setDrawer();
   }
-  const signature = tower ? JSON.stringify([tower.id, tower.level, tower.awakened, tower.equipment, game.state.endless,
+  const signature = tower ? JSON.stringify([tower.id, tower.level, tower.awakened, tower.equipment.map(item=>item.code), game.state.endless,
     game.state.towers.map(item => [item.id, item.level, item.pulseUntil > game.state.elapsed])]) : '';
   if (selectedSignature === signature) return;
   selectedSignature = signature;
@@ -364,6 +365,10 @@ const actionIcons = [
   [/^取消/, 'remove'], [/^确认/, 'check'],
 ];
 
+function setText(node,text) {
+  if (node.textContent!==text) node.textContent=text;
+}
+
 function commandButton(label, action, disabled = false, icon = actionIcons.find(([pattern]) => pattern.test(label))?.[1]) {
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'button compact'; button.textContent = label; button.disabled = disabled;
@@ -371,18 +376,33 @@ function commandButton(label, action, disabled = false, icon = actionIcons.find(
   button.addEventListener('click', action); return button;
 }
 
-function skillLine(parent, code, index, label) {
-  const line = document.createElement('p');
+/** @param {HTMLElement} node @param {number} cell */
+function setIconCell(node, cell) {
+  const sprite = String(cell);
+  if (node.dataset.sprite === sprite) return;
+  const columns = ICON_ATLAS.columns;
+  node.dataset.sprite = sprite;
+  node.style.setProperty('--icon-x', `${cell % columns / (columns - 1) * 100}%`);
+  node.style.setProperty('--icon-y', `${Math.floor(cell / columns) / (columns - 1) * 100}%`);
+}
+
+function skillGlyph(code, index) {
   const icon = document.createElement('span');
-  const copy = document.createElement('span');
-  const visual = towerVisual(code);
-  line.className = 'skill-line';
   icon.className = 'skill-icon';
   icon.dataset.icon = towerSkillIcon(code, index);
-  icon.style.color = visual.color;
+  icon.style.color = towerVisual(code).color;
   icon.setAttribute('aria-hidden','true');
+  const cell = towerSkillCell(code, index);
+  if (cell !== undefined) setIconCell(icon, cell);
+  return icon;
+}
+
+function skillLine(parent, code, index, label) {
+  const line = document.createElement('p');
+  const copy = document.createElement('span');
+  line.className = 'skill-line';
   copy.textContent = label;
-  line.append(icon,copy);
+  line.append(skillGlyph(code,index),copy);
   parent.append(line);
 }
 
@@ -445,23 +465,67 @@ function choiceStrip(label) {
   return strip;
 }
 
-function replacePanel(root, content) {
+function keepEquipmentShelf(current, content) {
+  const shelf=current?.children[1], nextShelf=content.children[1];
+  if (shelf?.className!=='card-choice-strip' || nextShelf?.className!=='card-choice-strip') return false;
+  const options=/** @type {HTMLElement[]} */ ([...shelf.children]);
+  const nextOptions=/** @type {HTMLElement[]} */ ([...nextShelf.children]);
+  if (options.length!==nextOptions.length || options.some((option,i)=>
+    option.dataset.choice!==nextOptions[i].dataset.choice ||
+    option.getAttribute('aria-label')!==nextOptions[i].getAttribute('aria-label'))) return false;
+  options.forEach((option,i)=>option.setAttribute('aria-pressed',nextOptions[i].getAttribute('aria-pressed')));
+  while (current.children.length>2) current.lastElementChild.remove();
+  current.append(...[...content.children].slice(2));
+  return true;
+}
+
+function replacePanel(root, content, keepShelf = false) {
   const focused = /** @type {HTMLElement} */ (document.activeElement);
   const inside = root.contains(focused);
-  const scrollers = root.firstElementChild?.getAttribute('data-panel') === content.getAttribute('data-panel')
-    ? [...root.querySelectorAll('.card-choice-strip')].map(node=>node.scrollLeft) : [];
-  root.replaceChildren(content);
-  [...root.querySelectorAll('.card-choice-strip')].forEach((node,index)=>{
-    node.scrollLeft = scrollers[index] ?? 0;
-  });
-  if (!inside) return;
-  const buttons = /** @type {NodeListOf<HTMLButtonElement>} */ (root.querySelectorAll('button'));
-  const next = [...buttons].find(button => !button.disabled &&
-    (focused?.dataset?.choice ? button.dataset.choice === focused.dataset.choice :
-      focused?.dataset?.tab ? button.dataset.tab === focused.dataset.tab : button.textContent === focused?.textContent))
-    ?? [...buttons].find(button => button.getAttribute('aria-pressed') === 'true')
-    ?? [...buttons].find(button => !button.disabled);
-  next?.focus({preventScroll:true});
+  const current=root.firstElementChild;
+  const samePanel=current && current.getAttribute('data-panel')===content.getAttribute('data-panel');
+  const container=root.closest('#build-dock, #command-drawer');
+  const scrollTop=samePanel?container?.scrollTop:undefined;
+  let disclosure;
+  if (samePanel) {
+    const oldPreview=root.querySelector('.card-preview');
+    const newPreview=content.querySelector('.card-preview');
+    if (oldPreview && newPreview && oldPreview.getAttribute('data-card')===newPreview.getAttribute('data-card')) {
+      disclosure=newPreview.querySelector('details');
+      if (disclosure) disclosure.open=oldPreview.querySelector('details')?.open??false;
+    }
+  }
+  if (!keepShelf || !samePanel || !keepEquipmentShelf(current,content)) {
+    const scrollers = samePanel ? [...root.querySelectorAll('.card-choice-strip')].map(node=>node.scrollLeft) : [];
+    root.replaceChildren(content);
+    [...root.querySelectorAll('.card-choice-strip')].forEach((node,index)=>{
+      if (scrollers[index]) node.scrollLeft=scrollers[index];
+    });
+  }
+  if (inside && !root.contains(focused)) {
+    const buttons = /** @type {HTMLButtonElement[]} */ ([...root.querySelectorAll('button')]);
+    const next = (focused.tagName==='SUMMARY'?disclosure?.querySelector('summary'):null) ?? buttons.find(button => !button.disabled &&
+      (focused.dataset.choice ? button.dataset.choice === focused.dataset.choice :
+        focused.dataset.tab ? button.dataset.tab === focused.dataset.tab : button.textContent === focused.textContent))
+      ?? buttons.find(button => button.getAttribute('aria-pressed') === 'true')
+      ?? buttons.find(button => !button.disabled);
+    next?.focus({preventScroll:true});
+  }
+  if (scrollTop!==undefined && container.scrollTop!==scrollTop) container.scrollTop=scrollTop;
+}
+
+function revealPanelContent(node) {
+  const container=node?.closest('#build-dock, #command-drawer');
+  if (!container) return;
+  const viewport=container.getBoundingClientRect();
+  const target=node.getBoundingClientRect();
+  if (!target.height) return;
+  const heading=container.querySelector('.drawer-heading');
+  const top=heading&&getComputedStyle(heading).position==='sticky'
+    ? Math.max(viewport.top,heading.getBoundingClientRect().bottom) : viewport.top;
+  const visible=Math.min(target.height,56,Math.max(0,container.clientHeight-(top-viewport.top)));
+  if (target.top<top) container.scrollTop+=target.top-top;
+  else if (target.top+visible>viewport.bottom) container.scrollTop+=target.top+visible-viewport.bottom;
 }
 
 function renderLoopCards() {
@@ -492,6 +556,7 @@ function renderLoopCards() {
   const preview = document.createElement('div');
   preview.id = 'loop-card-preview';
   preview.className = 'card-preview';
+  preview.setAttribute('data-card',loopCardSelection);
   preview.hidden = true;
   const detail = document.createElement('article');
   detail.className = 'loop-content-card';
@@ -501,20 +566,23 @@ function renderLoopCards() {
   const select = key => {
     loopCardSelection = loopCardSelection===key ? '' : key;
     renderLoopCards();
+    if (loopCardSelection && (loopCardTab==='bag'||loopCardTab==='draft')) {
+      revealPanelContent(root.querySelector('.card-preview-actions'));
+    }
   };
 
   if (loopCardTab === 'draft' && draft) {
-    paragraph(contents,`${draft.starter?'起手 SR':draft.tier+' 卡包'} · 免费选择一张`);
-    const choices = choiceStrip('卡包候选');
+    const choices = choiceStrip(`${draft.starter?'起手 SR':draft.tier+' 卡包'}候选，免费选择一张`);
     for (const code of draft.codes) choices.append(loopCardChoice(code,code,loopCardSelection,select,'draft'));
     contents.append(choices);
     if (draft.codes.includes(loopCardSelection)) {
       preview.hidden=false;
-      preview.replaceChildren(loopCardDetails(loopCardSelection,true),actions);
+      preview.replaceChildren(actions,loopCardDetails(loopCardSelection,true));
       actions.append(commandButton('领取这张卡',()=>{
         const result=game.choosePackCard(loopCardSelection);
         if (result.ok) {loopCardTab='bag';loopCardSelection=String(result.cardId);}
         resultMessage(result);
+        if (result.ok) revealPanelContent(root.querySelector('.card-preview-actions'));
       },!editable(),'cards'));
     }
   } else if (loopCardTab === 'shop') {
@@ -573,7 +641,7 @@ function renderLoopCards() {
     const card = cards.find(item=>String(item.id)===loopCardSelection);
     if (card) {
       preview.hidden=false;
-      preview.replaceChildren(loopCardDetails(card.code,true),actions);
+      preview.replaceChildren(actions,loopCardDetails(card.code,true));
       const eligibility = game.canDeploy(card.id);
       if (!eligibility.ok) paragraph(actions,eligibility.message);
       const sale = game.canSellCard?.(card.id) ?? {ok: card.paid || starter==='deployed'};
@@ -728,30 +796,35 @@ function equipmentGlyph(item) {
   glyph.className='equipment-glyph';
   glyph.dataset.icon='gear';
   glyph.setAttribute('aria-hidden','true');
-  if (Number.isInteger(item?.icon)) {
-    glyph.dataset.sprite='true';
-    glyph.style.setProperty('--equipment-x',`${(item.icon%6)*20}%`);
-    glyph.style.setProperty('--equipment-y',`${Math.floor(item.icon/6)*25}%`);
-  }
+  if (Number.isInteger(item?.icon)) setIconCell(glyph, ICON_ATLAS.equipmentStart + item.icon);
   return glyph;
 }
 
 function equipmentChoice(item, key, selected, onSelect, itemInstance = null) {
   const grade = equipmentGrade[item?.grade];
   const name = item?.name??'空装备槽';
-  const remaining = itemInstance?.readyAt>game.state.elapsed ? Math.ceil(itemInstance.readyAt-game.state.elapsed) : 0;
-  const state = item?.active && itemInstance ? `${itemInstance.manual?'手':'自'}${remaining||''}` : '';
-  const accessibleState=state?`${itemInstance.manual?'手动':'自动'} · ${remaining?`冷却 ${remaining} 秒`:'就绪'}`:'';
-  const button = panelChoice([name,grade,accessibleState].filter(Boolean).join(' · '),key,selected,onSelect);
+  const button = panelChoice([name,grade].filter(Boolean).join(' · '),key,selected,onSelect);
   button.classList.add('equipment-choice');
   button.dataset.grade=item?.grade??'empty';
   if (item?.description) button.title += `\n${item.description}`;
   const label = document.createElement('span');
   label.className='equipment-legend';
-  label.textContent=state||grade||'空';
-  if (item?.active && itemInstance) button.dataset.cooldown=String(remaining);
+  label.textContent=grade||'空';
   button.append(equipmentGlyph(item),label);
+  if (item?.active && itemInstance) refreshEquipmentBadge(button,item,itemInstance);
   return button;
+}
+
+const equipmentCooldown = instance => Math.max(0,Math.ceil((instance.readyAt??0)-game.state.elapsed));
+
+function refreshEquipmentBadge(button,item,instance) {
+  const remaining=equipmentCooldown(instance);
+  if (button.dataset.cooldown===String(remaining)) return;
+  button.dataset.cooldown=String(remaining);
+  setText(button.lastElementChild,`${instance.manual?'手':'自'}${remaining||''}`);
+  const label=`${item.name} · ${equipmentGrade[item.grade]} · ${instance.manual?'手动':'自动'} · ${remaining?`冷却 ${remaining} 秒`:'就绪'}`;
+  button.setAttribute('aria-label',label);
+  button.title=`${label}\n${item.description}`;
 }
 
 function equipmentDetail(title,item,onBack,tower=undefined) {
@@ -835,23 +908,25 @@ function equipmentRecipe(code,onBack,towerId=undefined,onPart=undefined) {
   const {detail,copy,actions}=equipmentDetail(recipe.name,null,onBack);
   recipeMaterials(copy,code,towerId,onPart);
   paragraph(copy,recipe.description);
-  paragraph(copy,'从零合成 '+equipmentMaterialCost(code)+' 金');
+  paragraph(copy,'从零合成 '+equipmentCraftCost(code)+' 金');
   const status=game.canCraft(code,towerId);
   if (!status.ok) paragraph(copy,status.message);
   if (towerId===undefined) {
     const sale=game.canBuyEquipment(code);
     actions.append(commandButton('直购 · '+equipmentPurchasePrice(code)+' 金',()=>resultMessage(game.buyEquipment(code)),!sale.ok,'gold'));
   }
-  actions.append(commandButton('合成装备',()=>resultMessage(game.craftEquipment(code,towerId)),!status.ok));
+  actions.append(commandButton(`合成装备 · ${recipe.craftFee} 金`,()=>resultMessage(game.craftEquipment(code,towerId)),!status.ok));
   return detail;
 }
 
 function renderLoopEquipmentShop() {
   const root = element('loop-equipment-shop');
   if (root.hidden) return;
-  const {inventory,gold,phase,paused,wave} = game.state;
+  const {inventory,gold,phase,paused} = game.state;
   const entries = Object.entries(game.equipment);
-  const signature = JSON.stringify([equipmentTab,equipmentSelection,inventory,game.state.towers.map(t=>[t.id,t.equipment]),entries.map(([code])=>gold>=equipmentPurchasePrice(code)),phase,paused,wave]);
+  const materials=game.state.towers.map(t=>[t.id,t.equipment.map(item=>item.code)]);
+  const canPayCraftFee=gold>=(game.equipment[equipmentSelection]?.craftFee??0);
+  const signature = JSON.stringify([equipmentTab,equipmentSelection,inventory,materials,entries.map(([code])=>gold>=equipmentPurchasePrice(code)),canPayCraftFee,phase,paused]);
   if (signature===loopEquipmentSignature) return;
   loopEquipmentSignature=signature;
   const panel=document.createElement('div');
@@ -863,7 +938,7 @@ function renderLoopEquipmentShop() {
   const select = key => {
     equipmentSelection=equipmentSelection===key?'':key;
     renderLoopEquipmentShop();
-    root.querySelector?.('.equipment-detail')?.scrollIntoView?.({block:'start'});
+    revealPanelContent(root.querySelector('.equipment-detail'));
   };
   const list = choiceStrip(equipmentTab==='bag'?'背包装备':equipmentTab==='recipes'?'成品装备':'基础装备');
   if (equipmentTab==='bag') {
@@ -901,7 +976,7 @@ function renderLoopEquipmentShop() {
       panel.append(detail);
     }
   }
-  replacePanel(root,panel);
+  replacePanel(root,panel,true);
 }
 
 function selectTowerEquipment(key) {
@@ -910,21 +985,23 @@ function selectTowerEquipment(key) {
   updateUI();
   const root = element('loop-controls');
   const detail = root.querySelector?.('.equipment-detail') ?? root.querySelector?.('[aria-label="可装配的背包装备"]');
-  detail?.scrollIntoView({ block: 'nearest' });
+  revealPanelContent(detail);
 }
 
-function renderTowerEquipment(root,tower,definition,remaining) {
+function renderTowerEquipment(root,tower,definition) {
   const occupied=tower.equipment??[];
   const slotCount=definition?.rarity==='common'?3:6;
   const panel=document.createElement('div');
   panel.className='equipment-panel';
   const select=selectTowerEquipment;
   const slots=choiceStrip(`塔装备槽 · ${occupied.length} / ${slotCount}`);
+  const refresh=[];
   slots.classList.add('equipment-slots');
   for (let i=0;i<slotCount;i++) {
     const item=occupied[i];
     const key=item?`slot:${item.id}`:`empty:${i}`;
     const slot=equipmentChoice(game.equipment[item?.code],key,towerEquipmentSelection,select,item);
+    if (game.equipment[item?.code]?.active) refresh.push(()=>refreshEquipmentBadge(slot,game.equipment[item.code],item));
     slot.dataset.slot=String(i+1);
     slots.append(slot);
   }
@@ -952,21 +1029,32 @@ function renderTowerEquipment(root,tower,definition,remaining) {
       if (!status.ok) paragraph(copy,status.message);
       actions.append(commandButton(`装配${item.name}`,()=>resultMessage(game.equip(tower.id,selected.id)),!status.ok));
     } else {
-      if (remaining>0) paragraph(copy,`脱战 ${Math.ceil(remaining)} 秒后可卸下`);
-      const remove=commandButton(`卸下${item.name}`,()=>resultMessage(game.unequip(tower.id,selected.id)),!editable()||remaining>0);
+      const detachStatus=document.createElement('p');
+      copy.append(detachStatus);
+      const remove=commandButton(`卸下${item.name}`,()=>resultMessage(game.unequip(tower.id,selected.id)));
       remove.dataset.compactLabel='卸下';
       actions.append(remove);
+      refresh.push(remaining=>{
+        setText(detachStatus,remaining>0?`脱战 ${Math.ceil(remaining)} 秒后可卸下`:'已脱战');
+        const disabled=!editable()||remaining>0;
+        if (remove.disabled!==disabled) remove.disabled=disabled;
+      });
       if (item.active) {
         actions.dataset.active='true';
-        const status=game.canCastEquipment(tower.id,selected.id);
-        const cooldown=Math.max(0,Math.ceil((selected.readyAt??0)-game.state.elapsed));
-        paragraph(copy,cooldown?`冷却 ${cooldown} 秒`:'技能就绪');
+        const castStatus=document.createElement('p');
+        copy.append(castStatus);
         const mode=commandButton(selected.manual?'切换为自动':'切换为手动',()=>resultMessage(game.toggleEquipmentMode(tower.id,selected.id)),!editable(),'controls');
         mode.dataset.compactLabel=selected.manual?'自动':'手动';
-        const cast=commandButton('施放装备技',()=>armEquipment(tower.id,selected,item),!selected.manual||!status.ok,'slash');
+        const cast=commandButton('施放装备技',()=>armEquipment(tower.id,selected,item),false,'slash');
         cast.dataset.compactLabel='施放';
         actions.append(mode,cast);
-        if (selected.manual && !status.ok && !cooldown) paragraph(copy,status.message);
+        refresh.push(()=>{
+          const status=game.canCastEquipment(tower.id,selected.id);
+          const cooldown=equipmentCooldown(selected);
+          setText(castStatus,cooldown?`冷却 ${cooldown} 秒`:selected.manual&&!status.ok?status.message:'技能就绪');
+          const disabled=!selected.manual||!status.ok;
+          if (cast.disabled!==disabled) cast.disabled=disabled;
+        });
       }
     }
     panel.append(detail);
@@ -985,6 +1073,7 @@ function renderTowerEquipment(root,tower,definition,remaining) {
     if (group==='recipe'&&recipes.includes(key)) panel.append(equipmentRecipe(key,()=>select(towerEquipmentSelection),tower.id));
   }
   replacePanel(root,panel);
+  return remaining=>refresh.forEach(update=>update(remaining));
 }
 
 function renderBreakthrough(panel,tower) {
@@ -1055,7 +1144,7 @@ function updateLoopPanels() {
   }
   const tower = towers.find(item=>item.id===selectedTowerId);
   element('loop-skill-status').hidden = !tower;
-  if (!tower) { root.hidden=true;loopPanelSignature='';return; }
+  if (!tower) { root.hidden=true;loopPanelSignature='';refreshTowerEquipment=null;return; }
   const definition = game.catalog.find(item=>item.code===tower.code);
   const remaining = Math.max(0,(tower.combatUntil??0)-elapsed);
   const occupied = tower.equipment??[];
@@ -1064,18 +1153,21 @@ function updateLoopPanels() {
   const qualification = tower.awakened ? '已突破 · ' : '';
   const progress = tower.deputyStage!==undefined ? '副塔 '+tower.deputyStage+'/3 阶'
     : tower.level>=game.levelCap(tower) ? (tower.level===20?'等待突破':'经验已满') : '经验 '+(tower.xp??0)+' / '+levelCap;
-  status.textContent = [towerIdentity(definition),qualification+progress,remaining>0?'脱战还需 '+Math.ceil(remaining)+' 秒':'已脱战'].join(' · ');
+  setText(status,[towerIdentity(definition),qualification+progress,remaining>0?'脱战还需 '+Math.ceil(remaining)+' 秒':'已脱战'].join(' · '));
   const sell = /** @type {HTMLButtonElement} */ (element('sell-button'));
-  const canSell = editable() && (!occupied.length || remaining===0);
-  sell.disabled = !canSell;
-  sell.title = occupied.length && remaining>0 ? '须脱战后出售带装备的塔' : '';
-  sell.textContent = sell.title || `出售 · 回收 ${tower.refund??0} 金币`;
+  const sellDisabled=!editable() || occupied.length>0&&remaining>0;
+  if (sell.disabled!==sellDisabled) sell.disabled=sellDisabled;
+  const sellRestriction=occupied.length&&remaining>0?'须脱战后出售带装备的塔':'';
+  if (sell.title!==sellRestriction) sell.title=sellRestriction;
+  setText(sell,sellRestriction || `出售 · 回收 ${tower.refund??0} 金币`);
   root.hidden=false;
-  const signature = JSON.stringify([tower.id,tower.level,tower.priority,tower.awakened,tower.deputyStage,occupied,inventory,Math.ceil(remaining),phase,paused,
-    towerSkillSelection,towerEquipmentSelection,game.canUpgradeDeputy(tower.id).ok,game.state.wave,towers.map(t=>[t.id,t.code,t.level,t.deputyStage,t.equipment]),
-    occupied.map(item=>[Math.ceil(Math.max(0,(item.readyAt??0)-elapsed)),
-      item.manual&&towerEquipmentSelection===`slot:${item.id}`?game.canCastEquipment(tower.id,item.id).ok:false])]);
-  if(signature===loopPanelSignature)return;
+  const slots=occupied.map(item=>[item.id,item.code,item.manual]);
+  const materials=towers.map(t=>[t.id,t.code,t.deputyStage,t.equipment.map(item=>item.code)]);
+  const recipe=towerEquipmentSelection.startsWith('recipe:')?game.equipment[towerEquipmentSelection.slice(7)]:null;
+  const canPayCraftFee=game.state.gold>=(recipe?.craftFee??0);
+  const signature = JSON.stringify([tower.id,tower.level,tower.priority,tower.awakened,tower.deputyStage,slots,inventory.map(item=>item.id),phase,paused,
+    towerSkillSelection,towerEquipmentSelection,game.canUpgradeDeputy(tower.id).ok,canPayCraftFee,materials]);
+  if(signature===loopPanelSignature){refreshTowerEquipment?.(remaining);return;}
   loopPanelSignature=signature;
   const skills = element('loop-skills');
   const skillDetail = element('loop-skill-detail');
@@ -1092,21 +1184,16 @@ function updateLoopPanels() {
       towerSkillSelection = towerSkillSelection === key ? '' : key;
       towerEquipmentSelection = '';
         updateUI();
-      if (towerSkillSelection) skillDetail.scrollIntoView?.({ block: 'nearest' });
+      if (towerSkillSelection) revealPanelContent(skillDetail);
     });
     button.classList.add('tower-skill-choice');
     button.dataset.locked = String(!unlocked);
     button.title = `${label}\n${skill}`;
     button.setAttribute('aria-controls','loop-skill-detail');
-    const icon = document.createElement('span');
-    icon.className = 'skill-icon';
-    icon.dataset.icon = towerSkillIcon(tower.code,index);
-    icon.style.color = towerVisual(tower.code).color;
-    icon.setAttribute('aria-hidden','true');
     const badge = document.createElement('small');
     badge.textContent = requirement;
     if (index===3) button.dataset.ultimate='true';
-    button.append(icon,badge);
+    button.append(skillGlyph(tower.code,index),badge);
     skillChoices.append(button);
     if (towerSkillSelection === key) {
       skillDetail.hidden = false;
@@ -1133,7 +1220,8 @@ function updateLoopPanels() {
     targeting.append(label);
   }
   renderBreakthrough(element('loop-breakthrough'),tower);
-  renderTowerEquipment(root,tower,definition,remaining);
+  refreshTowerEquipment=renderTowerEquipment(root,tower,definition);
+  refreshTowerEquipment(remaining);
 }
 
 const loopHudCommands = {
@@ -1266,8 +1354,10 @@ function updateUI() {
   fill.style.width = `${Math.min(1, pressure) * 100}%`;
   fill.classList.toggle('warning', pressure >= .55 && pressure < .8);
   fill.classList.toggle('danger', pressure >= .8);
-  element('pause-button').textContent = state.paused ? '继续' : '暂停';
-  element('pause-button').setAttribute('aria-pressed', String(state.paused));
+  const pauseButton = element('pause-button');
+  setText(pauseButton, state.paused ? '继续' : '暂停');
+  pauseButton.setAttribute('aria-pressed', String(state.paused));
+  setIconCell(pauseButton, ICON_ATLAS.hudStart + (state.paused ? ICON_ATLAS.hudButtons.length : ICON_ATLAS.hudButtons.indexOf('pause-button')));
   element('speed-button').textContent = `${state.speed}× 速度`;
   element('mute-button').textContent = audio.muted ? '声音关' : '声音开';
   element('mute-button').setAttribute('aria-pressed', String(audio.muted));
@@ -1396,7 +1486,7 @@ function renderHelpEquipment() {
     const price='直购 '+equipmentPurchasePrice(code)+' 金';
     paragraph(article,[equipmentGrade[item.grade],price].join(' · '));
     paragraph(article,item.description);
-    if (item.components) paragraph(article,'材料 · '+item.components.map(part=>definitions[part].name).join(' ＋ '));
+    if (item.components) paragraph(article,`合成 · ${item.craftFee} 金 · ${item.components.map(part=>definitions[part].name).join(' ＋ ')}`);
     if (item.active) paragraph(article,`主动技能 · 冷却 ${item.active.cooldown} 秒${item.active.targeted?' · 需选目标':''}`);
     return article;
   }));
@@ -1423,6 +1513,7 @@ function openHelp() {
 }
 
 function bindControls() {
+  ICON_ATLAS.hudButtons.forEach((id, index) => setIconCell(element(id), ICON_ATLAS.hudStart + index));
   element('tower-bag-button').addEventListener('click', () => {
     const open = element('tower-bag-button').getAttribute('aria-expanded') === 'true';
     selectTowerEquipment(open ? towerEquipmentSelection : 'bag');
@@ -1566,9 +1657,14 @@ function bindControls() {
 
 async function boot() {
   try {
-    const equipmentAtlas=new Image();
-    equipmentAtlas.onload=()=>document.documentElement.classList.add('equipment-art-loaded');
-    equipmentAtlas.src='./assets/modes/loop/equipment.webp';
+    const iconAtlas = new Image();
+    iconAtlas.onload = () => {
+      const root = document.documentElement;
+      root.style.setProperty('--icon-atlas', `url("${iconAtlas.src}")`);
+      root.style.setProperty('--icon-atlas-size', `${ICON_ATLAS.columns * 100}%`);
+      root.classList.add('icon-art-loaded');
+    };
+    iconAtlas.src = `./${ICON_ATLAS.path}`;
     const artwork = await loadArtwork(undefined, undefined, { progressive: true });
     renderer = createRenderer(canvas, artwork);
     artworkCache = artwork;

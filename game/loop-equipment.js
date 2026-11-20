@@ -1,6 +1,7 @@
 const white = (name, icon, cost, description, effects) => ({name, grade:'white', icon, cost, description, ...effects});
+const craftFees = {green:40,blue:90,orange:180};
 const recipe = (name, grade, icon, components, description, effects = {}, active = undefined) => ({
- name, grade, icon, components, description, ...effects, active,
+ name, grade, icon, components, craftFee:craftFees[grade], description, ...effects, active,
 });
 
 export const LOOP_EQUIPMENT = {
@@ -36,12 +37,12 @@ export const LOOP_EQUIPMENT = {
  sluice:recipe('截流闸','orange',29,['field','flywheel','lens'],'在场超过 20 秒的敌人进入射程时，自动在其脚下展开 3 秒减速区，冷却 30 秒。',{sluice:true}),
 };
 
-export function equipmentMaterialCost(code) {
+export function equipmentCraftCost(code) {
  const item=LOOP_EQUIPMENT[code];
- return item.components ? item.components.reduce((sum,part)=>sum+equipmentMaterialCost(part),0) : item.cost;
+ return item.components ? item.components.reduce((sum,part)=>sum+equipmentCraftCost(part),item.craftFee) : item.cost;
 }
 export function equipmentPurchasePrice(code) {
- const cost=equipmentMaterialCost(code);
+ const cost=equipmentCraftCost(code);
  return LOOP_EQUIPMENT[code].components ? Math.round(cost * 1.25 / 5) * 5 : cost;
 }
 
