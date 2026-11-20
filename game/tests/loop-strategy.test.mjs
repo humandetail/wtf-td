@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame} from '../engine.js';
+import {createLoopGame} from '../loop-session.js';
 import {loopSpriteUrl} from '../render.js';
 import {loopEnemy} from '../loop-catalog.js';
 import {createRoadPosition} from '../geometry.js';
 import {readFile} from 'node:fs/promises';
 
 function start(options={}){
- const g=createGame({draftRandom:()=>0,random:()=>0,...options});g.start();g.openStarter();return g;
+ const g=createLoopGame({draftRandom:()=>0,random:()=>0,...options});g.start();g.openStarter();return g;
 }
 function play(g,seconds){
  for(let i=0;i<seconds*4&&g.state.phase==='playing';i++)g.tick(.25);
@@ -24,7 +24,7 @@ test('implemented card and monster catalogues expose every documented identifier
 test('every independent artwork entry is a real alpha PNG in the runtime asset directory',async()=>{
  const g=start(), units=[...g.catalog,...Object.values(g.enemyCatalog)];
  const urls=units.map(unit=>loopSpriteUrl(unit.code)).filter(Boolean);
- assert.equal(urls.length,54);
+ assert.equal(urls.length,56);
  for(const url of urls){
   const data=await readFile(url);
   assert.equal(data.subarray(1,4).toString(),'PNG');

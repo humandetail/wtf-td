@@ -1,4 +1,4 @@
-import {createGame} from '../engine.js';
+import {createLoopGame} from '../loop-session.js';
 import {LOOP_RARITY} from '../loop-equipment.js';
 import {ROAD_SEGMENTS} from '../geometry.js';
 
@@ -36,7 +36,7 @@ function bestPosition(game,card){
 
 export function playLoopStrategy(seed=1,style='physical',options={}){
  const trace=options.trace;
- const game=createGame({random:seeded(Math.imul(seed,0x9e3779b1)),draftRandom:seeded(Math.imul(seed,0x85ebca6b)+1000),enemyHealthScale:options.enemyHealthScale,
+ const game=createLoopGame({random:seeded(Math.imul(seed,0x9e3779b1)),draftRandom:seeded(Math.imul(seed,0x85ebca6b)+1000),enemyHealthScale:options.enemyHealthScale,
   ...(options.noEpic?{towerFilter:t=>t.rarity!=='epic'}:{})});
  const state=game.state,milestones=[];
  const strategy=options.strategy??'gear';

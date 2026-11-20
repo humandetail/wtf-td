@@ -8,7 +8,7 @@ export function createAudio() {
   /** @type {Set<OscillatorNode>} */
   const voices = new Set();
   const lastPlayed = new Map();
-  const cooldowns = { shot: 0.065, hit: 0.09, kill: 0.08, build: 0.12, upgrade: 0.12, sell: 0.12, wave: 0.8, 'core-hit': 0.3, 'wave-clear': 0.8, 'research-complete': 0.12, checkpoint: 0.8, 'convoy-toggle': 0.3, 'convoy-repair': 0.3, relocate: 0.3, supply: 0.2, victory: 2, defeat: 2 };
+  const cooldowns = { shot: 0.065, hit: 0.09, kill: 0.08, build: 0.12, upgrade: 0.12, sell: 0.12, wave: 0.8, 'wave-clear': 0.8, victory: 2, defeat: 2 };
 
   async function unlock() {
     try {
@@ -70,9 +70,7 @@ export function createAudio() {
   /** @param {{type: string, code?: string} | string} event */
   function play(event) {
     if (!context || context.state !== 'running' || muted) return;
-    const originalType = typeof event === 'string' ? event : event.type;
-    const aliases = { fusion: 'upgrade', 'hero-attack': 'shot', 'hero-skill': 'upgrade', 'hero-hit': 'core-hit', 'hero-death': 'core-hit', 'hero-respawn': 'wave-clear', 'hero-level': 'research-complete', 'camp-clear': 'checkpoint', 'camp-reward': 'supply', attack: 'shot', damage: 'hit', 'king-attack': 'shot', 'king-death': 'core-hit', draw: 'wave-clear' };
-    const type = aliases[originalType] || originalType;
+    const type = typeof event === 'string' ? event : event.type;
     if (!(type in cooldowns)) return;
     const now = context.currentTime;
     if (now - (lastPlayed.get(type) ?? -Infinity) < cooldowns[type]) return;
@@ -97,9 +95,6 @@ export function createAudio() {
       case 'upgrade':
         [440, 554.37, 659.25, 880].forEach((note, index) => tone(note, note, 0.24, 'triangle', 0.23, index * 0.065));
         break;
-      case 'research-complete':
-        [523.25, 659.25, 783.99, 1046.5].forEach((note, index) => tone(note, note, 0.3, 'sine', 0.22, index * 0.09));
-        break;
       case 'sell':
         [660, 440, 330].forEach((note, index) => tone(note, note * 0.85, 0.16, 'sine', 0.22, index * 0.055));
         break;
@@ -118,20 +113,6 @@ export function createAudio() {
       case 'gold-rush-end':
         [587.33, 783.99, 1046.5].forEach((note, index) => tone(note, note, 0.19, 'sine', 0.14, index * 0.055));
         break;
-      case 'convoy-toggle':
-        tone(130.81, 196, 0.4, 'triangle', 0.25);
-        tone(196, 130.81, 0.4, 'triangle', 0.25, 0.22);
-        break;
-      case 'relocate':
-        tone(880, 110, 0.5, 'sine', 0.32);
-        tone(220, 55, 0.4, 'triangle', 0.2);
-        break;
-      case 'core-hit':
-        tone(98, 42, 0.3, 'triangle', 0.32);
-        break;
-      case 'checkpoint':
-      case 'convoy-repair':
-      case 'supply':
       case 'wave-clear':
         tone(130.81, 196, 0.25, 'sine', 0.25);
         tone(196, 261.63, 0.3, 'sine', 0.2, 0.12);

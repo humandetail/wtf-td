@@ -11,5 +11,9 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "gl-matrix": "3.3.0",
+    "war3-model": "4.0.1"
   }
 }

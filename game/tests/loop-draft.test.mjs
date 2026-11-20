@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame} from '../engine.js';
+import {createLoopGame} from '../loop-session.js';
 
 test('the free SR opens once and the timer starts after successful deployment', () => {
- const game=createGame({draftRandom:()=>0});
+ const game=createLoopGame({draftRandom:()=>0});
  game.start();game.tick(5);
  assert.equal(game.state.elapsed,0);
  assert.equal(game.state.gold,80);
@@ -20,7 +20,7 @@ test('the free SR opens once and the timer starts after successful deployment', 
 });
 
 test('packs respect their tier ceilings, failures preserve pity, and the third SSR pack guarantees SSR', () => {
- const game=createGame({startingGold:5000,draftRandom:()=>0,random:()=>{throw Error('drawing advanced the road RNG');}});
+ const game=createLoopGame({startingGold:5000,draftRandom:()=>0,random:()=>{throw Error('drawing advanced the road RNG');}});
  game.start();
  for(let i=1;i<=2;i++){
   const result=game.draw('SSR');assert.ok(result.ok);
@@ -39,7 +39,7 @@ test('packs respect their tier ceilings, failures preserve pity, and the third S
 });
 
 test('adjacent towers use real placement rules and five distinct R cards redeem one credential', () => {
- const game=createGame({startingGold:2000,draftRandom:()=>0});
+ const game=createLoopGame({startingGold:2000,draftRandom:()=>0});
  game.start();game.openStarter();
  for(const [i,x] of [190,262,334].entries()){
   if(i)assert.ok(game.draw('R').ok);
@@ -57,7 +57,7 @@ test('adjacent towers use real placement rules and five distinct R cards redeem 
 });
 
 test('SR and SSR use the same population and the 100 cap persists through endless',()=>{
- const game=createGame({startingGold:5000,draftRandom:()=>0});
+ const game=createLoopGame({startingGold:5000,draftRandom:()=>0});
  game.start();game.openStarter();
  for(const [i,code] of ['T05','T04','T25','T03','T26'].entries()){
   if(i)game.state.cards.push({id:100+i,code,paid:false,refund:0});

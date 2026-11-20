@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createGame} from '../engine.js';
+import {createLoopGame} from '../loop-session.js';
 import {GOLD_RUSHES,LOOP_ENEMIES,assignWaveBounties,loopEnemy,loopWave,waveMultiplier} from '../loop-catalog.js';
 
 function start(options={}){
- const game=createGame({draftRandom:()=>0,random:()=>0,...options});
+ const game=createLoopGame({draftRandom:()=>0,random:()=>0,...options});
  game.start();game.openStarter();return game;
 }
 function deployStarter(game){return game.deploy(game.state.cards[0].id,500,300).towerId;}

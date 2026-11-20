@@ -12,9 +12,9 @@ const failure=message=>({ok:false,message});
 
 export function createLoopGame(options={}){
  const waveCount=options.waveCount??LOOP_CAMPAIGN_WAVES;
- const initial=()=>({mode:'loop',phase:'menu',paused:false,speed:1,gold:options.startingGold??80,elapsed:0,
+ const initial=()=>({phase:'menu',paused:false,speed:1,gold:options.startingGold??80,elapsed:0,
   wave:0,nextWaveIn:options.initialDelay??30,limit:options.limit??60,endless:false,kills:0,
-  towers:[],enemies:[],walls:[],convoy:null,regions:[],dust:[],pendingSpawns:0,capacity:LOOP_POPULATION,populationUsed:0,
+  towers:[],enemies:[],regions:[],dust:[],pendingSpawns:0,capacity:LOOP_POPULATION,populationUsed:0,
   waveCount,starter:'unopened',ssrMisses:0,cards:[],inventory:[],challenge:null,completedChallenges:[],usedChallenges:[],goldRush:null,goldRushQueued:0,
   regularKillGold:0,regularSupply:0,endlessKills:0,endlessSupply:0,supplyCursor:0,ledger:[]});
  const state=initial(),random=options.random??Math.random,draftRandom=options.draftRandom??Math.random;
@@ -56,7 +56,7 @@ export function createLoopGame(options={}){
    const xp=waveXp(e.wave)*(e.boss?8:e.elite?2:1);
    for(const t of state.towers)if(Math.hypot(e.x-t.x,e.y-t.y)<=260)pendingExperience.set(t.id,(pendingExperience.get(t.id)??0)+xp);
   }
-  emit({type:'kill',x:e.x,y:e.y,code:e.code,amount:e.reward,wave:e.wave,endless:e.endless});
+  emit({type:'kill',x:e.x,y:e.y,angle:e.angle,code:e.code,amount:e.reward,wave:e.wave,endless:e.endless});
   if(e.endless)return;
   if(e.boss){
    const rush=GOLD_RUSHES.find(entry=>entry.wave===e.wave);
@@ -285,11 +285,8 @@ export function createLoopGame(options={}){
    if(card.starter)state.starter='deployed';
    state.towers.push({id:towerId,code:def.code,assetCode:def.assetCode,x,y,paid:card.paid,refund:card.refund??0,awakened:false,qualifiedUsed:false,xp:0,level:1,
     population:def.population,priority:'default',equipment:[],combatUntil:0,angle:0,cooldown:0,cycles:0,route:null});
-   emit({type:'build',x,y,code:def.code});return success('部署完成',{towerId});
+   emit({type:'build',x,y,code:def.code});return {ok:true,message:'部署完成',towerId};
   },
-  // Shared callers still use these rejections for commands belonging to other modes.
-  canBuildType:()=>failure('从卡包选择工事'), canBuild:()=>failure('从卡包选择工事'), build:()=>failure('从卡包选择工事'),
-  canUpgrade:()=>failure('击杀获取经验后自动升级'),
   sell(id){
    const tower=state.towers.find(t=>t.id===id);
    if(!editable()||!tower)return failure('当前不能出售');

@@ -1,24 +1,22 @@
-import {TOWERS, ENEMIES} from './catalog.js';
 import {CARD_ROWS, ENEMY_ROWS, WAVE_ROWS} from './loop-roster.js';
 import {LOOP_EQUIPMENT, LOOP_CAMPAIGN_WAVES} from './loop-equipment.js';
 export {LOOP_EQUIPMENT} from './loop-equipment.js';
 
 const baseStats = {
- T01:[22,.55,205,'ranged','physical'], T02:[18,.9,195,'ranged','magic'],
- T03:[82,1.8,245,'ranged','physical'], T04:[62,.9,265,'ranged','magic'],
- T05:[46,1.1,178,'melee','magic'], T06:[26,.85,205,'ranged','physical'],
- T07:[9,2,215,'ranged','physical'], T08:[14,1.2,145,'melee','magic'],
- T09:[0,1,210,'support',null], T10:[0,1,200,'support',null],
- T11:[0,8,190,'support',null], T12:[20,.9,125,'melee','physical'],
- T13:[18,1.2,230,'ranged','magic'], T14:[27,.95,235,'ranged','physical'],
+ T01:['T01','ranged','physical',22,.55,205,'direct','#f5ca66'], T02:['T02','ranged','magic',18,.9,195,'slow','#ca91ff'],
+ T03:['T03','ranged','physical',82,1.8,245,'splash','#ff9970'], T04:['T04','ranged','magic',62,.9,265,'direct','#fa787c'],
+ T05:['T05','melee','magic',46,1.1,178,'chain','#82cfff'], T06:['T06','ranged','physical',26,.85,205,'splash','#68dedf'],
+ T07:['T07','ranged','physical',9,2,215,'root','#b4e37c'], T08:['T08','melee','magic',14,1.2,145,'frost','#a5edff'],
+ T09:['T09','support',null,0,1,210,'radar','#c6b7ff'], T10:['T10','support',null,0,1,200,'overclock','#96f1b8'],
+ T11:['T11','support',null,0,8,190,'supply','#ffe494'], T12:['T12','melee','physical',20,.9,125,'barrier','#edbb8a'],
+ T13:['T05','ranged','magic',18,1.2,230,'magic','#d59bff'], T14:['T01','ranged','physical',27,.95,235,'multi','#f6d085'],
 };
 export const LOOP_TOWERS=Object.entries(CARD_ROWS).map(([code,[name,rarity,...data]])=>{
- const original=TOWERS.find(t=>t.code===code);
- const [assetCode,role,damageType,damage,interval,range,...skills]=original
-  ? [original.assetCode??code,baseStats[code][3],baseStats[code][4],...baseStats[code].slice(0,3),...data] : data;
- return {...original,code,name,rarity,assetCode,role,damageType,damage,interval,range,skills,
+ const base=baseStats[code];
+ const [assetCode,role,damageType,damage,interval,range,...skills]=base ? [...base.slice(0,6),...data] : data;
+ return {code,name,rarity,assetCode,role,damageType,damage,interval,range,skills,
   population:rarity==='common'?5:20,description:skills[0],
-  kind:original?.kind??(role==='support'?'aura':'direct'),color:original?.color??(damageType==='physical'?'#ffe494':'#9bc9ff')};
+  kind:base?.[6]??(role==='support'?'aura':'direct'),color:base?.[7]??(damageType==='physical'?'#ffe494':'#9bc9ff')};
 });
 export const LOOP_PRIORITIES={default:'默认职责',strongest:'最强目标',weakest:'最低生命',fastest:'最快目标',shield:'护盾优先',support:'支援优先',gold:'金币优先'};
 export const FIXED_ROUTES={T01:'A',T02:'B',T03:'A',T04:'A',T05:'A',T06:'B',T07:'B',T08:'A',T09:'A',T10:'B',T11:'A',T12:'B',T13:'B',T14:'A'};
@@ -84,9 +82,14 @@ export function nearbyAttackers(state,source,range,limit){
  return state.towers.filter(t=>loopTower(t.code)?.role!=='support'&&distance(t)<=range)
   .sort((a,b)=>distance(a)-distance(b)||a.id-b.id).slice(0,limit);
 }
+const enemyColors = {
+ X01:'#f6e8bd',X02:'#b8c6a2',X03:'#d6b1ed',X04:'#b9a1d8',
+ X05:'#e9bd69',X06:'#c3db8c',X07:'#ff947c',X08:'#a0d6b6',
+ X09:'#d7ab92',X10:'#cbd9ed',X11:'#ecb6df',X12:'#d3b18e',
+};
 export const LOOP_ENEMIES=Object.fromEntries(Object.entries(ENEMY_ROWS).map(([code,[name,assetCode,hp,speed,reward,description,counter,armor]])=>[
  code,{code,name,assetCode,hp:Number(hp),speed:Number(speed),reward:Number(reward),description,counter,armor:Number(armor??({X02:.35,X08:.35,E01:.25,C01:.4}[code]??0)),
-  color:ENEMIES.find(item=>item.code===assetCode)?.color??'#f5d79b'}
+  color:enemyColors[assetCode]??'#f5d79b'}
 ]));
 export const CHALLENGES=[
  ['C01',3,0,'blade'],['C02',8,1,'gear'],['C03',13,2,'coil'],['C04',18,3,'lens'],
