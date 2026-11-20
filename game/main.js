@@ -3,7 +3,7 @@ import { createLoopGame } from './loop-session.js';
 import { WORLD } from './geometry.js';
 import { createAudio } from './audio.js';
 import { loadArtwork, createRenderer, loopSpriteUrl } from './render.js';
-import { towerSkillIcon, towerVisual } from './battle-visuals.js';
+import { ICON_ATLAS, towerSkillCell, towerSkillIcon, towerVisual } from './battle-visuals.js';
 import { affixApplies } from './loop-catalog.js';
 import { equipmentCraftCost, equipmentPurchasePrice, LOOP_DEPUTY_LEVELS } from './loop-equipment.js';
 
@@ -376,18 +376,33 @@ function commandButton(label, action, disabled = false, icon = actionIcons.find(
   button.addEventListener('click', action); return button;
 }
 
-function skillLine(parent, code, index, label) {
-  const line = document.createElement('p');
+/** @param {HTMLElement} node @param {number} cell */
+function setIconCell(node, cell) {
+  const sprite = String(cell);
+  if (node.dataset.sprite === sprite) return;
+  const columns = ICON_ATLAS.columns;
+  node.dataset.sprite = sprite;
+  node.style.setProperty('--icon-x', `${cell % columns / (columns - 1) * 100}%`);
+  node.style.setProperty('--icon-y', `${Math.floor(cell / columns) / (columns - 1) * 100}%`);
+}
+
+function skillGlyph(code, index) {
   const icon = document.createElement('span');
-  const copy = document.createElement('span');
-  const visual = towerVisual(code);
-  line.className = 'skill-line';
   icon.className = 'skill-icon';
   icon.dataset.icon = towerSkillIcon(code, index);
-  icon.style.color = visual.color;
+  icon.style.color = towerVisual(code).color;
   icon.setAttribute('aria-hidden','true');
+  const cell = towerSkillCell(code, index);
+  if (cell !== undefined) setIconCell(icon, cell);
+  return icon;
+}
+
+function skillLine(parent, code, index, label) {
+  const line = document.createElement('p');
+  const copy = document.createElement('span');
+  line.className = 'skill-line';
   copy.textContent = label;
-  line.append(icon,copy);
+  line.append(skillGlyph(code,index),copy);
   parent.append(line);
 }
 
@@ -781,11 +796,7 @@ function equipmentGlyph(item) {
   glyph.className='equipment-glyph';
   glyph.dataset.icon='gear';
   glyph.setAttribute('aria-hidden','true');
-  if (Number.isInteger(item?.icon)) {
-    glyph.dataset.sprite='true';
-    glyph.style.setProperty('--equipment-x',`${(item.icon%6)*20}%`);
-    glyph.style.setProperty('--equipment-y',`${Math.floor(item.icon/6)*25}%`);
-  }
+  if (Number.isInteger(item?.icon)) setIconCell(glyph, ICON_ATLAS.equipmentStart + item.icon);
   return glyph;
 }
 
@@ -1179,15 +1190,10 @@ function updateLoopPanels() {
     button.dataset.locked = String(!unlocked);
     button.title = `${label}\n${skill}`;
     button.setAttribute('aria-controls','loop-skill-detail');
-    const icon = document.createElement('span');
-    icon.className = 'skill-icon';
-    icon.dataset.icon = towerSkillIcon(tower.code,index);
-    icon.style.color = towerVisual(tower.code).color;
-    icon.setAttribute('aria-hidden','true');
     const badge = document.createElement('small');
     badge.textContent = requirement;
     if (index===3) button.dataset.ultimate='true';
-    button.append(icon,badge);
+    button.append(skillGlyph(tower.code,index),badge);
     skillChoices.append(button);
     if (towerSkillSelection === key) {
       skillDetail.hidden = false;
@@ -1348,8 +1354,10 @@ function updateUI() {
   fill.style.width = `${Math.min(1, pressure) * 100}%`;
   fill.classList.toggle('warning', pressure >= .55 && pressure < .8);
   fill.classList.toggle('danger', pressure >= .8);
-  element('pause-button').textContent = state.paused ? '继续' : '暂停';
-  element('pause-button').setAttribute('aria-pressed', String(state.paused));
+  const pauseButton = element('pause-button');
+  setText(pauseButton, state.paused ? '继续' : '暂停');
+  pauseButton.setAttribute('aria-pressed', String(state.paused));
+  setIconCell(pauseButton, ICON_ATLAS.hudStart + (state.paused ? ICON_ATLAS.hudButtons.length : ICON_ATLAS.hudButtons.indexOf('pause-button')));
   element('speed-button').textContent = `${state.speed}× 速度`;
   element('mute-button').textContent = audio.muted ? '声音关' : '声音开';
   element('mute-button').setAttribute('aria-pressed', String(audio.muted));
@@ -1505,6 +1513,7 @@ function openHelp() {
 }
 
 function bindControls() {
+  ICON_ATLAS.hudButtons.forEach((id, index) => setIconCell(element(id), ICON_ATLAS.hudStart + index));
   element('tower-bag-button').addEventListener('click', () => {
     const open = element('tower-bag-button').getAttribute('aria-expanded') === 'true';
     selectTowerEquipment(open ? towerEquipmentSelection : 'bag');
@@ -1648,9 +1657,14 @@ function bindControls() {
 
 async function boot() {
   try {
-    const equipmentAtlas=new Image();
-    equipmentAtlas.onload=()=>document.documentElement.classList.add('equipment-art-loaded');
-    equipmentAtlas.src='./assets/modes/loop/equipment.webp';
+    const iconAtlas = new Image();
+    iconAtlas.onload = () => {
+      const root = document.documentElement;
+      root.style.setProperty('--icon-atlas', `url("${iconAtlas.src}")`);
+      root.style.setProperty('--icon-atlas-size', `${ICON_ATLAS.columns * 100}%`);
+      root.classList.add('icon-art-loaded');
+    };
+    iconAtlas.src = `./${ICON_ATLAS.path}`;
     const artwork = await loadArtwork(undefined, undefined, { progressive: true });
     renderer = createRenderer(canvas, artwork);
     artworkCache = artwork;

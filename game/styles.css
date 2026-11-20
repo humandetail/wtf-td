@@ -206,8 +206,16 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .equipment-glyph{position:relative;display:inline-grid;place-items:center;width:34px;height:34px;flex:none;color:#d8b969}
 .equipment-choice .equipment-glyph{align-self:center;margin:0}
 .equipment-glyph::before{content:"";display:block;width:22px;height:22px;background:currentColor;mask:var(--ui-glyph) center/contain no-repeat;-webkit-mask:var(--ui-glyph) center/contain no-repeat}
-.equipment-art-loaded .equipment-glyph[data-sprite]{background-image:url("./assets/modes/loop/equipment.webp");background-repeat:no-repeat;background-size:600% 500%;background-position:var(--equipment-x) var(--equipment-y)}
-.equipment-art-loaded .equipment-glyph[data-sprite]::before{display:none}
+.icon-art-loaded .skill-icon[data-sprite],
+.icon-art-loaded .equipment-glyph[data-sprite],
+.icon-art-loaded #game-screen .game-controls .button[data-sprite]::before {
+  background: var(--icon-atlas) var(--icon-x) var(--icon-y) / var(--icon-atlas-size) var(--icon-atlas-size) no-repeat;
+  -webkit-mask: none;
+  mask: none;
+}
+.icon-art-loaded .skill-icon[data-sprite] { border-radius: 2px }
+.icon-art-loaded .equipment-glyph[data-sprite]::before { display: none }
+.icon-art-loaded #game-screen .game-controls .button[data-sprite]::before { content: ""; width: 14px; height: 14px; flex: none }
 #help-dialog[open]{
   display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:12px;
   width:min(960px,calc(100% - 16px));height:min(760px,calc(100dvh - 16px));
