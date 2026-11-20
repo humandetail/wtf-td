@@ -47,7 +47,7 @@ function deployDeputy(game,main) {
  return deputy;
 }
 
-test('crafting uses distinct materials free of charge and orange re-equip requires a deputy',()=>{
+test('crafting charges a fee once and orange re-equip requires a deputy',()=>{
  const game=start({startingGold:2500,draftRandom:()=>.99});
  const towerId=deployStarter(game),main=game.state.towers[0];
  assert.equal(main.code,'T27');
@@ -56,6 +56,7 @@ test('crafting uses distinct materials free of charge and orange re-equip requir
  assert.equal(deputy.deputyStage,3);
  const blue=game.buyEquipment('splitter');
  assert.ok(blue.ok);
+ assert.equal(game.state.inventory[0].invested,400);
  assert.ok(game.buyEquipment('siege').ok);
  const invested=game.state.inventory.reduce((sum,item)=>sum+item.invested,0);
  assert.equal(game.craftEquipment('arbalest').ok,false);
@@ -63,13 +64,14 @@ test('crafting uses distinct materials free of charge and orange re-equip requir
  const gold=game.state.gold;
  const orange=game.craftEquipment('arbalest');
  assert.ok(orange.ok);
- assert.equal(game.state.gold,gold);
+ assert.equal(game.state.gold,gold-180);
+ assert.equal(game.state.ledger.at(-1).amount,-180);
  assert.equal(game.equip(towerId,orange.itemId).ok,false);
  main.level=19;
  assert.equal(game.breakthrough(towerId,deputy.id).ok,false);
  main.level=20;
  assert.ok(game.breakthrough(towerId,deputy.id).ok);
- assert.equal(game.state.gold,gold);
+ assert.equal(game.state.gold,gold-180);
  assert.equal(game.breakthrough(towerId,deputy.id).ok,false);
  assert.ok(game.equip(towerId,orange.itemId).ok);
  assert.ok(game.sell(deputy.id).ok);
@@ -81,16 +83,43 @@ test('crafting uses distinct materials free of charge and orange re-equip requir
  deployDeputy(game,main);
  assert.ok(game.equip(towerId,orange.itemId).ok);
  assert.ok(game.unequip(towerId,orange.itemId).ok);
- assert.equal(game.sellEquipment(orange.itemId).refund,Math.floor((invested+65)/4));
+ assert.equal(game.sellEquipment(orange.itemId).refund,Math.floor((invested+65+180)/4));
  assert.equal(game.sellEquipment(orange.itemId).ok,false);
 
  for(const code of ['embers','field','crystal'])assert.ok(game.buyEquipment(code).ok);
  const before=game.state.inventory.map(item=>item.id);
+ const goldBefore=game.state.gold;
  assert.equal(game.craftEquipment('furnace').ok,false);
  assert.deepEqual(game.state.inventory.map(item=>item.id),before);
+ assert.equal(game.state.gold,goldBefore);
  assert.ok(game.buyEquipment('crystal').ok);
  assert.ok(game.craftEquipment('furnace').ok);
  assert.deepEqual(game.state.inventory.map(item=>item.code),['furnace']);
+});
+
+test('tower crafting rejects an insufficient fee without consuming any material',()=>{
+ const game=start({startingGold:164});
+ const towerId=deployStarter(game);
+ const {itemId:blade}=game.buyEquipment('blade');
+ const {itemId:gear}=game.buyEquipment('gear');
+ assert.ok(game.equip(towerId,blade).ok);
+ const tower=game.state.towers[0];
+ const entries=game.state.ledger.length;
+ assert.equal(game.state.gold,39);
+ assert.equal(game.craftEquipment('repeater',towerId).message,'金币不足');
+ assert.equal(game.state.gold,39);
+ assert.equal(game.state.ledger.length,entries);
+ assert.deepEqual(tower.equipment.map(item=>item.id),[blade]);
+ assert.deepEqual(game.state.inventory.map(item=>item.id),[gear]);
+
+ game.state.gold=40;
+ assert.ok(game.craftEquipment('repeater',towerId).ok);
+ assert.equal(game.state.gold,0);
+ assert.equal(game.state.ledger.length,entries+1);
+ assert.deepEqual(tower.equipment.map(item=>[item.code,item.invested]),[['repeater',165]]);
+ assert.deepEqual(game.state.inventory,[]);
+ assert.equal(game.craftEquipment('repeater',towerId).ok,false);
+ assert.equal(game.state.gold,0);
 });
 
 test('cross-type gear remains wearable while incompatible affixes stay inactive',()=>{

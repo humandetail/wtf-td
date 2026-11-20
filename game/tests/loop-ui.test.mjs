@@ -12,7 +12,22 @@ async function harness(loopFixture = null) {
     setAttribute(k,v){this.attrs[k]=v;} getAttribute(k){return this.attrs[k];}
     addEventListener(k,fn){this.events[k]=fn;} append(...nodes){this.children.push(...nodes);for(const node of nodes)node.parent=this;}
     replaceChildren(...nodes){this.children=[];this.append(...nodes);} contains(node){return this===node||this.children.some(child=>child.contains(node));}
-    closest(){return null;} querySelectorAll(){return [];} focus(){document.activeElement=this;}
+    get firstElementChild(){return this.children[0];}
+    get lastElementChild(){return this.children.at(-1);}
+    get parentElement(){return this.parent;}
+    remove(){this.parent.children=this.parent.children.filter(child=>child!==this);}
+    closest(){return null;} querySelectorAll(){return [];} scrollIntoView(){} focus(){document.activeElement=this;}
+    querySelector(selector){
+      const [head,...rest]=selector.split(' ');
+      const matches=node=>head.startsWith('.') ? node.className?.split(' ').includes(head.slice(1)) : node.tagName===head.toUpperCase();
+      for(const child of this.children){
+        const found=matches(child)?(rest.length?child.querySelector(rest.join(' ')):child):null;
+        if(found)return found;
+        const nested=child.querySelector(selector);
+        if(nested)return nested;
+      }
+      return null;
+    }
     showModal(){this.open=true;} close(){this.open=false;this.events.close?.();}
     click(){if(!this.disabled)this.events.click?.({target:this,currentTarget:this});} getBoundingClientRect(){return {left:0,top:0,width:1280,height:800};}
   }
@@ -82,6 +97,25 @@ test('loop shop previews tiers, opens guaranteed starter and confirms a deployme
  panelButton('loop-controls',button=>button.dataset.choice==='empty:0').click();
  assert.equal(node('loop-skill-detail').hidden,true);
  assert.equal(node('tower-bag-button').getAttribute('aria-expanded'),'true');
+});
+
+test('card inspection and the equipment shelf survive updates within their panel',async()=>{
+ const {node,go,click,panelButton}=await harness();
+ go();
+ panelButton('loop-cards',button=>button.textContent==='开启免费 SR 起手卡').click();
+ panelButton('loop-cards',button=>button.dataset.group==='draft').click();
+ node('loop-cards').querySelector('.card-preview details').open=true;
+ click('pause-button');
+ assert.equal(node('loop-cards').querySelector('.card-preview details').open,true);
+ click('pause-button');
+
+ click('equipment-button');
+ panelButton('loop-equipment-shop',button=>button.dataset.tab==='recipes').click();
+ const shop=node('loop-equipment-shop');
+ const shelf=shop.querySelector('.card-choice-strip');
+ panelButton('loop-equipment-shop',button=>button.dataset.choice==='repeater').click();
+ assert.equal(shop.querySelector('.card-choice-strip'),shelf);
+ assert.equal(shop.querySelector('.equipment-detail h4').textContent,'连射机括');
 });
 
 test('the help manual uses the loop catalog from the menu and resumes only a running battle',async()=>{
@@ -198,7 +232,15 @@ test('loop equipment storefront, recipe and six slots remain usable through deta
  shopButton(button=>button.dataset.choice==='focus').click();
  const materials=descendants(node('loop-equipment-shop')).filter(node=>node.className==='equipment-recipe-part');
  assert.equal(materials.filter(node=>node.dataset.missing==='false').length,2);
- shopButton(button=>button.textContent==='合成装备').click();
+  assert.ok(descendants(node('loop-equipment-shop')).some(node=>node.textContent==='从零合成 165 金'));
+  assert.ok(shopButton(button=>button.textContent==='直购 · 205 金'));
+  const craft=()=>shopButton(button=>button.textContent==='合成装备 · 40 金');
+  loop.state.gold=39;ui.updateUI();
+  assert.equal(craft().disabled,true);
+  loop.state.gold=40;ui.updateUI();
+  assert.equal(craft().disabled,false);
+  craft().click();
+  assert.equal(loop.state.gold,0);
  assert.equal(loop.state.inventory.length,1);
  assert.equal(loop.state.inventory[0].code,'focus');
  click('close-drawer-button');
@@ -214,6 +256,39 @@ test('loop equipment storefront, recipe and six slots remain usable through deta
  loop.state.elapsed=5;ui.updateUI();
  slotButton(button=>button.textContent==='卸下导能机芯').click();
  assert.equal(tower.equipment.length,0);
+});
+
+test('combat and equipment cooldown ticks update the current tower controls in place',async()=>{
+ const loop=(await import('../loop-session.js')).createLoopGame({draftRandom:()=>0,startingGold:800});
+ const {ui,go,node,panelButton,descendants}=await harness(loop);
+ go();
+ const {cardId}=loop.openStarter();
+ const {towerId}=loop.deploy(cardId,190,140);
+ const tower=loop.state.towers[0];
+ tower.equipment.push({id:99,code:'anchor',invested:0,readyAt:3,manual:true});
+ tower.combatUntil=5;
+ ui.activatePoint({x:190,y:140});
+ const slot=()=>panelButton('loop-controls',button=>button.dataset.choice==='slot:99');
+ slot().click();
+ const equippedSlot=slot();
+ const remove=panelButton('loop-controls',button=>button.textContent==='卸下锚定场');
+ const cast=panelButton('loop-controls',button=>button.textContent==='施放装备技');
+ const currentSkills=node('loop-skills').firstElementChild;
+ assert.equal(remove.disabled,true);
+ assert.equal(cast.disabled,true);
+ loop.state.elapsed=2;
+ ui.updateUI();
+ assert.ok(node('loop-skills').firstElementChild===currentSkills);
+ assert.ok(slot()===equippedSlot);
+ assert.equal(equippedSlot.dataset.cooldown,'1');
+ assert.ok(descendants(node('loop-controls')).some(child=>child.textContent==='脱战 3 秒后可卸下'));
+ loop.state.elapsed=5;
+ ui.updateUI();
+ assert.equal(panelButton('loop-controls',button=>button.textContent==='卸下锚定场'),remove);
+ assert.equal(remove.disabled,false);
+ assert.equal(cast.disabled,false);
+ assert.equal(equippedSlot.dataset.cooldown,'0');
+ assert.equal(tower.id,towerId);
 });
 
 test('loop SSR opening and R exchange remain visible through their tabs',async()=>{
