@@ -54,7 +54,7 @@ npm run dev
 - `main.js`、`render.js`：交互、资源加载与 Canvas 表现。
 - `loop-session.js`、`loop-catalog.js`、`geometry.js`：对局、单位配置和地图几何。
 - `audio.js`：本次原创的短音效合成，覆盖发射、命中、击杀、建造、升级、出售、波次、胜利、失败。
-- `assets/maps/v2/`：保留的四防区地图素材；当前地图使用 `assets/maps/v5/scene.webp` 的完整玉石封印庭院，道路与地块同图绘制；v3/v4 地图和源文件保留；`v1/` 保留初版图片、源文件和旧路线。原有地图根目录图片同样保留。
+- `assets/maps/v6/`：当前战场「镜潮枢庭」的完整原画与运行用 WebP，2D 和 3D 共用同一张地形图。v1–v5 归档了旧地图及其制作素材。
 - `assets/original-assets.sha256.json`：开发前原素材内容基线。
 - `../outputs/`：只读的原始素材与原清单；游戏直接引用其中的单位方向图与特效。原 `../work/` 源文件与备份也纳入完整性保护，不通过游戏服务公开。
 

@@ -1,14 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {loadArtwork,loadImage} from '../render.js';
+import {loadArtwork,loadImage,MAP_SCENE} from '../render.js';
 import {readFileSync} from 'node:fs';
+
+const isActiveMap = pathname => pathname.endsWith(`/${MAP_SCENE}`);
 
 test('an unavailable loop map leaves unit and effect artwork available',async()=>{
  const savedImage=globalThis.Image,savedFetch=globalThis.fetch;
  const requests=[];
  class ImageMock{
   set src(value){const url=new URL(value);requests.push(url.pathname);
-   queueMicrotask(()=>url.pathname.endsWith('/v5/scene.webp')?this.onerror?.():this.onload?.());
+   queueMicrotask(()=>isActiveMap(url.pathname)?this.onerror?.():this.onload?.());
   }
  }
  try{
@@ -18,7 +20,7 @@ test('an unavailable loop map leaves unit and effect artwork available',async()=
   assert.equal(artwork.ground,null);
   assert.ok(artwork.units.get('T01').masterImage);
   assert.ok(artwork.effects.get('F04'));
-  assert.equal(requests.filter(path=>path.endsWith('/v5/scene.webp')).length,3);
+  assert.equal(requests.filter(isActiveMap).length,3);
  }finally{globalThis.Image=savedImage;globalThis.fetch=savedFetch;}
 });
 
@@ -51,12 +53,12 @@ test('progressive startup opens with the first requests still pending and instal
 test('a temporary loop scene failure retries the lightweight WebP and still completes startup',async()=>{
  const savedImage=globalThis.Image,savedFetch=globalThis.fetch,requests=[];
  class ImageMock{
-  set src(value){const url=new URL(value);requests.push(url);queueMicrotask(()=>{if(url.pathname.endsWith('/maps/v5/scene.webp')&&requests.filter(u=>u.pathname===url.pathname).length===1)this.onerror();else {this.width=this.naturalWidth=1280;this.height=this.naturalHeight=800;this.onload();}});}
+  set src(value){const url=new URL(value);requests.push(url);queueMicrotask(()=>{if(isActiveMap(url.pathname)&&requests.filter(u=>u.pathname===url.pathname).length===1)this.onerror();else {this.width=this.naturalWidth=1280;this.height=this.naturalHeight=800;this.onload();}});}
  }
  try{
   globalThis.Image=ImageMock;globalThis.fetch=async url=>({ok:true,json:async()=>JSON.parse(readFileSync(url,'utf8'))});
   const progress=[],artwork=await loadArtwork((n,total)=>progress.push([n,total]));
-  assert.ok(artwork.ground);assert.equal(requests.filter(u=>u.pathname.endsWith('/maps/v5/scene.webp')).length,2);assert.deepEqual(progress.at(-1),[31,31]);
+  assert.ok(artwork.ground);assert.equal(requests.filter(u=>isActiveMap(u.pathname)).length,2);assert.deepEqual(progress.at(-1),[31,31]);
  }finally{globalThis.Image=savedImage;globalThis.fetch=savedFetch;}
 });
 
@@ -83,7 +85,7 @@ test('a temporary loop scene failure retries the lightweight WebP and still comp
   const maps=requests.filter(url=>url.pathname.includes('/assets/maps/'));
   assert.equal(maps.length,1);
   for(const url of maps){
-   assert.ok(url.pathname.endsWith('/scene.webp'));
+   assert.ok(isActiveMap(url.pathname));
    const bytes=readFileSync(url);
    assert.equal(bytes.toString('ascii',0,4),'RIFF');assert.equal(bytes.toString('ascii',8,12),'WEBP');
    assert.ok(bytes.length<700000,`${url.pathname} exceeds mobile map budget`);

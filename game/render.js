@@ -4,7 +4,7 @@ import {effectColor,towerVisual} from './battle-visuals.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
-const MAPS = new URL('./assets/maps/v5/', import.meta.url);
+export const MAP_SCENE = 'assets/maps/v6/scene.webp';
 const LOOP_SPRITES = new Set([
   'T13', 'T14',
   ...Array.from({length:22},(_,i)=>'T'+(i+15)),
@@ -48,7 +48,7 @@ export async function loadArtwork(onProgress=(done,total)=>{}, onRetry=(url,atte
   const tasks = [];
   const result = { units, effects, ground: null };
   const queue = (url, store) => tasks.push({ url, store });
-  queue(new URL('scene.webp', MAPS), image => { result.ground = image; });
+  queue(new URL(MAP_SCENE, import.meta.url), image => { result.ground = image; });
   for (const entry of manifest.units) {
     const masterUrl = new URL(entry.master, ORIGINALS);
     const unit = { ...entry, masterUrl, masterImage: null, images: new Map(), requested: new Set() };
@@ -123,7 +123,7 @@ export function createRenderer(canvas, artwork) {
         backdrop.drawImage(ground, 0, 0, WORLD.width, WORLD.height);
         backdrop.restore();
       } else {
-        backdrop.strokeStyle = '#776b52';
+        backdrop.strokeStyle = '#9daab5';
         backdrop.lineWidth = ROAD_WIDTH;
         backdrop.lineCap = 'round';
         for (const {x1,y1,x2,y2} of ROAD_SEGMENTS) {
