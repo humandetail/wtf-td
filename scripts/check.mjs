@@ -174,36 +174,37 @@ for(const version of ['v3','v4']){
  assert(freePoints>100,'自由建造区域不足或退化成固定放置点');
  console.log(`✓ ${version} 路网像素、禁止压路与 ${freePoints} 个非固定建造采样点有效`);
 }
-// Both maps are painted as whole scenes. Inspect actual colors, not a synthetic lane alpha mask.
-async function checkPaintedScene(directory,segments,nodes,plaza,canPlace,minimumSamples,bounds=BUILD_CENTER_BOUNDS,footprint=FOOTPRINT) {
+const loopSegments=ROAD_NODES.flatMap((node,index)=>node.neighbors.filter(n=>n>index).map(n=>({x1:node.x,y1:node.y,x2:ROAD_NODES[n].x,y2:ROAD_NODES[n].y})));
+// Each scene is painted as a whole. Classify paving using that scene's palette.
+async function checkPaintedScene(directory,isPaving) {
 const sceneBytes=await read(`${directory}/scene.png`);
-assert(sceneBytes.equals(await read(`${directory}/source/scene-imagegen-original.png`)),`${directory} 场景与保留生成原图不一致`);
 const sceneWidth=sceneBytes.readUInt32BE(16),sceneHeight=sceneBytes.readUInt32BE(20);
 assert(Math.abs(sceneWidth/sceneHeight-1.6)<.025&&sceneWidth>=1280&&sceneHeight>=800,`${directory} 场景比例或尺寸错误`);
 const scene=await checkPng(`${directory}/scene.png`,sceneWidth,sceneHeight,false,true);
 const pavingAt=(x,y)=>{
  const index=(Math.round(y*sceneHeight/800)*sceneWidth+Math.round(x*sceneWidth/1280))*3;
  const [r,g,b]=scene.rgb.subarray(index,index+3);
- return r>160&&g>150&&r-g>7&&b/g>.68;
+ return isPaving(r,g,b);
 };
 let paintedSamples=0;
-for(const {x1,y1,x2,y2} of segments){
+for(const {x1,y1,x2,y2} of loopSegments){
  const node={x:x1,y:y1},end={x:x2,y:y2},length=Math.hypot(x2-x1,y2-y1);
  for(let d=0;d<=length;d+=8){
   const x=node.x+(end.x-node.x)*d/length,y=node.y+(end.y-node.y)*d/length;
   // Junction medallions and the jade core have their own colors; inspect them in the route overlay.
-  if((x>=plaza.x&&x<=plaza.x+plaza.width&&y>=plaza.y&&y<=plaza.y+plaza.height)||nodes.some(n=>Math.hypot(n.x-x,n.y-y)<18))continue;
+  if((x>=PLAZA.x&&x<=PLAZA.x+PLAZA.width&&y>=PLAZA.y&&y<=PLAZA.y+PLAZA.height)||ROAD_NODES.some(n=>Math.hypot(n.x-x,n.y-y)<18))continue;
   let found=false;
   for(let dy=-12;dy<=12&&!found;dy+=3)for(let dx=-12;dx<=12;dx+=3)if(pavingAt(x+dx,y+dy)){found=true;break;}
   assert(found,`${directory} 实际铺路偏离行走线：${x},${y}`);paintedSamples++;
  }
 }
-assert(paintedSamples>minimumSamples,`${directory} 实际铺路采样不足`);
+assert(paintedSamples>700,`${directory} 实际铺路采样不足`);
 let paintedFootprints=0;
+const {bounds}=LOOP_BUILD_AREA;
 for(let y=bounds.y;y<=bounds.y+bounds.height;y+=13)for(let x=bounds.x;x<=bounds.x+bounds.width;x+=19){
- if(!canPlace(x,y).ok)continue;
+ if(!loopPlacementStatus(x,y).ok)continue;
  paintedFootprints++;
- for(const dx of [-footprint.width/2,0,footprint.width/2])for(const dy of [-footprint.height/2,0,footprint.height/2]){
+ for(const dx of [-LOOP_FOOTPRINT.width/2,0,LOOP_FOOTPRINT.width/2])for(const dy of [-LOOP_FOOTPRINT.height/2,0,LOOP_FOOTPRINT.height/2]){
   let paved=0;
   for(let py=-3;py<=3;py++)for(let px=-3;px<=3;px++)paved+=Number(pavingAt(x+dx+px,y+dy+py));
   assert(paved/49<.45,`${directory} 可建占地落在实际铺路上：${x},${y}`);
@@ -211,8 +212,10 @@ for(let y=bounds.y;y<=bounds.y+bounds.height;y+=13)for(let x=bounds.x;x<=bounds.
 }
 console.log(`✓ ${directory} 实际场景 ${paintedSamples} 个路面色彩采样与 ${paintedFootprints} 处建筑占地采样有效（节点装饰另行看图）`);
 }
-const loopSegments=ROAD_NODES.flatMap((node,index)=>node.neighbors.filter(n=>n>index).map(n=>({x1:node.x,y1:node.y,x2:ROAD_NODES[n].x,y2:ROAD_NODES[n].y})));
-await checkPaintedScene('game/assets/maps/v5',loopSegments,ROAD_NODES,PLAZA,loopPlacementStatus,700,LOOP_BUILD_AREA.bounds,LOOP_FOOTPRINT);
+const archivedScene='game/assets/maps/v5';
+assert((await read(`${archivedScene}/scene.png`)).equals(await read(`${archivedScene}/source/scene-imagegen-original.png`)), 'v5 场景与保留生成原图不一致');
+await checkPaintedScene(archivedScene,(r,g,b)=>r>160&&g>150&&r-g>7&&b/g>.68);
+await checkPaintedScene('game/assets/maps/v6',(r,g,b)=>r>=112&&g>=119&&b>=128&&b>=r-8);
 for (const code of ['T13','T14']) await checkPng(`game/assets/modes/loop/${code}.png`,362,362,true);
 const contract = (await read('game/CONTRACT.md')).toString();
 const required = contract.match(/Required DOM IDs: ([^.]+)\./)?.[1].split(',').map(id=>id.trim());

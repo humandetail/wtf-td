@@ -248,8 +248,7 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .equipment-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .equipment-actions .button{margin:0}
 .equipment-detail-copy{min-width:0}
-.command-drawer[data-view=equipment]{overflow-x:hidden;scroll-padding-top:48px}
-.command-drawer[data-view=equipment] .drawer-heading{padding-bottom:5px;margin-bottom:6px}
+.command-drawer[data-view=equipment]{overflow-x:hidden;scroll-padding-top:36px}
 .equipment-detail .gear-list-back{display:none}
 #tower-equipment .equipment-detail{padding:6px}
 #tower-equipment .equipment-detail-copy{position:relative;min-height:0;overflow:auto;padding-right:44px}

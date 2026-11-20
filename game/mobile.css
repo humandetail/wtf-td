@@ -34,7 +34,7 @@
 :root.touch-layout .map-tools button::before{width:16px;height:16px}:root.touch-layout .map-tools [aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 :root.touch-layout .command-drawer{top:auto;left:6px;right:6px;bottom:6px;width:auto;max-height:75%;padding:14px;border-radius:16px 16px 8px 8px;border-top:2px solid #c6b477;scrollbar-gutter:auto;animation:sheet-in .18s ease-out}
 :root.touch-layout .command-drawer .button{min-height:var(--command-height)}
-:root.touch-layout .drawer-heading{position:sticky;top:-14px;background:#15241c;z-index:1;padding-top:6px}
+:root.touch-layout .drawer-heading{position:sticky;top:0;background:#15241c;z-index:1}
 :root.touch-layout .build-dock{bottom:6px;left:6px;right:6px;padding:10px;border-radius:16px 16px 8px 8px;max-height:70%;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;animation:sheet-in .18s ease-out}
 :root.touch-layout .loop-card-content>.card-preview{max-height:none;overflow:visible}
 :root.touch-layout .card-preview-actions{order:0;flex-basis:100%}
@@ -139,8 +139,12 @@
   scrollbar-gutter:auto;
   animation:none;
 }
-.game-screen.loop-console .drawer-heading{padding-bottom:5px;margin-bottom:6px}
+.game-screen.loop-console .drawer-heading{padding-bottom:0;margin-bottom:5px}
 .game-screen.loop-console .drawer-heading h2{font-size:14px;white-space:normal}
+#command-drawer:not([data-view=tower]) #close-drawer-button{position:relative;min-height:30px}
+:root.touch-layout #command-drawer:not([data-view=tower]) #close-drawer-button::after{
+  content:"";position:absolute;inset:-6px 0;
+}
 .game-screen.loop-console [data-view=tower] .drawer-heading{
   position:absolute;inset:8px 8px auto auto;margin:0;padding:0;border:0;
 }
