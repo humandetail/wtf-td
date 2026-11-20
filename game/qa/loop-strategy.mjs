@@ -58,9 +58,13 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
   if(result?.ok)trace?.push({at:state.elapsed,command,args});
   return result;
  }
- act('start');act('openStarter');
- function buyPack(tier) {
-  const purchase=act('draw',tier);
+ act('start');act('openStarterPack');
+ act('choosePackCard',state.draft.codes[0]);
+ function buyPack(tier,desiredCode) {
+  if(!act('buyPack',tier).ok)return false;
+  const rarityRank={common:0,rare:1,epic:2};
+  const sorted=[...state.draft.codes].sort((a,b)=>rarityRank[definitions.get(b).rarity]-rarityRank[definitions.get(a).rarity]||score(b)-score(a));
+  const purchase=act('choosePackCard',state.draft.codes.includes(desiredCode)?desiredCode:sorted[0]);
   if(!purchase.ok)return false;
   first[tier]??=state.wave;
   const {rarity}=definitions.get(state.cards.find(card=>card.id===purchase.cardId).code);
@@ -80,7 +84,6 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
    if(!available)return false;
    reserved.add(available.id);
   }
-  if(!state.inventory.some(item=>item.code===definition.scroll)&&!act('buyEquipment',definition.scroll).ok)return false;
   return act('craftEquipment',code).ok;
  }
  function equip(tower,code){
@@ -104,15 +107,19 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
     const epic=state.towers.find(t=>t.id===epicId);
     const main=epic&&definitions.get(epic.code).damage>0?epic:starter;
     const credentialCode=main&&game.credentials[main.code];
-    let credential=state.towers.find(tower=>tower.code===credentialCode&&!tower.qualifiedUsed);
+    const credential=state.towers.find(tower=>tower.code===credentialCode);
     const pending=()=>state.cards.find(card=>card.code===credentialCode);
     if(main&&!credential&&!main.awakened&&state.wave>=game.exchangeWave&&!pending()){
      const materials=state.cards.filter(card=>definitions.get(card.code).rarity==='common').slice(0,5);
      if(materials.length===5)act('exchangeR',credentialCode,materials.map(card=>card.id));
     }
-    if(credential&&act('breakthrough',main.id,credential.id).ok)first.breakthrough??=state.wave;
-
     const pressure=state.enemies.filter(enemy=>enemy.special!=='gold').length;
+    const upgrade=state.towers.filter(t=>t.deputyStage!==undefined&&t.deputyStage<3).sort((a,b)=>score(b.code)-score(a.code));
+    if(credential&&main.level>=16&&credential.deputyStage<3)act('upgradeDeputy',credential.id);
+    else if(state.wave>=4&&(state.gold>=200||pressure>=25)&&upgrade.length)act('upgradeDeputy',upgrade[0].id);
+    if(credential&&act('breakthrough',main.id,credential.id).ok)first.breakthrough??=state.wave;
+    if(main?.level>=20)first.level20??=state.wave;
+    if(main?.level>=30)first.level30??=state.wave;
     const room=()=>state.capacity-state.populationUsed;
     const pursuingEpic=seekEpic&&!epic&&state.wave>=11;
     const seekingCredential=main&&!credential&&!pending()&&!main.awakened&&(!pursuingEpic||state.wave>=32)&&state.wave>=(strategy==='credential'?7:15);
@@ -122,7 +129,7 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
     if(starter&&room()>=rPopulation){
      if(pursuingEpic&&room()>=heroPopulation&&state.gold>=game.shopPacks.find(pack=>pack.tier==='SSR').price&&
         !state.cards.some(card=>definitions.get(card.code).rarity==='epic'))buyPack('SSR');
-     else if(seekingCredential&&(!playable||strategy==='credential')&&state.gold>=(strategy==='credential'?120:360))buyPack('R');
+     else if(seekingCredential&&(!playable||strategy==='credential')&&state.gold>=(strategy==='credential'?120:360))buyPack('R',credentialCode);
      else if(!playable&&(!pursuingEpic||pressure>=34||state.wave<15)&&commons<desiredR&&
         (commons<2||pressure>=30||state.gold>=180||options.onlyR)) {
       const heroes=state.towers.length-commons;

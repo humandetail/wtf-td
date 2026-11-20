@@ -14,8 +14,8 @@ const equipmentAtlas = await read('game/assets/modes/loop/equipment.webp');
 assert.equal(equipmentAtlas.toString('ascii',8,12),'WEBP','装备图集必须是 WebP');
 assert.equal(equipmentAtlas.toString('ascii',12,16),'VP8L','装备图集必须使用无损编码');
 const atlasHeader=equipmentAtlas.readUInt32LE(21);
-assert.deepEqual([(atlasHeader&0x3fff)+1,((atlasHeader>>>14)&0x3fff)+1,(atlasHeader>>>28)&1],[576,384,1]);
-assert.deepEqual(Object.values(LOOP_EQUIPMENT).map(item=>item.icon).sort((a,b)=>a-b),Array.from({length:23},(_,i)=>i));
+assert.deepEqual([(atlasHeader&0x3fff)+1,((atlasHeader>>>14)&0x3fff)+1,(atlasHeader>>>28)&1],[576,480,1]);
+assert.deepEqual(Object.values(LOOP_EQUIPMENT).map(item=>item.icon).sort((a,b)=>a-b),Array.from({length:Object.keys(LOOP_EQUIPMENT).length},(_,i)=>i));
 for(const code of Object.keys(LOOP_EQUIPMENT)) {
  const icon=await read(`game/assets/modes/loop/equipment-source/${code}.png`);
  assert.equal(icon.readUInt32BE(16),96);

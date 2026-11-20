@@ -2,7 +2,7 @@ import {CHALLENGES, GOLD_RUSHES, LOOP_TOWERS, LOOP_EQUIPMENT, LOOP_ENEMIES, LOOP
  loopTower, loopStats, loopWave, loopEnemy, loopWaveInterval, waveMultiplier, assignWaveBounties} from './loop-catalog.js';
 import {createLoopCombat} from './loop-combat.js';
 import {createLoopArmory} from './loop-armory.js';
-import { LOOP_CAMPAIGN_WAVES, LOOP_CREDENTIALS, LOOP_PACKS, LOOP_RARITY, LOOP_XP, LOOP_POPULATION, LOOP_SSR_GUARANTEE, LOOP_EXCHANGE_WAVE } from './loop-equipment.js';
+import { LOOP_CAMPAIGN_WAVES, LOOP_CREDENTIALS, LOOP_DEPUTIES, LOOP_DEPUTY_COSTS, LOOP_DEPUTY_LEVELS, LOOP_PACKS, LOOP_RARITY, LOOP_XP, LOOP_POPULATION, LOOP_SSR_GUARANTEE, LOOP_EXCHANGE_WAVE, loopLevelCap } from './loop-equipment.js';
 import {loopPlacementStatus, createRoadPosition, advanceOnRoad, ROAD_NODES} from './geometry.js';
 
 const starters=['T05','T25','T26','T27'];
@@ -15,8 +15,8 @@ export function createLoopGame(options={}){
  const initial=()=>({phase:'menu',paused:false,speed:1,gold:options.startingGold??80,elapsed:0,
   wave:0,nextWaveIn:options.initialDelay??30,limit:options.limit??60,endless:false,kills:0,
   towers:[],enemies:[],regions:[],dust:[],pendingSpawns:0,capacity:LOOP_POPULATION,populationUsed:0,
-  waveCount,starter:'unopened',ssrMisses:0,cards:[],inventory:[],challenge:null,completedChallenges:[],usedChallenges:[],goldRush:null,goldRushQueued:0,
-  regularKillGold:0,regularSupply:0,endlessKills:0,endlessSupply:0,supplyCursor:0,ledger:[]});
+  waveCount,starter:'unopened',ssrMisses:0,draft:null,cards:[],inventory:[],challenge:null,completedChallenges:[],usedChallenges:[],goldRush:null,goldRushQueued:0,
+  regularKillGold:0,regularSupply:0,endlessKills:0,endlessSupply:0,supplyCursor:0,gearBounty:{},ledger:[]});
  const state=initial(),random=options.random??Math.random,draftRandom=options.draftRandom??Math.random;
  let events=[],queue=[],spawnIn=0,nextId=1,nextEnemy=1,priorDirection=null,rushQueue=[];
  const remainingByWave=new Map(), pendingExperience=new Map(), challengesUsed=new Set();
@@ -54,7 +54,7 @@ export function createLoopGame(options={}){
    state.kills++;
    changeGold(e.reward,'kill');if(e.endless)state.endlessKills++;else state.regularKillGold+=e.reward;
    const xp=waveXp(e.wave)*(e.boss?8:e.elite?2:1);
-   for(const t of state.towers)if(Math.hypot(e.x-t.x,e.y-t.y)<=260)pendingExperience.set(t.id,(pendingExperience.get(t.id)??0)+xp);
+   for(const t of state.towers)if(!LOOP_DEPUTIES.has(t.code)&&Math.hypot(e.x-t.x,e.y-t.y)<=260)pendingExperience.set(t.id,(pendingExperience.get(t.id)??0)+xp);
   }
   emit({type:'kill',x:e.x,y:e.y,angle:e.angle,code:e.code,amount:e.reward,wave:e.wave,endless:e.endless});
   if(e.endless)return;
@@ -74,7 +74,9 @@ export function createLoopGame(options={}){
  function flushExperience(){
   if(!pendingExperience.size)return;
   for(const t of state.towers){
-   t.xp=Math.min(LOOP_XP.at(-1),t.xp+(pendingExperience.get(t.id)??0));
+   const gain=pendingExperience.get(t.id);
+   if(!gain)continue;
+   t.xp=Math.min(LOOP_XP[loopLevelCap(t)-1],t.xp+gain);
    const level=LOOP_XP.filter(xp=>t.xp>=xp).length;
    if(level<=t.level)continue;
    if(t.level<3&&level>=3||t.level<5&&level>=5){t.cycles=0;t.streak=0;t.lockId=null;}
@@ -94,6 +96,16 @@ export function createLoopGame(options={}){
  const chooseCode=items=>items[Math.min(items.length-1,Math.max(0,Math.floor(draftRandom()*items.length)))];
  function eligiblePacks(pack) {
   return pool.filter(tower=>pack.odds[LOOP_RARITY[tower.rarity]]>0);
+ }
+ function draftChoices(towers,first){
+  const remaining=towers.filter(tower=>tower.code!==first);
+  const choices=[first];
+  while(choices.length<3&&remaining.length){
+   const chosen=chooseCode(remaining);
+   choices.push(chosen.code);
+   remaining.splice(remaining.indexOf(chosen),1);
+  }
+  return choices;
  }
  function addCard(code,paid,starter=false) {
   const card={id:nextId++,code,paid,starter,refund:paid?refundFor(code):0};
@@ -210,6 +222,25 @@ export function createLoopGame(options={}){
  }
  const game={state,catalog:LOOP_TOWERS,enemyCatalog:LOOP_ENEMIES,priorities:LOOP_PRIORITIES,equipment:LOOP_EQUIPMENT,challenges:CHALLENGES,
   ...armory,shopPacks:LOOP_PACKS,ssrGuarantee:LOOP_SSR_GUARANTEE,exchangeWave:LOOP_EXCHANGE_WAVE,credentials:LOOP_CREDENTIALS,xpThresholds:LOOP_XP,
+  levelCap:loopLevelCap,
+  canUpgradeDeputy(towerId){
+   const tower=state.towers.find(t=>t.id===towerId);
+   if(!editable()||!tower||tower.deputyStage===undefined)return {...failure('当前不能升阶'),cost:undefined};
+   const cost=LOOP_DEPUTY_COSTS[tower.deputyStage];
+   if(cost===undefined)return {...failure('副塔已升满'),cost};
+   return state.gold<cost?{...failure(`需 ${cost} 金币`),cost}:{...success('可以升阶'),cost};
+  },
+  upgradeDeputy(towerId){
+   const status=game.canUpgradeDeputy(towerId);if(!status.ok)return status;
+   const tower=state.towers.find(t=>t.id===towerId);
+   changeGold(-status.cost,'deputy-upgrade');
+   tower.deputyStage++;
+   tower.level=LOOP_DEPUTY_LEVELS[tower.deputyStage];
+   tower.route=tower.level>=3?FIXED_ROUTES[tower.code]:null;
+   tower.cycles=0;tower.streak=0;tower.lockId=null;
+   emit({type:'upgrade',x:tower.x,y:tower.y,code:tower.code,amount:tower.level});
+   return success(`副塔已升至 ${tower.deputyStage} 阶`);
+  },
   statsFor:t=>loopStats(t,state),
   forecasts:()=>[state.wave+1,state.wave+2].filter(w=>state.endless||w<=waveCount).map(forecast),
   start(){if(state.phase==='menu')state.phase='playing';return success('开启免费起手 SR');},
@@ -225,20 +256,33 @@ export function createLoopGame(options={}){
    if(!playing()||state.paused||state.starter!=='deployed'||queue.length||!state.endless&&state.wave>=waveCount)return failure('当前不能提前出怪');
    beginWave();return success('下一波开始');
   },
-  canOpenStarter(){return editable()&&state.starter==='unopened'?{ok:true}:failure('起手 SR 已开启或当前不可开启');},
-  openStarter(){
+  canOpenStarter(){return editable()&&!state.draft&&state.starter==='unopened'?{ok:true}:failure('起手 SR 已开启或当前不可开启');},
+  openStarterPack(){
    const status=game.canOpenStarter();if(!status.ok)return status;
-   const code=chooseCode(starters.filter(code=>pool.some(tower=>tower.code===code)));
+   const choices=starters.filter(code=>pool.some(tower=>tower.code===code));
+   const code=chooseCode(choices);
    if(!code)return failure('起手池没有可抽塔');
-   state.starter='held';
-   return success('已开启起手 SR',{cardId:addCard(code,false,true)});
+   state.draft={tier:'SR',starter:true,codes:draftChoices(pool.filter(tower=>choices.includes(tower.code)),code)};
+   return success('请选择一张起手 SR');
+  },
+  choosePackCard(code){
+   const draft=state.draft;
+   if(!editable()||!draft?.codes.includes(code))return {...failure('请选择当前卡包中的一张卡'),cardId:undefined};
+   state.draft=null;
+   if(draft.starter)state.starter='held';
+   return {...success(`已获得 · ${loopTower(code).name}`),cardId:addCard(code,!draft.starter,draft.starter)};
+  },
+  openStarter(){
+   const status=game.openStarterPack();
+   return status.ok?game.choosePackCard(state.draft.codes[0]):status;
   },
   canDraw(tier){
    const pack=LOOP_PACKS.find(pack=>pack.tier===tier);
    if(!editable()||!pack||!eligiblePacks(pack).length)return failure('当前不可购买该卡包');
+   if(state.draft)return failure('请先选择上一包的塔卡');
    return state.gold<pack.price?failure(`抽卡需要 ${pack.price} 金币`):{ok:true};
   },
-  draw(tier){
+  buyPack(tier){
    const status=game.canDraw(tier);if(!status.ok)return status;
    const pack=LOOP_PACKS.find(pack=>pack.tier===tier);
    const available=eligiblePacks(pack);
@@ -250,7 +294,13 @@ export function createLoopGame(options={}){
    const code=chooseCode(available.filter(tower=>LOOP_RARITY[tower.rarity]===quality)).code;
    changeGold(-pack.price,'draft');
    if(tier==='SSR')state.ssrMisses=quality==='SSR'?0:Math.min(LOOP_SSR_GUARANTEE-1,state.ssrMisses+1);
-   return success(`已获得 ${quality} · ${loopTower(code).name}`,{cardId:addCard(code,true)});
+   const allowed=available.filter(tower=>LOOP_PACKS.findIndex(entry=>entry.tier===LOOP_RARITY[tower.rarity])<=LOOP_PACKS.findIndex(entry=>entry.tier===quality));
+   state.draft={tier,starter:false,codes:draftChoices(allowed,code)};
+   return success(`已购买 ${tier} 包 · 请选择一张塔卡`);
+  },
+  draw(tier){
+   const status=game.buyPack(tier);
+   return status.ok?game.choosePackCard(state.draft.codes[0]):status;
   },
   canSellCard(id){
    const card=state.cards.find(card=>card.id===id);
@@ -283,7 +333,8 @@ export function createLoopGame(options={}){
    const card=state.cards.find(c=>c.id===id),def=loopTower(card.code),towerId=nextId++;
    state.cards=state.cards.filter(c=>c.id!==id);state.populationUsed+=def.population;
    if(card.starter)state.starter='deployed';
-   state.towers.push({id:towerId,code:def.code,assetCode:def.assetCode,x,y,paid:card.paid,refund:card.refund??0,awakened:false,qualifiedUsed:false,xp:0,level:1,
+   state.towers.push({id:towerId,code:def.code,assetCode:def.assetCode,x,y,paid:card.paid,refund:card.refund??0,awakened:false,
+    deputyStage:LOOP_DEPUTIES.has(def.code)?0:undefined,xp:0,level:1,
     population:def.population,priority:'default',equipment:[],combatUntil:0,angle:0,cooldown:0,cycles:0,route:null});
    emit({type:'build',x,y,code:def.code});return {ok:true,message:'部署完成',towerId};
   },

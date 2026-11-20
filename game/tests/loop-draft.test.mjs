@@ -38,6 +38,28 @@ test('packs respect their tier ceilings, failures preserve pity, and the third S
  game.restart();assert.equal(game.state.ssrMisses,0);
 });
 
+test('three candidates persist and choosing a card never charges gold',()=>{
+ const game=createLoopGame({startingGold:500,draftRandom:()=>0});
+ game.start();
+ assert.ok(game.openStarterPack().ok);
+ assert.equal(new Set(game.state.draft.codes).size,3);
+ assert.equal(game.state.gold,500);
+ assert.ok(game.choosePackCard(game.state.draft.codes[1]).ok);
+ assert.ok(game.buyPack('R').ok);
+ const codes=[...game.state.draft.codes];
+ const gold=game.state.gold;
+ assert.equal(gold,380);
+ assert.equal(new Set(codes).size,3);
+ assert.equal(game.buyPack('SR').ok,false);
+ assert.equal(game.choosePackCard('T36').ok,false);
+ assert.deepEqual(game.state.draft.codes,codes);
+ assert.equal(game.state.cards.length,1);
+ assert.ok(game.choosePackCard(codes[2]).ok);
+ assert.equal(game.choosePackCard(codes[2]).ok,false);
+ assert.equal(game.state.cards.at(-1).code,codes[2]);
+ assert.equal(game.state.gold,gold);
+});
+
 test('adjacent towers use real placement rules and five distinct R cards redeem one credential', () => {
  const game=createLoopGame({startingGold:2000,draftRandom:()=>0});
  game.start();game.openStarter();

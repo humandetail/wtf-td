@@ -143,7 +143,7 @@ export function createBattleOverlay(canvas,camera) {
       drawEffects(state.elapsed);
       for (const tower of state.towers) {
         const p = point(tower.x,tower.y,actorSize(tower,true)[2]);
-        if (p.visible && p.x>=0 && p.x<=width && p.y>=0 && p.y<=height) label(`Lv.${tower.level}`,p.x,p.y,'#f5ddaa',10);
+        if (p.visible && p.x>=0 && p.x<=width && p.y>=0 && p.y<=height) label(tower.deputyStage===undefined?`Lv.${tower.level}`:`${tower.deputyStage}阶`,p.x,p.y,'#f5ddaa',10);
       }
       for (const enemy of state.enemies) {
         if (enemy.hp<=0) continue;

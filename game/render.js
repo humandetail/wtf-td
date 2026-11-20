@@ -270,7 +270,7 @@ export function createRenderer(canvas, artwork) {
       ctx.restore();
     }
     if (tower) {
-      text(`Lv.${entity.level}`, entity.x, entity.y + 27, '#f3d88e', 12);
+      text(entity.deputyStage===undefined?`Lv.${entity.level}`:`${entity.deputyStage}阶`, entity.x, entity.y + 27, '#f3d88e', 12);
       const stats = loopStats(entity, frameState);
       if (['radar', 'overclock', 'barrier', 'supply','support','healer'].includes(stats.kind)) {
         ring(entity.x, entity.y + 2, 34, stats.color, .45, 1.5);

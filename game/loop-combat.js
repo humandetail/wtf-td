@@ -40,14 +40,91 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   interrupt(e);
   e.rootUntil=Math.max(e.rootUntil,state.elapsed+duration*(1+s.control)*(e.boss?.5:1));
   if(e.boss)e.immuneUntil=e.rootUntil+3;
-  enemyEffects.rooted(e);engage(t);pulse(e,22,t.code==='T08'?'frost':'net');return true;
+  enemyEffects.rooted(e);engage(t);bountyMark(e,t);pulse(e,22,t.code==='T08'?'frost':'net');return true;
  }
- function slow(e,value,duration,t,s){effect(e,'slow',value,duration*(1+s.control),t.id);if(e.hp>0)engage(t);}
+ const controlled=e=>e.rootUntil>state.elapsed||(!(e.slowImmuneUntil>state.elapsed)&&strength(e,'slow')>0);
+ function bountyMark(e,t){
+  if(!state.endless&&!e.special&&!e.boss&&!e.elite&&!e.summoned&&gearBonus(t,'bounty'))(e.bountyBy??=new Set()).add(t.id);
+ }
+ function slow(e,value,duration,t,s){
+  if(e.hp<=0)return;
+  effect(e,'slow',value,duration*(1+s.control),t.id);engage(t);
+  if(e.slowImmuneUntil>state.elapsed)return;
+  bountyMark(e,t);
+  if(!gearBonus(t,'stall'))return;
+  const record=(e.stallBy??={})[t.id]??={hits:0,ready:0};
+  if(record.ready>state.elapsed||++record.hits<3)return;
+  record.hits=0;record.ready=state.elapsed+5;
+  root(e,.6,t,s);
+ }
  function addBurn(e,burn){
   if(e.hp<=0)return;
   const existing=e.burns.find(b=>b.towerId===burn.towerId);
   if(existing)Object.assign(existing,burn,{started:existing.until>state.elapsed?existing.started:burn.started});
   else e.burns.push(burn);
+ }
+ function armorStacks(e,t){
+  const same=t.sunderTarget===e.id&&t.sunderUntil>state.elapsed;
+  t.sunderStacks=same?Math.min(3,t.sunderStacks+1):1;
+  t.sunderTarget=e.id;t.sunderUntil=state.elapsed+3;
+  effect(e,'armor',.04*t.sunderStacks,3,t.equipment.find(item=>item.code==='splitter').id);
+ }
+ function breachShield(e,t){
+  t.breachTarget=e.id;
+  effect(e,'armor',.12,3,t.equipment.find(item=>item.code==='arbalest').id);
+ }
+ function weaponDamage(e,amount,type,t,s){
+  if(gearBonus(t,'scope')&&distance(t,e)>=s.range*2/3)amount*=1.20;
+  if(type==='physical'){
+   if(gearBonus(t,'sunder'))armorStacks(e,t);
+   if(gearBonus(t,'breach')&&t.breachTarget===e.id){
+    t.breachTarget=null;amount*=1.35;
+   }
+  }
+  if(type==='magic'&&gearBonus(t,'prism')){
+   const stacks=Math.min(3,Math.floor((state.elapsed-Math.max(t.lastSpellHit??0,t.prismEquippedAt??0))/2));
+   t.lastSpellHit=state.elapsed;
+   amount*=1+.15*stacks;
+   if(stacks===3&&gearBonus(t,'capacitor')){
+    for(const ally of nearbyAttackers(state,t,Math.min(160,s.range),2)){
+     ally.capacitorUntil=state.elapsed+8;link(t,ally,'charge');
+    }
+   }
+  }
+  return amount;
+ }
+ function weaponEffects(e,t,s,type,damage){
+  if(gearBonus(t,'refraction')&&t.refractionCycle!==t.cycles&&distance(t,e)>=s.range*2/3){
+   const other=area(t,s.range*2/3,1,next=>next!==e&&!next.hidden)[0];
+   if(other){t.refractionCycle=t.cycles;link(e,other,'beam');hurt(other,damage*.35,type,t,{stats:s,secondary:true});}
+  }
+  if(e.hp>0&&gearBonus(t,'disruptor')&&t.lockId===e.id&&t.disruptCycle!==t.cycles){
+   t.disruptCycle=t.cycles;
+   t.disruptHits=!e.support?0:t.disruptTarget===e.id?(t.disruptHits??0)+1:1;
+   t.disruptTarget=e.support?e.id:null;
+   if(t.disruptHits>=3){e.supportDampened=true;t.disruptHits=0;}
+  }
+  if(type==='magic'&&gearBonus(t,'embers')&&controlled(e)&&!(t.embersReady>state.elapsed)){
+   t.embersReady=state.elapsed+3;pulse(e,55,'fire');
+   for(const next of area(e,55,4))hurt(next,damage*.30,'magic',t,{stats:s,secondary:true});
+  }
+  if(t.capacitorUntil>state.elapsed){
+   t.capacitorUntil=0;hurt(e,damage*.30,'magic',t,{stats:s,secondary:true});
+  }
+  if(e.hp<=0)return;
+  for(const source of state.towers){
+   if(source===t||distance(source,t)>source.revealRange)continue;
+   if(gearBonus(source,'relay')&&controlled(e)&&!(t.relayReady>state.elapsed)&&nearbyAttackers(state,source,source.revealRange,2).includes(t)){
+    t.relayReady=state.elapsed+6;t.relayUntil=state.elapsed+2;link(source,t,'charge');engage(source);
+   }
+   if(!gearBonus(source,'nexus')||!(distance(source,e)<=source.revealRange))continue;
+   const record=(e.nexusBy??={})[source.id]??={towerId:0,until:0,ready:0};
+   if(record.ready>state.elapsed)continue;
+   if(record.until>state.elapsed&&record.towerId!==t.id){
+    record.ready=state.elapsed+5;record.until=0;
+    link(source,e,'beam');engage(source);hurt(e,damage*.30,type,t,{stats:s,secondary:true});
+   }else{record.towerId=t.id;record.until=state.elapsed+3;}
+  }
  }
  function effectiveBurn(e,time){return e.burns.filter(b=>b.until>time).sort((a,b)=>b.dps-a.dps||a.started-b.started)[0];}
  function propagate(e,burn){
@@ -64,6 +141,9 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
  function hurt(e,amount,type,t=null,options={}){
   if(e.hp<=0||amount<=0||state.phase!=='playing')return;
   const opts={direct:true,...options},s=opts.stats;
+  const weapon=opts.weapon&&opts.direct&&t&&s;
+  const baseDamage=amount;
+  if(weapon)amount=weaponDamage(e,amount,type,t,s);
   engage(t);
   if(t?.code==='T31')amount*=1+gearBonus(t,type);
   const exposed=e.statuses.filter(x=>x.kind==='vulnerable'&&x.until>state.elapsed).sort((a,b)=>b.value-a.value||a.source-b.source)[0];
@@ -76,16 +156,20 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   if(opts.arc&&strength(e,'wet'))amount*=1.25;
   amount*=1+Math.min(.25,exposed?.value??0);
   if(opts.direct&&e.shieldHits>0){
-   e.shieldHits--;emit({type:'shield-hit',x:e.x,y:e.y});return;
+   const extra=weapon&&gearBonus(t,'shieldBreaker')&&t.shieldProcCycle!==t.cycles;
+   if(extra)t.shieldProcCycle=t.cycles;
+   e.shieldHits=Math.max(0,e.shieldHits-(extra?2:1));
+   if(weapon&&e.shieldHits===0&&type==='physical'&&gearBonus(t,'breach'))breachShield(e,t);
+   emit({type:'shield-hit',x:e.x,y:e.y});return;
   }
   if(type==='magic'&&strength(e,'magicBreak')>0){
    const source=e.statuses.filter(x=>x.kind==='magicBreak'&&x.until>state.elapsed).sort((a,b)=>b.value-a.value||a.source-b.source)[0];
    engage(state.towers.find(tower=>tower.id===source.source));
   }
-  const pierce=Math.max(opts.pierce??0,t&&opts.direct&&type==='physical'?gearBonus(t,'pierce'):0);
+  const pierce=opts.pierce??0;
   amount*=1-Math.max(0,enemyEffects.defense(e,type)-pierce);
   amount=enemyEffects.amountAfterArmor(e,amount,type,t,opts);
-  const oldShield=e.shield,shieldMultiplier=opts.shieldMultiplier??1;
+  const oldShield=e.shield,shieldMultiplier=(opts.shieldMultiplier??1)*(weapon&&gearBonus(t,'shieldBreaker')?1.35:1);
   const shieldPart=Math.min(amount,e.shield/shieldMultiplier);
   e.shield=Math.max(0,e.shield-shieldPart*shieldMultiplier);
   let life=amount-shieldPart;
@@ -93,12 +177,30 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   life=Math.min(e.hp,life);e.hp-=life;
   onDamage(e,life);
   emit({type:'hit',x:e.x,y:e.y,amount:shieldPart+life,color:s?.color??'#b5a2eb'});
+  if(oldShield>0&&e.shield<=1e-9&&weapon&&type==='physical'&&gearBonus(t,'breach'))breachShield(e,t);
   if(oldShield>0&&e.shield<=1e-9&&t?.code==='T21'&&t.level>=3&&!opts.secondary){
    if(e.hp>0)slow(e,.2,2,t,s);
    if(t.level>=5){pulse(e,55,'suppress');for(const other of area(e,55,3,a=>a!==e))hurt(other,s.damage*.45,'magic',t,{stats:s,secondary:true});}
   }
-  if(e.hp>0){enemyEffects.hit(e,t,type,opts);return;}
+  if(e.hp>0){
+   enemyEffects.hit(e,t,type,opts);
+   if(weapon)weaponEffects(e,t,s,type,baseDamage);
+   return;
+  }
   enemyEffects.dead(e);onDeath(e);
+  if(t&&gearBonus(t,'flywheel')&&!(t.flywheelReady>state.elapsed)){t.flywheelReady=state.elapsed+3;t.cooldown=(t.cooldown??0)*.5;}
+  if(t&&e.bountyBy&&[...e.bountyBy].some(id=>id!==t.id)&&!state.endless){
+   const count=(state.gearBounty??={})[e.wave]??0;
+   if(count<12){state.gearBounty[e.wave]=count+1;changeGold(1,'gear-bounty');emit({type:'income',x:e.x,y:e.y,amount:1,color:'#ffe494'});}
+  }
+  if(t&&type==='magic'&&controlled(e)&&gearBonus(t,'cinders')&&!(t.cindersReady>state.elapsed)){
+   t.cindersReady=state.elapsed+3;
+   for(const next of area(e,80,2)){
+    link(e,next,'fire');
+    addBurn(next,{towerId:t.id,dps:(s?.damage??loopStats(t,state).damage)*.15,damage:0,started:state.elapsed,until:state.elapsed+2,primary:false,level:0});
+   }
+  }
+  if(weapon)weaponEffects(e,t,s,type,baseDamage);
   if(!opts.noPropagation&&e.special!=='gold')propagate(e,effectiveBurn(e,state.elapsed));
   if(t?.code==='T16'&&t.level>=5&&opts.direct&&!opts.secondary&&e.special!=='gold'){
    const next=area(e,75,Infinity,a=>a.special!=='gold').sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp||a.id-b.id)[0];
@@ -166,11 +268,17 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
  function shot(t,e,s,origin=t,damageType=s.damageType){
   emit({type:'shot',x:origin.x,y:origin.y,tx:e.x,ty:e.y,code:t.code,color:s.color,loop:true,damageType});
  }
- function zone(t,e,{radius,limit,duration,interval,damage=0,kind='',value=0,delay=0,keep=false},s){
+ function zone(t,e,{radius,limit,duration,interval,damage=0,kind='',value=0,delay=0,keep=false,weapon=false},s){
   if(kind==='heat'&&state.regions.some(z=>z.source===t.id&&z.kind===kind&&z.keep&&z.until>state.elapsed))return;
   if(!delay&&kind!=='suppress')state.regions=state.regions.filter(z=>z.source!==t.id||z.kind!==kind);
   state.regions.push({source:t.id,x:e.x,y:e.y,radius,limit,until:state.elapsed+duration+delay,nextAt:state.elapsed+delay+(delay?0:interval),
-   interval,damage,kind,value,keep,control:s.control,bossBonus:s.bossBonus});
+   interval,damage,kind,value,keep,weapon,cycle:t.cycles,control:s.control,bossBonus:s.bossBonus});
+ }
+ function scatter(t,s,center,list,type,cycle=t.cycles){
+  if(cycle%4!==0||!gearBonus(t,'scatter'))return;
+  for(const e of area(center,75,2,next=>!list.includes(next)&&!next.hidden)){
+   shot(t,e,s,center,type);hurt(e,s.damage*.30,type,t,{stats:s,secondary:true});
+  }
  }
  function assist(t,e){
   for(const source of state.towers){
@@ -180,7 +288,12 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
    mark.hits.add(t.id);
    if(mark.hits.size<2)continue;
    mark.until=0;effect(e,'vulnerable',.22,4,source.id);engage(source);pulse(e,28,'radar');
-   if(source.level>=5)charge(t,source,.25);
+   if(source.level>=30){
+    for(const id of mark.hits){
+     const ally=state.towers.find(candidate=>candidate.id===id);
+     if(ally)charge(ally,source,.25);
+    }
+   }else if(source.level>=5)charge(t,source,.25);
   }
  }
  function charge(target,source,bonus){
@@ -201,19 +314,29 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   engage(t);
   for(const source of s.supportSources.filter(source=>source.key!=='conditional'))engage(state.towers.find(a=>a.id===source.id));
   let multiplier=t.chargeUntil>state.elapsed?t.chargeMultiplier:1;
+  const echo=multiplier>1&&t.chargeEcho&&t.chargeEcho===t.chargeSource?t.chargeEcho:null;
   if(multiplier>1)engage(state.towers.find(a=>a.id===t.chargeSource));
-  t.chargeUntil=0;
+  t.chargeUntil=0;t.chargeEcho=null;
+  if(echo){
+   const source=state.towers.find(a=>a.id===echo);
+   if(source)charge(t,source,.12);
+  }
   if(changed){
    const support=state.towers.filter(a=>a.code==='T29'&&nearbyAttackers(state,a,a.revealRange,a.level>=3?4:3).includes(t)&&!(t.rhythmUntil>state.elapsed))
     .sort((a,b)=>b.level-a.level||a.id-b.id)[0];
-   if(support){multiplier*=support.level>=5?1.2:1.12;t.rhythmUntil=state.elapsed+(support.level>=3?3:4);engage(support);link(support,t,'charge');}
+   if(support){
+    multiplier*=support.level>=5?1.2:1.12;
+    if(support.level>=30)t.cooldown*=.72;
+    t.rhythmUntil=state.elapsed+(support.level>=3?3:4);engage(support);link(support,t,'charge');
+   }
   }
   const [code,level]=[t.code,t.level];
-  const doHit=(e,damage,type=s.damageType,opts={})=>hurt(e,damage*(code==='T04'&&(e.boss||e.elite)?1.35:1),type,t,{stats:s,shieldMultiplier:s.shieldMultiplier,...opts});
+  const ultimate=level>=30;
+  const doHit=(e,damage,type=s.damageType,opts={})=>hurt(e,damage*(code==='T04'&&(e.boss||e.elite)?1.35:1),type,t,{stats:s,shieldMultiplier:s.shieldMultiplier,weapon:!opts.secondary,...opts});
   if(code==='T17'){
    shot(t,primary,s);
    const common={duration:.01,interval:1,kind:'mine',limit:6,radius:55,damage:s.damage*multiplier,value:level>=3?.2:0,delay:.45};
-   zone(t,primary,common,s);
+   zone(t,primary,{...common,weapon:true},s);
    if(level>=5&&t.cycles%3===0)zone(t,primary,{...common,limit:4,radius:40,damage:.45*s.damage,delay:.95},s);
    return;
   }
@@ -250,7 +373,7 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
     const count=level>=3&&e.shieldHits>0?4:3;
     for(let i=0;i<count&&e.hp>0;i++){
      const last=level>=5&&t.cycles%4===0&&i===count-1;
-     doHit(e,damage*(last?1.6:1),type,{secondary:i>0});
+     doHit(e,damage*(last?1.6:1),type,{secondary:i>0,weapon:true});
      if(last){pulse(e,16,'net');slow(e,.25,1,t,s);}
     }
     continue;
@@ -266,57 +389,116 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
    if(code==='T35'&&level>=3&&e.hp/e.maxHp<(eliteTarget ? .45 : .3))damage*=eliteTarget ? 1.5 : 1.3;
    const resonance=code==='T28'&&e.shield>0;
    doHit(e,damage,type,{arc:code==='T05',pierce:full?.15:0});
+   if(ultimate&&code==='T28'&&resonance&&e.shield<=0){
+    pulse(e,80,'shock');
+    for(const other of area(e,80,4,a=>a!==e)){effect(other,'vulnerable',.20,4,t.id);doHit(other,s.damage*.45,'magic',{secondary:true});}
+   }
    if(e.hp<=0)continue;
    if(code==='T06'){slow(e,.15,1,t,s);effect(e,'wet',1,level>=3?5:3,t.id);}
    if(code==='T07')root(e,level>=3?.5:.65,t,s);
    if(code==='T08'){
     slow(e,.3,1.8,t,s);
-    if(level>=3&&e===primary&&t.streak%3===0&&root(e,.8,t,s)&&level>=5)e.thaw={at:e.rootUntil,source:t.id};
+    if(level>=3&&e===primary&&t.streak%3===0&&root(e,.8,t,s)&&level>=5){
+     e.thaw={at:e.rootUntil,source:t.id};
+     if(ultimate)for(const other of area(e,75,3,a=>a!==e))root(other,.65,t,s);
+    }
    }
    if(code==='T02'&&level>=3)effect(e,'suppress',.5,3,t.id);
    if(code==='T19')slow(e,level>=3&&e.speed>=100?.4:.25,1.5,t,s);
    if(code==='T24'&&level>=3&&!(t.interruptAt>state.elapsed)&&interrupt(e)){
     t.interruptAt=state.elapsed+9;if(level>=5)effect(e,'suppress',.35,4,t.id);
+    if(ultimate){
+     pulse(e,95,'suppress');
+     for(const other of area(e,95,2,a=>a!==e&&!!a.channel))interrupt(other);
+    }
    }
    if(code==='T26'&&level>=3&&e===primary&&strength(e,'wet')&&!(e.vortexUntil?.[t.id]>state.elapsed)){
     if(root(e,.45,t,s))(e.vortexUntil??={})[t.id]=state.elapsed+5;
    }
    if(code==='T27'&&level>=3&&strength(e,'haste')>0)slow(e,.3,1.5,t,s);
    if(resonance)effect(e,'vulnerable',level>=3?.20:.14,4,t.id);
+   if(ultimate&&code==='T32'&&wideCycle(t))slow(e,.25,2,t,s);
   }
   if(code==='T15'){
    const keep=level>=5&&t.cycles%4===0;
    zone(t,primary,{duration:keep?3:2,interval:.5,kind:'heat',limit:level>=3?6:4,radius:level>=3?60:46,damage:s.damage*.35,keep},s);
   }
-  if(gearBonus(t,'embers')&&t.cycles%3===0){
-   pulse(primary,55,'fire');
-   for(const e of area(primary,55,4))doHit(e,s.damage*.30,'magic',{secondary:true,noPropagation:true});
+  scatter(t,s,primary,list,type);
+  if(code==='T32'&&level>=3)for(const e of cone(t,t.angle+Math.PI,sectorDegrees(t),ranked,wideCycle(t)?5:3)){
+   doHit(e,s.damage*.65*multiplier);
+   if(ultimate&&wideCycle(t))slow(e,.25,2,t,s);
   }
-  if(code==='T32'&&level>=3)for(const e of cone(t,t.angle+Math.PI,sectorDegrees(t),ranked,wideCycle(t)?5:3))doHit(e,s.damage*.65*multiplier);
   if(level<5)return;
   if(code==='T01'&&t.streak%6===0){link(t,primary,'projectile');doHit(primary,s.damage*.6,type,{secondary:true,pierce:1});}
-  if(code==='T04'&&t.streak%6===0){link(t,primary,'beam');doHit(primary,s.damage,type,{secondary:true});}
-  if(code==='T03'&&t.cycles%4===0){pulse(primary,35,'burst');for(let i=0;i<2;i++)for(const e of area(primary,35,3))doHit(e,s.damage*.25,type,{secondary:true});}
-  if(code==='T05'&&t.cycles%4===0){pulse(list.at(-1),45,'arc');for(const e of area(list.at(-1),45,4))doHit(e,s.damage/.8*.35,type,{secondary:true});}
+  if(code==='T04'&&t.streak%6===0){
+   link(t,primary,'beam');doHit(primary,s.damage,type,{secondary:true});
+   if(ultimate)for(const other of area(primary,90,2,a=>a!==primary)){
+    link(primary,other,'beam');doHit(other,s.damage*.60,'magic',{secondary:true});
+   }
+  }
+  if(code==='T03'&&t.cycles%4===0){
+   pulse(primary,35,'burst');for(let i=0;i<2;i++)for(const e of area(primary,35,3))doHit(e,s.damage*.25,type,{secondary:true});
+   if(ultimate){pulse(primary,100,'shock');for(const e of area(primary,100,6))doHit(e,s.damage*.45,'physical',{secondary:true});}
+  }
+  if(code==='T05'&&t.cycles%4===0){
+   const end=list.at(-1);
+   pulse(end,45,'arc');for(const e of area(end,45,4))doHit(e,s.damage/.8*.35,type,{secondary:true});
+   if(ultimate){link(end,primary,'arc');doHit(primary,s.damage*.65,'magic',{arc:true,secondary:true});}
+  }
   if(code==='T06'&&t.cycles%5===0){pulse(primary,100,'water');for(const e of area(primary,100,8))effect(e,'wet',1,5,t.id);}
-  if(code==='T02'&&t.cycles%4===0)zone(t,primary,{duration:3,interval:.2,kind:'suppress',value:.5,limit:6,radius:90},s);
+  if(code==='T02'&&t.cycles%4===0)zone(t,primary,{duration:ultimate?4:3,interval:.2,kind:'suppress',value:ultimate?.75:.5,limit:6,radius:ultimate?125:90},s);
   if(code==='T12'&&t.cycles%5===0){pulse(primary,90,'shock');for(const e of area(primary,90,6)){effect(e,'armor',.15,3,t.id);doHit(e,s.damage*.4,type,{secondary:true});}}
   if(code==='T19'&&t.cycles%3===0){pulse(primary,55,'net');for(const e of area(primary,55,4))if(e!==primary)slow(e,.2,2,t,s);}
   if(code==='T20'&&t.cycles%4===0&&old&&old!==primary){link(t,old,'burst');doHit(old,s.damage*.5,type,{secondary:true});}
-  if(code==='T26'&&t.cycles%5===0){pulse(primary,75,'water');for(const e of area(primary,75,5,a=>strength(a,'wet')>0))slow(e,.35,2,t,s);}
+  if(code==='T26'&&t.cycles%5===0){
+   pulse(primary,75,'water');
+   for(const e of area(primary,75,5,a=>strength(a,'wet')>0)){slow(e,.35,2,t,s);if(ultimate)root(e,.6,t,s);}
+  }
   if(code==='T27'&&t.cycles%4===0&&strength(primary,'haste')>0){
-   const next=ranked.find(e=>e!==primary&&e.hp>0&&strength(e,'haste')>0);
-   if(next){link(t,next,'projectile');doHit(next,.7*s.damage,type,{secondary:true});slow(next,.3,1.5,t,s);}
+   const next=ranked.filter(e=>e!==primary&&e.hp>0&&strength(e,'haste')>0).slice(0,ultimate?3:1);
+   for(const e of next){link(t,e,'projectile');doHit(e,.7*s.damage,type,{secondary:true});slow(e,.3,1.5,t,s);}
   }
   if(code==='T28'&&t.cycles%4===0){
    const shielded=area(primary,65,3,a=>a!==primary&&a.shield>0);
    if(shielded.length)pulse(primary,65,'suppress');
    for(const e of shielded)effect(e,'vulnerable',.20,4,t.id);
   }
-  if(code==='T31'&&t.streak%5===0){link(t,primary,otherType==='magic'?'beam':'projectile');doHit(primary,s.damage*.45,otherType,{secondary:true});}
-  if(code==='T33'&&full){pulse(primary,60,'burst');for(const e of area(primary,60,4,a=>a!==primary))doHit(e,s.damage*.45,type,{secondary:true});}
-  if(code==='T34'&&enhanced)zone(t,primary,{duration:2,interval:.5,kind:'afterheat',limit:5,radius:58,damage:s.damage*.25},s);
-  if(code==='T35'&&t.cycles%5===0&&primary.hp/primary.maxHp<.3){link(t,primary,'suppress');doHit(primary,s.damage*.9,type,{secondary:true});effect(primary,'suppress',.45,3,t.id);}
+  if(code==='T31'&&t.streak%5===0){
+   link(t,primary,otherType==='magic'?'beam':'projectile');doHit(primary,s.damage*.45,otherType,{secondary:true,pierce:ultimate?.20:0});
+   if(ultimate)doHit(primary,s.damage*.45,type,{secondary:true,pierce:.20});
+  }
+  if(code==='T33'&&full){
+   pulse(primary,60,'burst');for(const e of area(primary,60,4,a=>a!==primary))doHit(e,s.damage*.45,type,{secondary:true});
+   if(ultimate){
+    const dx=Math.cos(t.angle),dy=Math.sin(t.angle);
+    const behind=area(primary,135,3,a=>{
+     const x=a.x-primary.x,y=a.y-primary.y;
+     return x*dx+y*dy>0&&Math.abs(x*dy-y*dx)<=22;
+    });
+    for(const e of behind){link(primary,e,'beam');doHit(e,s.damage*.70,type,{secondary:true});}
+   }
+  }
+  if(code==='T34'&&enhanced){
+   const radius=ultimate?85:58;
+   zone(t,primary,{duration:ultimate?3:2,interval:.5,kind:'afterheat',limit:5,radius,damage:s.damage*.25},s);
+   if(ultimate)for(const e of area(primary,radius,5))root(e,.65,t,s);
+  }
+  if(code==='T35'&&t.cycles%5===0&&primary.hp/primary.maxHp<.3){
+   link(t,primary,'suppress');doHit(primary,s.damage*.9,type,{secondary:true});effect(primary,'suppress',.45,3,t.id);
+   if(ultimate)for(const e of area(primary,115,2,a=>a!==primary&&(a.elite||a.boss)&&a.hp/a.maxHp<.30)){
+    link(primary,e,'projectile');doHit(e,s.damage*.9,type,{secondary:true});
+   }
+  }
+  if(ultimate&&code==='T14'&&t.cycles%4===0)for(const e of list.filter(a=>a.hp>0).slice(0,3)){
+   shot(t,e,s);doHit(e,s.damage*.5,type,{secondary:true});
+  }
+  if(ultimate&&code==='T23'&&t.cycles%5===0&&(primary.boss||primary.elite)){
+   pulse(primary,72,'beam');
+   for(const e of area(primary,72,4,a=>a!==primary))doHit(e,s.damage*.55,'magic',{secondary:true});
+  }
+  if(ultimate&&code==='T25'&&wideCycle(t))for(const e of list.filter(a=>a.hp>0).slice(0,3)){
+   link(list.at(-1),e,'beam');doHit(e,s.damage*.5,'magic',{secondary:true});
+  }
  }
  function pay(t,requested){
   const remaining=state.endless?Math.floor(state.endlessKills/10)-state.endlessSupply:Math.floor(state.regularKillGold*.12)-state.regularSupply;
@@ -336,14 +518,25 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
    if(due(t,'incomeIn',s.supplyInterval,dt))pay(t,s.supplyIncome);
    if(t.level>=5&&due(t,'dividendIn',60,dt))pay(t,state.endless?1:10);
   }
-  const strongest=()=>area(t,s.range,Infinity,e=>!e.hidden&&e.special!=='gold').sort((a,b)=>(b.hp+b.shield)-(a.hp+a.shield)||a.id-b.id);
-  if(t.code==='T09'&&t.level>=3&&due(t,'markIn',2*(1-s.gearPeriod),dt)){
-   const e=strongest()[0];if(e){effect(e,'vulnerable',t.level>=5&&(e.boss||e.elite)?.18:.1,2.5,t.id);link(t,e,'radar');}
+  const strongest=(includeHidden=false)=>area(t,s.range,Infinity,e=>(includeHidden||!e.hidden)&&e.special!=='gold').sort((a,b)=>(b.hp+b.shield)-(a.hp+a.shield)||a.id-b.id);
+  if(t.code==='T09'&&t.level>=3&&due(t,'markIn',2,dt)){
+   for(const e of strongest(t.level>=30).slice(0,t.level>=30?2:1)){
+    effect(e,'vulnerable',t.level>=5&&(e.boss||e.elite)?.18:.1,2.5,t.id);link(t,e,'radar');
+    if(t.level>=30)effect(e,'reveal',1,2.5,t.id);
+   }
   }
-  if(t.code==='T10'&&t.level>=5&&due(t,'pulseIn',10*(1-s.gearPeriod),dt))for(const target of nearbyAttackers(state,t,s.range,4))charge(target,t,.2);
+  if(t.code==='T10'&&t.level>=5&&due(t,'pulseIn',10,dt))for(const target of nearbyAttackers(state,t,s.range,4)){
+   charge(target,t,.2);
+   if(t.level>=30&&target.chargeSource===t.id)target.chargeEcho=t.id;
+  }
   if(t.code==='T30'&&due(t,'markIn',3.5,dt)){
    const ordered=strongest().filter(e=>enemyEffects.defense(e,'magic')>0).sort((a,b)=>enemyEffects.defense(b,'magic')-enemyEffects.defense(a,'magic'));
-   for(const e of ordered.slice(0,t.level>=5?2:1)){effect(e,'magicBreak',t.level>=3?.18:.1,t.level>=3?2.5:2,t.id);link(t,e,'suppress');}
+   for(const e of ordered.slice(0,t.level>=5?2:1)){
+    effect(e,'magicBreak',t.level>=3?.18:.1,t.level>=3?2.5:2,t.id);link(t,e,'suppress');
+    if(t.level>=30)for(const nearby of area(e,65,2,a=>a!==e)){
+     effect(nearby,'magicBreak',.18,2.5,t.id);link(e,nearby,'suppress');
+    }
+   }
   }
   if(t.code==='T36'&&due(t,'markIn',6,dt))t.marks=strongest().slice(0,t.level>=3?2:1).map(e=>{
    link(t,e,'radar');return {id:e.id,until:state.elapsed+4,hits:new Set()};
@@ -370,14 +563,18 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
    if(z.kind==='mine')pulse(z,z.radius,'burst');
    const t=state.towers.find(t=>t.id===z.source);
    const list=area(z,z.radius,z.limit);
+   const stats=z.weapon&&t?loopStats(t,state):undefined;
    for(const [index,e] of list.entries()){
-    if(z.damage)hurt(e,z.damage,z.kind==='mine'?'physical':'magic',t,{direct:z.kind==='mine',secondary:true,bossBonus:z.bossBonus});
+    if(z.damage)hurt(e,z.damage,z.kind==='mine'?'physical':'magic',t,{direct:z.kind==='mine',secondary:true,bossBonus:z.bossBonus,weapon:z.weapon,stats});
     if(z.kind==='mine'&&z.value&&index<4)slow(e,z.value,1.2,t,z);
+   if(z.kind==='sluice'&&t)slow(e,.35,.35,t,z);
+   if(z.kind==='blockade')blockade(e,z.source);
     if(z.kind==='suppress'){
      effect(e,'suppress',z.value,.4,z.source);if(e.support)effect(e,'outSuppress',z.value,.4,z.source);
      if(list.length)engage(t);
     }
    }
+   if(stats)scatter(t,stats,z,list,'physical',z.cycle);
    flushExperience();
   }
   state.regions=state.regions.filter(z=>z.nextAt<=z.until+1e-9);
@@ -385,37 +582,33 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
  function equipmentTarget(tower,item,x=undefined,y=undefined,stats=loopStats(tower,state)){
   const active=LOOP_EQUIPMENT[item.code]?.active;
   if(!active||tower.silenceUntil>state.elapsed||item.readyAt>state.elapsed)return null;
-  if(active.kind==='rally'){
-   const allies=nearbyAttackers(state,tower,stats.range,4);
-   if(!allies.length||!item.manual&&allies.filter(ally=>ally.combatUntil>state.elapsed).length<2)return null;
-   return {center:tower,allies};
-  }
   const aimed=x!==undefined||y!==undefined;
   if(aimed&&(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>WORLD.width||y>WORLD.height||distance(tower,{x,y})>stats.range))return null;
   const ranked=rank(tower,stats);
-  if(active.kind==='lance'){
-   const enemy=aimed?nearest({x,y},ranked.filter(enemy=>distance(enemy,{x,y})<=28))[0]
-    :ranked.find(enemy=>enemy.boss&&enemy.special!=='gold')??ranked.find(enemy=>enemy.special==='gold');
-   return enemy?{center:enemy,enemies:[enemy]}:null;
-  }
   if(aimed){
-   const enemies=area({x,y},90,6);
-   return enemies.length?{center:{x,y},enemies}:null;
+   const enemies=area({x,y},90,Infinity);
+   if(!enemies.length&&active.kind==='anchor')return null;
+   return {center:{x,y},enemies};
   }
-  const center=ranked.find(enemy=>enemy.boss||area(enemy,90,4).length>=4);
-  return center?{center,enemies:area(center,90,6)}:null;
+  const center=ranked.find(enemy=>active.kind==='anchor'?enemy.channel||area(enemy,90,4).length>=4:enemy.support);
+  return center?{center,enemies:area(center,90,Infinity)}:null;
+ }
+ function blockade(enemy,source){
+  effect(enemy,'blockOut',1,.2,source);
+  effect(enemy,'reveal',1,.2,source);
+  enemy.hidden=false;
  }
  function useEquipment(tower,item,target,stats=loopStats(tower,state)){
   const {kind,cooldown}=LOOP_EQUIPMENT[item.code].active;
   item.readyAt=state.elapsed+cooldown;
   engage(tower);
-  if(kind==='lance')link(tower,target.center,'beam');
-  else pulse(target.center,kind==='rally'?stats.range:90,kind==='slow'?'water':kind==='rally'?'charge':'fire');
-  if(kind==='rally')for(const ally of target.allies)ally.rallyUntil=state.elapsed+5;
-  for(const enemy of target.enemies??[]){
-   if(kind==='slow')slow(enemy,.35,3,tower,stats);
-   else hurt(enemy,stats.damage*(kind==='lance'?1.5:.9),kind==='fire'?'magic':stats.damageType??(tower.cycles%2?'physical':'magic'),tower,
-    {stats,secondary:true,noPropagation:true,pierce:kind==='lance'?.30:0});
+  pulse(target.center,90,kind==='anchor'?'net':'radar');
+  if(kind==='anchor'){
+   for(const enemy of target.enemies.filter(e=>e.boss))interrupt(enemy);
+   for(const enemy of target.enemies.filter(e=>!e.boss).slice(0,6))root(enemy,1.5,tower,stats);
+  }else{
+   zone(tower,target.center,{duration:3,interval:.1,kind:'blockade',limit:Infinity,radius:90},stats);
+   for(const enemy of target.enemies)blockade(enemy,tower.id);
   }
   flushExperience();
  }
@@ -424,6 +617,12 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
   for(const t of state.towers){
    const s=loopStats(t,state);
    t.attack=s.damage>0;t.revealRange=s.range;
+   if(gearBonus(t,'reveal')&&!(t.revealGearReady>state.elapsed)){
+    t.revealGearReady=state.elapsed+4;
+    const targets=area(t,s.range,Infinity);
+    if(targets.length)pulse(t,s.range,'radar');
+    for(const enemy of targets)effect(enemy,'reveal',1,2,t.id);
+   }
   }
   statusStep(dt);
   const supplies=state.towers.filter(t=>t.code==='T11');
@@ -437,6 +636,13 @@ export function createLoopCombat(state,emit,{onDeath,onDamage,flushExperience,su
    if(state.phase!=='playing')break;
    if(t.code==='T11')continue;
    const s=loopStats(t,state);
+   if(gearBonus(t,'sluice')&&!(t.sluiceReady>state.elapsed)){
+    const target=area(t,s.range,Infinity,enemy=>state.elapsed-enemy.spawnedAt>=20).sort((a,b)=>a.spawnedAt-b.spawnedAt)[0];
+    if(target){
+     t.sluiceReady=state.elapsed+30;pulse(target,70,'water');
+     zone(t,target,{duration:3,interval:.2,kind:'sluice',limit:8,radius:70},s);
+    }
+   }
    for(const item of t.equipment??[]){
     if(item.manual||!LOOP_EQUIPMENT[item.code]?.active||item.readyAt>state.elapsed)continue;
     const target=equipmentTarget(t,item,undefined,undefined,s);

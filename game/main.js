@@ -4,6 +4,8 @@ import { WORLD } from './geometry.js';
 import { createAudio } from './audio.js';
 import { loadArtwork, createRenderer, loopSpriteUrl } from './render.js';
 import { towerSkillIcon, towerVisual } from './battle-visuals.js';
+import { affixApplies } from './loop-catalog.js';
+import { equipmentMaterialCost, equipmentPurchasePrice, LOOP_DEPUTY_LEVELS } from './loop-equipment.js';
 
 /** @template {HTMLElement} T @param {string} id @returns {T} */
 function element(id) {
@@ -333,7 +335,7 @@ function updateSelection() {
   element('tower-panel').hidden = !tower;
   if (!tower) return;
   const stats = game.statsFor(tower);
-  element('tower-title').textContent = `${stats.name} · ${loopTier[stats.rarity]} · Lv.${tower.level}`;
+  element('tower-title').textContent = `${stats.name} · ${loopTier[stats.rarity]} · ${towerLevelLabel(tower)}`;
   const portrait = element('loop-selected-portrait');
   if (portrait.dataset.code !== tower.code) {
     portrait.dataset.code = tower.code;
@@ -398,6 +400,18 @@ function armCard(cardId) {
 }
 
 const loopTier = { common: 'R', rare: 'SR', epic: 'SSR' };
+const attributeLabel = {strength:'力量',agility:'敏捷',intelligence:'智力'};
+const dutyLabel = {damage:'输出',control:'控场',support:'辅助'};
+const towerLevelLabel = tower => tower.deputyStage===undefined ? 'Lv.'+tower.level : tower.deputyStage+' 阶';
+const skillLevel = index => index===3?30:2*index+1;
+function skillRequirement(code,index) {
+  const level=skillLevel(index);
+  return Object.values(game.credentials).includes(code)?LOOP_DEPUTY_LEVELS.indexOf(level)+' 阶':level+' 级';
+}
+function towerIdentity(tower) {
+  const damage = !tower.damage?'无直接伤害':tower.damageType==='physical'?'物理':tower.damageType==='magic'?'法术':'双系';
+  return `${attributeLabel[tower.attribute]} · ${damage} · ${dutyLabel[tower.duty]}`;
+}
 
 function panelTabs(tabs, active, onSelect, label) {
   const group = document.createElement('div');
@@ -454,13 +468,13 @@ function renderLoopCards() {
   const root = element('loop-cards');
   if (element('build-dock').hidden) return;
 
-  const {cards, starter, ssrMisses, wave, paused, phase, capacity, populationUsed} = game.state;
+  const {cards, draft, starter, ssrMisses, wave, paused, phase, capacity, populationUsed} = game.state;
   element('build-dock').dataset.starter=starter??'';
   const packs = game.shopPacks ?? [];
   const canBuy = packs.map(pack => game.canDraw(pack.tier));
   const rCards = cards.filter(card => game.catalog.find(tower=>tower.code===card.code)?.rarity==='common');
   loopExchangeCards = loopExchangeCards.filter(id => rCards.some(card=>card.id===id));
-  const signature = JSON.stringify([loopCardTab,loopCardSelection,loopExchangeCode,loopExchangeCards,cards,starter,ssrMisses,canBuy,paused,phase,capacity,populationUsed,wave>=game.exchangeWave]);
+  const signature = JSON.stringify([loopCardTab,loopCardSelection,loopExchangeCode,loopExchangeCards,cards,draft,starter,ssrMisses,canBuy,paused,phase,capacity,populationUsed,wave>=game.exchangeWave]);
   if (signature === loopCardsSignature) return;
   loopCardsSignature = signature;
 
@@ -468,6 +482,7 @@ function renderLoopCards() {
   panel.className = 'loop-card-panel';
   panel.setAttribute('data-panel',loopCardTab);
   const tabs = [['shop','卡铺'],['bag',`卡包 ${cards.length}`]];
+  if (draft) tabs.push(['draft','三选一']);
   if (wave >= game.exchangeWave) tabs.push(['exchange','换卡']);
   panel.append(panelTabs(tabs,loopCardTab,tab=>{loopCardTab=tab;loopCardSelection='';renderLoopCards();},'卡牌操作'));
 
@@ -488,12 +503,26 @@ function renderLoopCards() {
     renderLoopCards();
   };
 
-  if (loopCardTab === 'shop') {
+  if (loopCardTab === 'draft' && draft) {
+    paragraph(contents,`${draft.starter?'起手 SR':draft.tier+' 卡包'} · 免费选择一张`);
+    const choices = choiceStrip('卡包候选');
+    for (const code of draft.codes) choices.append(loopCardChoice(code,code,loopCardSelection,select,'draft'));
+    contents.append(choices);
+    if (draft.codes.includes(loopCardSelection)) {
+      preview.hidden=false;
+      preview.replaceChildren(loopCardDetails(loopCardSelection,true),actions);
+      actions.append(commandButton('领取这张卡',()=>{
+        const result=game.choosePackCard(loopCardSelection);
+        if (result.ok) {loopCardTab='bag';loopCardSelection=String(result.cardId);}
+        resultMessage(result);
+      },!editable(),'cards'));
+    }
+  } else if (loopCardTab === 'shop') {
     if (starter === 'unopened') {
       const open = game.canOpenStarter();
       const starterAction = commandButton('开启免费 SR 起手卡',()=>{
-        const result=game.openStarter();
-        if (result.ok) {loopCardTab='bag';loopCardSelection=String(result.cardId);}
+        const result=game.openStarterPack();
+        if (result.ok) {loopCardTab='draft';loopCardSelection='';}
         resultMessage(result);
       },!open.ok,'cards');
       starterAction.classList.add('primary');
@@ -527,8 +556,8 @@ function renderLoopCards() {
       if (pity && !guarantee) paragraph(detail,`连续 ${ssrMisses??0} 包未出 SSR · 最多再 ${game.ssrGuarantee-(ssrMisses??0)} 包`);
       if (!status.ok) paragraph(detail,status.message);
       const buy=commandButton(`购买 ${selected.tier} 包`,()=>{
-        const result=game.draw(selected.tier);
-        if (result.ok) {loopCardTab='bag';loopCardSelection=String(result.cardId);}
+        const result=game.buyPack(selected.tier);
+        if (result.ok) {loopCardTab='draft';loopCardSelection='';}
         resultMessage(result);
       },!status.ok);
       buy.hidden=starter==='unopened'&&!status.ok;
@@ -597,13 +626,20 @@ function renderLoopCards() {
 function loopCardChoice(code, key, selected, onSelect, group) {
   const definition = game.catalog.find(item=>item.code===code);
   const tier = loopTier[definition?.rarity] ?? 'R';
-  const button=panelChoice(`${tier} ${definition?.name??code}`,key,selected,onSelect);
+  const button=panelChoice(`${tier} ${definition?.name??code}${definition?' · '+towerIdentity(definition):''}`,key,selected,onSelect);
   button.dataset.group=group;
   button.dataset.rarity=String(definition?.rarity??'common');
   const fallback=document.createElement('span');
   fallback.textContent=tier;
   button.append(fallback);
   loopPortrait(button,code,definition?.assetCode);
+  if (definition) {
+    const attribute=document.createElement('small');
+    attribute.className='tower-attribute';
+    attribute.dataset.attribute=definition.attribute;
+    attribute.textContent=attributeLabel[definition.attribute];
+    button.append(attribute);
+  }
   return button;
 }
 
@@ -642,26 +678,26 @@ function loopCardDetails(code, compact = false) {
   if (!compact) loopPortrait(card,code,tower?.assetCode);
   card.append(title);
   if (tower) paragraph(card,`${loopTier[tower.rarity]} · ${tower.population} 人口`);
+  if (tower) paragraph(card,towerIdentity(tower));
   if (tower && !compact) {
     const role = ({melee:'近战',ranged:'远程',support:'辅助'})[tower.role];
-    const type = tower.damageType === 'physical' ? '物理' : tower.damageType === 'magic' ? '法术' : '物理／法术';
-    paragraph(card, tower.damage > 0 ? `${role} · ${type} · 1 级伤害 ${tower.damage} · 射程 ${tower.range}` : role);
+    if (tower.damage > 0) paragraph(card,`${role} · 1 级伤害 ${tower.damage} · 射程 ${tower.range}`);
   }
   const credential = game.credentials?.[code];
   const qualifiesFor = Object.entries(game.credentials??{}).filter(([,item])=>item===code).map(([main])=>towers.find(tower=>tower.code===main)?.name??main);
-  if (credential) paragraph(card,`突破凭证 · ${towers.find(tower=>tower.code===credential)?.name??credential}`);
+  if (credential) paragraph(card,`指定副塔 · ${towers.find(tower=>tower.code===credential)?.name??credential} 三阶`);
   if (qualifiesFor.length) paragraph(card,`可给 ${qualifiesFor.join('、')} 提供突破资格`);
   if (compact && tower?.skills?.length > 1) {
-    skillLine(card, code, 0, `1级 · ${tower.skills[0]}`);
+    skillLine(card, code, 0, `${skillRequirement(code,0)} · ${tower.skills[0]}`);
     const extra = document.createElement('details');
     const label = document.createElement('summary');
     label.textContent = '后续技能';
     extra.append(label);
-    for (const [index, skill] of tower.skills.slice(1).entries()) skillLine(extra, code, index + 1, `${2*index+3}级 · ${skill}`);
+    for (const [index, skill] of tower.skills.slice(1).entries()) skillLine(extra, code, index + 1, `${skillRequirement(code,index+1)} · ${skill}`);
     card.append(extra);
     return card;
   }
-  for (const [index,skill] of (tower?.skills??[]).entries()) skillLine(card, code, index, `${2*index+1}级 · ${skill}`);
+  for (const [index,skill] of (tower?.skills??[]).entries()) skillLine(card, code, index, `${skillRequirement(code,index)} · ${skill}`);
   return card;
 }
 
@@ -690,18 +726,18 @@ const equipmentGrade = {white:'白装',green:'绿装',blue:'蓝装',orange:'橙�
 function equipmentGlyph(item) {
   const glyph = document.createElement('span');
   glyph.className='equipment-glyph';
-  glyph.dataset.icon=item?.isScroll ? 'book' : 'gear';
+  glyph.dataset.icon='gear';
   glyph.setAttribute('aria-hidden','true');
   if (Number.isInteger(item?.icon)) {
     glyph.dataset.sprite='true';
     glyph.style.setProperty('--equipment-x',`${(item.icon%6)*20}%`);
-    glyph.style.setProperty('--equipment-y',`${Math.floor(item.icon/6)*100/3}%`);
+    glyph.style.setProperty('--equipment-y',`${Math.floor(item.icon/6)*25}%`);
   }
   return glyph;
 }
 
 function equipmentChoice(item, key, selected, onSelect, itemInstance = null) {
-  const grade = item?.isScroll?`${equipmentGrade[item.grade]?.slice(0,1)??''}卷`:equipmentGrade[item?.grade];
+  const grade = equipmentGrade[item?.grade];
   const name = item?.name??'空装备槽';
   const remaining = itemInstance?.readyAt>game.state.elapsed ? Math.ceil(itemInstance.readyAt-game.state.elapsed) : 0;
   const state = item?.active && itemInstance ? `${itemInstance.manual?'手':'自'}${remaining||''}` : '';
@@ -718,7 +754,7 @@ function equipmentChoice(item, key, selected, onSelect, itemInstance = null) {
   return button;
 }
 
-function equipmentDetail(title,item,onBack) {
+function equipmentDetail(title,item,onBack,tower=undefined) {
   const detail=document.createElement('article');
   detail.className='equipment-detail loop-content-card';
   const copy=document.createElement('div');
@@ -728,49 +764,83 @@ function equipmentDetail(title,item,onBack) {
   back.classList.add('gear-list-back');
   back.title='返回装备列表';
   copy.append(back);
-  if (item?.description) paragraph(copy,item.description);
+  if (item?.description && (!tower || item.grade==='blue' || item.grade==='orange')) {
+    const description=document.createElement('p');
+    description.textContent=item.description;
+    const effects=Object.keys(affixNames).filter(key=>item[key]===true);
+    if (tower && effects.length && effects.every(key=>!affixApplies(tower,key))) {
+      description.className='equipment-affix';
+      description.dataset.inactive='true';
+    }
+    copy.append(description);
+  }
+  if (tower) renderAffixes(copy,item,tower);
   const actions=document.createElement('div');
   actions.className='equipment-actions';
   detail.append(copy,actions);
   return {detail,copy,actions};
 }
 
-function equipmentCost(code, definitions = game.equipment) {
-  const item = definitions[code];
-  if (!item?.components) return item?.cost ?? 0;
-  return equipmentCost(item.scroll, definitions) + item.components.reduce((sum,part)=>sum+equipmentCost(part, definitions),0);
+const affixNames={physical:'物理伤害',magic:'法术伤害',rate:'攻击频率',control:'控制时长',range:'射程或支援半径',boss:'首领直伤',
+  sunder:'叠加破甲',breach:'破盾重击',shieldBreaker:'额外破盾',scatter:'分矢',embers:'余烬爆炸',cinders:'传递余烬',
+  stall:'重复减速触发定身',relay:'协作攻速',nexus:'集火合击',prism:'法术蓄能',flywheel:'收割加速',scope:'远距增伤',
+  bounty:'额外赏金',reveal:'揭露隐匿',disruptor:'削弱支援',refraction:'外圈折射',capacitor:'友塔附伤',sluice:'补漏减速'};
+
+function renderAffixes(copy,item,tower) {
+  for (const [key,label] of Object.entries(affixNames)) {
+    const value=item[key];
+    if (!value) continue;
+    const active=affixApplies(tower,key);
+    const line=document.createElement('small');
+    line.className='equipment-affix';
+    line.dataset.inactive=String(!active);
+    line.textContent=label+(typeof value==='number'?' +' + Math.round(value*100) + '%':'')+(active?'':' · 当前塔不生效');
+    copy.append(line);
+  }
 }
 
-function equipmentRecipe(code,onBack,towerId=undefined) {
-  const recipe=game.equipment[code];
-  const {detail,copy,actions}=equipmentDetail(recipe.name,recipe,onBack);
-  const materials=towerId===undefined ? game.state.inventory
-    : game.state.towers.find(t=>t.id===towerId)?.equipment??[];
+function recipeMaterials(copy,code,towerId,onPart) {
+  const {recipe,parts}=game.craftParts(code,towerId);
+  if (!recipe?.components) return;
   const chain=document.createElement('div');
   chain.className='equipment-recipe-line';
-  const used=new Set();
-  for (const ingredient of [...recipe.components,recipe.scroll]) {
+  const grouped=new Map();
+  for (const [index,ingredient] of recipe.components.entries()) {
+    const part=grouped.get(ingredient)??{required:0,owned:0};
+    part.required++;
+    if (parts[index]) part.owned++;
+    grouped.set(ingredient,part);
+  }
+  for (const [ingredient,{required,owned}] of grouped) {
     const definition=game.equipment[ingredient];
-    if (!definition) continue;
-    const available=(ingredient===recipe.scroll ? game.state.inventory : materials).find(item=>item.code===ingredient&&!used.has(item.id));
-    if (available) used.add(available.id);
-    const part=document.createElement('div');
+    const locations=game.state.towers.filter(t=>t.equipment.some(item=>item.code===ingredient)).map(t=>game.catalog.find(entry=>entry.code===t.code)?.name??t.code);
+    const part=onPart&&definition.components?commandButton('',()=>onPart(ingredient)):document.createElement('div');
     part.className='equipment-recipe-part';
-    part.dataset.missing=String(!available);
+    part.dataset.missing=String(owned<required);
     const label=document.createElement('small');
-    label.textContent=`${definition.name} · ${available?'已有':'缺件'}`;
+    label.textContent=definition.name+' '+owned+'/'+required+(owned<required?' · 缺 '+(required-owned)+' 件':'');
     part.append(equipmentGlyph(definition),label);
+    if (locations.length) {
+      const location=document.createElement('small');
+      location.textContent='已装配 · '+locations.join('、');
+      part.append(location);
+    }
     chain.append(part);
   }
   copy.append(chain);
-  paragraph(copy,`从零制作 ${equipmentCost(code)} 金`);
+}
+
+function equipmentRecipe(code,onBack,towerId=undefined,onPart=undefined) {
+  const recipe=game.equipment[code];
+  const {detail,copy,actions}=equipmentDetail(recipe.name,null,onBack);
+  recipeMaterials(copy,code,towerId,onPart);
+  paragraph(copy,recipe.description);
+  paragraph(copy,'从零合成 '+equipmentMaterialCost(code)+' 金');
   const status=game.canCraft(code,towerId);
   if (!status.ok) paragraph(copy,status.message);
-  const scroll=game.equipment[recipe.scroll];
-  if (scroll && !game.state.inventory.some(item=>item.code===recipe.scroll)) {
-    const sale=game.canBuyEquipment(recipe.scroll);
-    actions.append(commandButton(`买卷轴 · ${scroll.cost} 金`,()=>resultMessage(game.buyEquipment(recipe.scroll)),!sale.ok,'gold'));
-    if (!sale.ok && sale.message!==status.message) paragraph(copy,sale.message);
+  if (towerId===undefined) {
+    const sale=game.canBuyEquipment(code);
+    actions.append(commandButton('直购 · '+equipmentPurchasePrice(code)+' 金',()=>resultMessage(game.buyEquipment(code)),!sale.ok,'gold'));
   }
   actions.append(commandButton('合成装备',()=>resultMessage(game.craftEquipment(code,towerId)),!status.ok));
   return detail;
@@ -780,21 +850,22 @@ function renderLoopEquipmentShop() {
   const root = element('loop-equipment-shop');
   if (root.hidden) return;
   const {inventory,gold,phase,paused,wave} = game.state;
-  const entries = Object.entries(/** @type {Record<string,{name:string,cost:number,grade:string,description:string,isScroll?:boolean,components?:string[]}>} */ (game.equipment??{}));
-  const signature = JSON.stringify([equipmentTab,equipmentSelection,inventory,entries.map(([,item])=>gold>=item.cost),phase,paused,wave]);
+  const entries = Object.entries(game.equipment);
+  const signature = JSON.stringify([equipmentTab,equipmentSelection,inventory,game.state.towers.map(t=>[t.id,t.equipment]),entries.map(([code])=>gold>=equipmentPurchasePrice(code)),phase,paused,wave]);
   if (signature===loopEquipmentSignature) return;
   loopEquipmentSignature=signature;
   const panel=document.createElement('div');
   panel.className='equipment-panel';
   panel.setAttribute('data-panel',equipmentTab);
-  panel.append(panelTabs([['shop','基础商店'],['recipes','制作书'],['bag','背包']],equipmentTab,tab=>{
+  panel.append(panelTabs([['shop','基础装备'],['recipes','成品装备'],['bag','背包']],equipmentTab,tab=>{
     equipmentTab=tab;equipmentSelection='';renderLoopEquipmentShop();
   },'装备操作'));
   const select = key => {
     equipmentSelection=equipmentSelection===key?'':key;
     renderLoopEquipmentShop();
+    root.querySelector?.('.equipment-detail')?.scrollIntoView?.({block:'start'});
   };
-  const list = choiceStrip(equipmentTab==='bag'?'背包装备':equipmentTab==='recipes'?'制作书与卷轴':'基础装备');
+  const list = choiceStrip(equipmentTab==='bag'?'背包装备':equipmentTab==='recipes'?'成品装备':'基础装备');
   if (equipmentTab==='bag') {
     for (const entry of inventory) {
       if (game.equipment[entry.code]) list.append(equipmentChoice(game.equipment[entry.code],String(entry.id),equipmentSelection,select));
@@ -806,7 +877,8 @@ function renderLoopEquipmentShop() {
       const item=game.equipment[selected.code];
       const {detail,copy,actions}=equipmentDetail(item.name,item,()=>select(equipmentSelection));
       const refund=Math.floor((selected.invested??0)/4);
-      if (!item.isScroll) actions.append(commandButton('为场上塔装配',()=>{
+      recipeMaterials(copy,selected.code,undefined,code=>{equipmentTab='recipes';equipmentSelection=code;renderLoopEquipmentShop();});
+      actions.append(commandButton('为场上塔装配',()=>{
         notice('点选塔并打开装备页，再从背包取用。');
         setDrawer();
       },false,'gear'));
@@ -815,12 +887,12 @@ function renderLoopEquipmentShop() {
     }
   } else {
     for (const [code,item] of entries) {
-      if ((equipmentTab==='recipes')!==!!(item.components||item.isScroll)) continue;
+      if ((equipmentTab==='recipes')!==!!item.components) continue;
       list.append(equipmentChoice(item,code,equipmentSelection,select));
     }
     panel.append(list);
     const item=game.equipment[equipmentSelection];
-    if (item?.components) panel.append(equipmentRecipe(equipmentSelection,()=>select(equipmentSelection)));
+    if (item?.components) panel.append(equipmentRecipe(equipmentSelection,()=>select(equipmentSelection),undefined,select));
     else if (item) {
       const {detail,copy,actions}=equipmentDetail(item.name,item,()=>select(equipmentSelection));
       const status=game.canBuyEquipment(equipmentSelection);
@@ -857,7 +929,7 @@ function renderTowerEquipment(root,tower,definition,remaining) {
     slots.append(slot);
   }
   panel.append(slots);
-  const inventory=game.state.inventory.filter(item=>game.equipment[item.code]&&!game.equipment[item.code].isScroll);
+  const inventory=game.state.inventory.filter(item=>game.equipment[item.code]);
   const [group,key]=towerEquipmentSelection.split(':');
   const bagOpen = ['bag','empty','inventory'].includes(group);
   const bagButton = element('tower-bag-button');
@@ -873,7 +945,8 @@ function renderTowerEquipment(root,tower,definition,remaining) {
   const selected=(group==='slot'?occupied:inventory).find(item=>String(item.id)===key);
   if ((group==='slot'||group==='inventory') && selected) {
     const item=game.equipment[selected.code];
-    const {detail,copy,actions}=equipmentDetail(item.name,item,()=>select(towerEquipmentSelection));
+    const {detail,copy,actions}=equipmentDetail(item.name,item,()=>select(towerEquipmentSelection),tower);
+    recipeMaterials(copy,selected.code,tower.id,undefined);
     if (group==='inventory') {
       const status=game.canEquip(tower.id,selected.id);
       if (!status.ok) paragraph(copy,status.message);
@@ -901,7 +974,7 @@ function renderTowerEquipment(root,tower,definition,remaining) {
   if (bagOpen && !inventory.length) paragraph(panel,'背包暂无可装配的装备。');
   const recipes=Object.keys(game.equipment).filter(code=>{
     const ingredients=game.equipment[code].components;
-    return ingredients?.length && ingredients.every(part=>occupied.some(item=>item.code===part));
+    return ingredients?.some(part=>occupied.some(item=>item.code===part)) && game.craftParts(code,tower.id).parts.every(Boolean);
   });
   if (recipes.length) {
     const options=choiceStrip('可用同塔组件制作的配方');
@@ -916,15 +989,24 @@ function renderTowerEquipment(root,tower,definition,remaining) {
 
 function renderBreakthrough(panel,tower) {
   panel.replaceChildren();
+  if (tower.deputyStage!==undefined) {
+    panel.hidden=false;
+    const status=game.canUpgradeDeputy(tower.id);
+    if (tower.deputyStage===3) { paragraph(panel,'副塔已升满 · 三阶');return; }
+    const label='升至 '+(tower.deputyStage+1)+' 阶'+(status.cost===undefined?'':' · '+status.cost+' 金');
+    const button=commandButton(label,()=>resultMessage(game.upgradeDeputy(tower.id)),!status.ok,'upgrade');
+    if (!status.ok) button.title=status.message;
+    panel.append(button);
+    return;
+  }
   const code=game.credentials?.[tower.code];
   panel.hidden = !code || !!tower.awakened;
   if (panel.hidden) return;
   const name=game.catalog.find(item=>item.code===code)?.name??code;
-  const credential=game.state.towers.find(item=>item.code===code&&!item.qualifiedUsed&&item.level>=5);
-  const status=game.canBreakthrough(tower.id,credential?.id);
-  const label = tower.level < 5 ? '突破 · 5级解锁' : '突破 · 180 金';
-  const button = commandButton(label,()=>resultMessage(game.breakthrough(tower.id,credential?.id)),!status.ok,'upgrade');
-  button.title = `突破凭证 · 5 级${name}${status.ok ? '' : `\n${status.message}`}`;
+  const status=game.canBreakthrough(tower.id);
+  const label = tower.level < 20 ? '突破 · 20 级' : '突破';
+  const button = commandButton(label,()=>resultMessage(game.breakthrough(tower.id)),!status.ok,'upgrade');
+  button.title = `指定副塔 · 三阶${name}${status.ok ? '' : `\n${status.message}`}`;
   panel.append(button);
 }
 
@@ -979,16 +1061,18 @@ function updateLoopPanels() {
   const occupied = tower.equipment??[];
   const status = element('loop-skill-status');
   const levelCap = game.xpThresholds?.[tower.level] ?? 0;
-  const qualification = tower.awakened ? '已突破 · ' : tower.qualifiedUsed ? '凭证已使用 · ' : '';
-  status.textContent = `${qualification}${tower.level>=5?'经验已满':`经验 ${tower.xp??0} / ${levelCap}`} · ${remaining>0?`脱战还需 ${Math.ceil(remaining)} 秒`:'已脱战'}`;
+  const qualification = tower.awakened ? '已突破 · ' : '';
+  const progress = tower.deputyStage!==undefined ? '副塔 '+tower.deputyStage+'/3 阶'
+    : tower.level>=game.levelCap(tower) ? (tower.level===20?'等待突破':'经验已满') : '经验 '+(tower.xp??0)+' / '+levelCap;
+  status.textContent = [towerIdentity(definition),qualification+progress,remaining>0?'脱战还需 '+Math.ceil(remaining)+' 秒':'已脱战'].join(' · ');
   const sell = /** @type {HTMLButtonElement} */ (element('sell-button'));
   const canSell = editable() && (!occupied.length || remaining===0);
   sell.disabled = !canSell;
   sell.title = occupied.length && remaining>0 ? '须脱战后出售带装备的塔' : '';
   sell.textContent = sell.title || `出售 · 回收 ${tower.refund??0} 金币`;
   root.hidden=false;
-  const signature = JSON.stringify([tower.id,tower.level,tower.priority,tower.awakened,tower.qualifiedUsed,occupied,inventory,Math.ceil(remaining),phase,paused,
-    towerSkillSelection,towerEquipmentSelection,game.state.gold>=180,game.state.wave, towers.map(t=>[t.id,t.code,t.level,t.qualifiedUsed]),
+  const signature = JSON.stringify([tower.id,tower.level,tower.priority,tower.awakened,tower.deputyStage,occupied,inventory,Math.ceil(remaining),phase,paused,
+    towerSkillSelection,towerEquipmentSelection,game.canUpgradeDeputy(tower.id).ok,game.state.wave,towers.map(t=>[t.id,t.code,t.level,t.deputyStage,t.equipment]),
     occupied.map(item=>[Math.ceil(Math.max(0,(item.readyAt??0)-elapsed)),
       item.manual&&towerEquipmentSelection===`slot:${item.id}`?game.canCastEquipment(tower.id,item.id).ok:false])]);
   if(signature===loopPanelSignature)return;
@@ -1000,9 +1084,10 @@ function updateLoopPanels() {
   skillDetail.hidden = true;
   for (const [index, skill] of (definition?.skills ?? []).entries()) {
     const key = String(index);
-    const level = 2 * index + 1;
+    const level = skillLevel(index);
+    const requirement = skillRequirement(tower.code,index);
     const unlocked = tower.level >= level;
-    const label = `${level}级 · ${unlocked ? '已解锁' : '待解锁'}`;
+    const label = requirement+' · '+(index===3?'终极技能 · ':'')+(unlocked?'已解锁':'待解锁');
     const button = panelChoice(label, key, towerSkillSelection, () => {
       towerSkillSelection = towerSkillSelection === key ? '' : key;
       towerEquipmentSelection = '';
@@ -1019,7 +1104,8 @@ function updateLoopPanels() {
     icon.style.color = towerVisual(tower.code).color;
     icon.setAttribute('aria-hidden','true');
     const badge = document.createElement('small');
-    badge.textContent = unlocked ? `Lv.${level}` : `${level}级解锁`;
+    badge.textContent = requirement;
+    if (index===3) button.dataset.ultimate='true';
     button.append(icon,badge);
     skillChoices.append(button);
     if (towerSkillSelection === key) {
@@ -1099,7 +1185,7 @@ function updateLoopConsole() {
     const button = document.createElement('button');
     button.className = 'ready-tower';
     button.type = 'button';
-    button.title = `${name} · Lv.${tower.level}`;
+    button.title = `${name} · ${towerLevelLabel(tower)}`;
     loopPortrait(button, tower.code, tower.assetCode);
     const label = document.createElement('span');
     label.textContent = button.title;
@@ -1162,7 +1248,7 @@ function updateUI() {
   const waveCap = state.waveCount;
   const waitingForCard = state.starter !== 'deployed';
   const counting = Number.isFinite(state.nextWaveIn) && (state.endless || state.wave < waveCap);
-  element('wave-label').textContent = waitingForCard ? (state.starter==='held'?'部署起手 SR':'开启起手 SR') : counting ? `${state.wave?'下波':'备战'} ${Math.max(0,Math.ceil(state.nextWaveIn))}s` : '波次';
+  element('wave-label').textContent = waitingForCard ? (state.starter==='held'?'部署起手 SR':state.draft?.starter?'选择起手 SR':'开启起手 SR') : counting ? `${state.wave?'下波':'备战'} ${Math.max(0,Math.ceil(state.nextWaveIn))}s` : '波次';
   element('wave-value').textContent = state.endless ? `∞ ${state.wave}` : `${state.wave} / ${waveCap}`;
   const rail = element('campaign-rail');
   rail.hidden = state.endless;
@@ -1307,14 +1393,10 @@ function renderHelpEquipment() {
     heading.append(equipmentGlyph(item));
     addDetailTitle(heading,item.name);
     article.append(heading);
-    const gradeName = item.isScroll ? `${equipmentGrade[item.grade]}卷轴` : equipmentGrade[item.grade];
-    const role = ({physical:'物理输出塔',magic:'法术输出塔',attack:'攻击塔',control:'控场塔',support:'支援塔'})[item.role];
-    const price = item.components ? `从零制作 ${equipmentCost(code,definitions)} 金` : `购买 ${item.cost} 金`;
-    const wave = item.availableWave ?? definitions[item.scroll]?.availableWave;
-    paragraph(article,[gradeName,price,wave && `第 ${wave} 波开放`].filter(Boolean).join(' · '));
+    const price='直购 '+equipmentPurchasePrice(code)+' 金';
+    paragraph(article,[equipmentGrade[item.grade],price].join(' · '));
     paragraph(article,item.description);
-    if (role) paragraph(article,`适用 · ${role}`);
-    if (item.components) paragraph(article,`材料 · ${[...item.components,item.scroll].map(part=>definitions[part].name).join(' ＋ ')}`);
+    if (item.components) paragraph(article,'材料 · '+item.components.map(part=>definitions[part].name).join(' ＋ '));
     if (item.active) paragraph(article,`主动技能 · 冷却 ${item.active.cooldown} 秒${item.active.targeted?' · 需选目标':''}`);
     return article;
   }));

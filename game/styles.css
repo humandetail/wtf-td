@@ -195,7 +195,7 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .loop-card-content>.card-preview{max-height:38svh;overflow:auto}
 .loop-card-content .card-preview-actions .button:first-of-type{border-color:#a8824e}
 .loop-card-content select{min-width:0;width:100%;min-height:44px;color:var(--text);background:#1b3027;border:1px solid #76886c;border-radius:6px;padding:4px 6px}
-.equipment-choice.card-choice{min-width:44px;width:48px;height:48px}
+.equipment-choice.card-choice{isolation:isolate;min-width:44px;width:48px;height:48px}
 .equipment-choice[data-grade=white]{border-color:#aab4a9}
 .equipment-choice[data-grade=green]{border-color:#78ae84}
 .equipment-choice[data-grade=blue]{border-color:#70a3b8}
@@ -206,7 +206,7 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .equipment-glyph{position:relative;display:inline-grid;place-items:center;width:34px;height:34px;flex:none;color:#d8b969}
 .equipment-choice .equipment-glyph{align-self:center;margin:0}
 .equipment-glyph::before{content:"";display:block;width:22px;height:22px;background:currentColor;mask:var(--ui-glyph) center/contain no-repeat;-webkit-mask:var(--ui-glyph) center/contain no-repeat}
-.equipment-art-loaded .equipment-glyph[data-sprite]{background-image:url("./assets/modes/loop/equipment.webp");background-repeat:no-repeat;background-size:600% 400%;background-position:var(--equipment-x) var(--equipment-y)}
+.equipment-art-loaded .equipment-glyph[data-sprite]{background-image:url("./assets/modes/loop/equipment.webp");background-repeat:no-repeat;background-size:600% 500%;background-position:var(--equipment-x) var(--equipment-y)}
 .equipment-art-loaded .equipment-glyph[data-sprite]::before{display:none}
 #help-dialog[open]{
   display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:12px;
@@ -240,7 +240,7 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .equipment-actions{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .equipment-actions .button{margin:0}
 .equipment-detail-copy{min-width:0}
-.command-drawer[data-view=equipment]{overflow-x:hidden}
+.command-drawer[data-view=equipment]{overflow-x:hidden;scroll-padding-top:48px}
 .command-drawer[data-view=equipment] .drawer-heading{padding-bottom:5px;margin-bottom:6px}
 .equipment-detail .gear-list-back{display:none}
 #tower-equipment .equipment-detail{padding:6px}
@@ -248,3 +248,11 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 #tower-equipment .gear-list-back{position:absolute;right:0;top:0;display:flex;width:44px;min-height:44px;justify-content:center;padding:0;font-size:0}
 #tower-equipment .gear-list-back::before{font-size:14px}
 #tower-equipment .equipment-actions{flex:none}
+
+.card-choice .tower-attribute{position:absolute;right:0;bottom:0;padding:1px 3px;border-radius:3px 0 5px 0;background:#17221e;color:#f3dbb5;font-size:9px;line-height:1.25}
+.tower-attribute[data-attribute="strength"]{color:#ffab8e}
+.tower-attribute[data-attribute="agility"]{color:#aee092}
+.tower-attribute[data-attribute="intelligence"]{color:#b9d5ff}
+.equipment-affix{display:block;color:var(--text)}
+.equipment-affix[data-inactive="true"]{color:var(--muted);opacity:.7}
+.tower-skill-choice[data-ultimate="true"]{border-color:#b6804f}
