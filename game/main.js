@@ -28,7 +28,7 @@ let renderer;
 let loop3D = null;
 let battle3D = null;
 let wants3D = false;
-let yoshinoAsset = null;
+let battleModelAsset = null;
 let readyTowerSignature = '';
 let selectedTowerId = null;
 let selectedEnemyId = null;
@@ -54,7 +54,6 @@ const keyboardPointer = { x: 190, y: 140 };
 let view = 'menu';
 let lastPhase = 'menu';
 let noticeUntil = 0;
-let helpPaused = false;
 let selectedSignature = '';
 /** @type {HTMLElement} */
 let drawerTrigger = canvas;
@@ -166,12 +165,12 @@ function applyBattleView() {
         onPitch:pitch=>{ element('loop-camera-pitch').textContent = `${pitch}°`; },
         onLost:fallBackTo2D,
         onModelError:error=>{
-          yoshinoAsset = null;
-          element('loop-3d-status').textContent = '模型无法渲染，当前使用低模怪物。';
+          if (!(battleModelAsset instanceof Map) && !battleModelAsset?.load) battleModelAsset = null;
+          element('loop-3d-status').textContent = '部分模型无法渲染，对应单位使用低模。';
           console.warn(error);
         }
       });
-      battle3D.setModel(yoshinoAsset);
+      battle3D.setModel(battleModelAsset);
     } catch (error) {
       fallBackTo2D(error);
     }
@@ -199,6 +198,7 @@ async function enableLocal3D() {
     });
     const input = /** @type {HTMLInputElement} */ (element('loop-3d-model'));
     const status = element('loop-3d-status');
+    const modelMode = new URLSearchParams(globalThis.location?.search).get('models');
     async function loadEnemyModel(files) {
       input.disabled = true;
       status.textContent = '正在读取本地模型…';
@@ -208,9 +208,9 @@ async function enableLocal3D() {
           status.textContent = '请在这里选择四糸乃模型与两张贴图，当前使用低模怪物。';
           return;
         }
-        yoshinoAsset = await loop3D.loadModel(selected);
+        battleModelAsset = await loop3D.loadModel(selected);
         status.textContent = '四糸乃已加载，暂用于所有怪物。';
-        battle3D?.setModel(yoshinoAsset);
+        battle3D?.setModel(battleModelAsset);
       } catch (error) {
         status.textContent = error.message || '模型加载失败。请重新选择三个文件。';
       } finally {
@@ -222,7 +222,38 @@ async function enableLocal3D() {
       if (input.files.length) void loadEnemyModel(input.files);
     });
     applyBattleView();
-    void loadEnemyModel(loop3D.findLocalModel().catch(()=>null));
+    if (modelMode === 'sample') {
+      input.disabled = true;
+      status.textContent = '正在读取模型样例…';
+      try {
+        const samples = await loop3D.loadSamples();
+        battleModelAsset = samples;
+        const names = [samples.has('T05') && '电弧线圈',samples.has('X13') && '铁砂蠕虫'].filter(Boolean);
+        status.textContent = names.length ? `已载入模型样例（${names.join('、')}）。` : '找不到本机模型样例，当前使用低模。';
+        battle3D?.setModel(samples);
+      } finally {
+        input.disabled = false;
+      }
+      return;
+    }
+    input.disabled = true;
+    status.textContent = '正在读取本地模型库…';
+    const catalog = modelMode === 'yoshino' ? null : await loop3D.readCatalog().catch(()=>null);
+    if (!catalog) {
+      void loadEnemyModel(loop3D.findLocalModel().catch(()=>null));
+      return;
+    }
+    function applyModelLibrary() {
+      battleModelAsset = loop3D.battleLibrary(catalog);
+      const units = [...catalog.defaults.keys()].filter(code=>!code.startsWith('fx:')).length;
+      status.textContent = `本地模型库已载入 · ${units} 个单位有默认模型。`;
+      battle3D?.setModel(battleModelAsset);
+    }
+    applyModelLibrary();
+    input.disabled = false;
+    window.addEventListener('storage',event=>{
+      if (event.key === loop3D.assignmentKey) applyModelLibrary();
+    });
   } catch (error) {
     console.warn('本地 3D 未启动',error);
   }
@@ -1078,6 +1109,8 @@ function renderTowerEquipment(root,tower,definition) {
 
 function renderBreakthrough(panel,tower) {
   panel.replaceChildren();
+  const requirement=element('loop-breakthrough-requirement');
+  requirement.hidden=true;
   if (tower.deputyStage!==undefined) {
     panel.hidden=false;
     const status=game.canUpgradeDeputy(tower.id);
@@ -1092,10 +1125,14 @@ function renderBreakthrough(panel,tower) {
   panel.hidden = !code || !!tower.awakened;
   if (panel.hidden) return;
   const name=game.catalog.find(item=>item.code===code)?.name??code;
+  const stage=Math.max(-1,...game.state.towers.filter(item=>item.code===code).map(item=>item.deputyStage??-1));
+  const deputyProgress=stage<0?'未部署（需三阶）':`${stage}/3 阶在场`;
+  setText(requirement,`突破 · ${tower.level}/20 级 · 副塔 ${name} ${deputyProgress}`);
+  requirement.hidden=false;
   const status=game.canBreakthrough(tower.id);
   const label = tower.level < 20 ? '突破 · 20 级' : '突破';
   const button = commandButton(label,()=>resultMessage(game.breakthrough(tower.id)),!status.ok,'upgrade');
-  button.title = `指定副塔 · 三阶${name}${status.ok ? '' : `\n${status.message}`}`;
+  if (!status.ok) button.title=status.message;
   panel.append(button);
 }
 
@@ -1416,8 +1453,7 @@ function updateMenu() {
 }
 
 function returnToMenu() {
-  if (view === 'game' && !window.confirm('返回主菜单？本局将暂停并保留，可点“继续游戏”返回。')) return;
-  if (game.state.phase === 'playing' && !game.state.paused) game.togglePause();
+  if (view === 'game' && !window.confirm('返回主菜单？本局进度会保留，可点“继续布防”回到战场。')) return;
   clearTransient();
   showView('menu');
   element('start-button').focus();
@@ -1435,7 +1471,6 @@ function enterGame(restart = false) {
     game.restart();
     clearTransient();
   } else if (game.state.phase === 'menu') game.start();
-  else if (game.state.paused) game.togglePause();
   if (game.state.starter !== 'deployed') {
     loopCardTab=game.state.starter==='held'?'bag':'shop';
     if(loopCardTab==='bag')loopCardSelection=String(game.state.cards.find(card=>card.starter)?.id??'');
@@ -1506,8 +1541,6 @@ function selectHelpPage(page) {
 
 function openHelp() {
   if (help.open) return;
-  helpPaused = view === 'game' && game.state.phase === 'playing' && !game.state.paused;
-  if (helpPaused) game.togglePause();
   selectHelpPage('rules');
   help.showModal();
 }
@@ -1576,11 +1609,6 @@ function bindControls() {
   element('help-tower-rarity').addEventListener('change',renderHelpTowers);
   element('help-equipment-grade').addEventListener('change',renderHelpEquipment);
   element('close-help').addEventListener('click', () => help.close());
-  help.addEventListener('close', () => {
-    if (helpPaused && view === 'game' && game.state.paused) game.togglePause();
-    helpPaused = false;
-    updateUI();
-  });
   function pointer(event,select = false) {
     if (battle3D) return battle3D.point(event,game.state,select);
     const bounds = canvas.getBoundingClientRect();
@@ -1647,12 +1675,6 @@ function bindControls() {
       if (!hadDrawer) canvas.focus({ preventScroll: true });
     }
   });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) touchControls?.clear();
-    if (document.hidden && game.state.phase === 'playing' && !game.state.paused) {
-      game.togglePause(); notice('离开页面，已自动暂停。'); updateUI();
-    }
-  });
 }
 
 async function boot() {
@@ -1688,10 +1710,39 @@ async function boot() {
       void enableLocal3D();
     }
     let previous = performance.now();
-    let uiIn = 0;
-    const frame = now => {
-      const dt = Math.min(.1, Math.max(0, (now - previous) / 1000));
+    const elapsedSeconds = () => {
+      const now = performance.now();
+      const elapsed = (now - previous) / 1000;
       previous = now;
+      return elapsed;
+    };
+    const advanceBackground = () => {
+      const elapsed = elapsedSeconds();
+      if (view !== 'game') return;
+      game.tick(elapsed);
+      // Avoid replaying past effects and sounds when the tab becomes visible.
+      game.drainEvents();
+    };
+    let backgroundTimer;
+    function updateBackgroundTimer() {
+      if (document.hidden) {
+        touchControls?.clear();
+        if (view === 'game' && backgroundTimer === undefined) backgroundTimer = setInterval(advanceBackground, 1000);
+      } else if (backgroundTimer !== undefined) {
+        clearInterval(backgroundTimer);
+        backgroundTimer = undefined;
+        advanceBackground();
+        updateUI();
+      }
+    }
+    document.addEventListener('visibilitychange', updateBackgroundTimer);
+    updateBackgroundTimer();
+
+    let uiIn = 0;
+    const frame = () => {
+      requestAnimationFrame(frame);
+      if (document.hidden) return;
+      const dt = Math.min(.1, elapsedSeconds());
       if (view === 'game') {
         game.tick(dt);
         syncEvents();
@@ -1705,7 +1756,6 @@ async function boot() {
         if (uiIn <= 0) { updateUI(); uiIn = .1; }
         if (performance.now() > noticeUntil) element('notice').hidden = true;
       }
-      requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
   } catch (error) {

@@ -16,4 +16,4 @@ Required DOM IDs: loop-controls, loop-skill-status, loop-forecast, loop-enemy-in
 
 `render.js` 用 Canvas 2D 绘制 1280 × 800 的循环圈地图。部署遮罩与点击位置由同一份地图几何决定。触屏先预览，再提交一次指令。键盘方向键移动光标，Enter 选择或部署。
 
-本地 `?view=3d` 挂载 WebGL 画布和镜头控件，使用同一局状态。对局菜单内切换视图或 WebGL 失效时回到 2D。公开 Pages 包提供 2D 入口。返回主菜单会暂停本局，点击继续恢复，刷新页面会重置。
+本地 `?view=3d` 挂载 WebGL 画布和镜头控件，使用同一局状态。对局菜单内切换视图或 WebGL 失效时回到 2D。公开 Pages 包提供 2D 入口。对局在战场推进，返回主菜单保留本局进度和手动暂停状态，刷新页面会重置。

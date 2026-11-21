@@ -6,6 +6,8 @@ import fs from 'node:fs';
 async function harness(loopFixture = null) {
   const imports = Object.assign({}, ...await Promise.all(['battle-visuals','render','loop-session','geometry','loop-catalog','loop-equipment'].map(name=>import(new URL(`../${name}.js`,import.meta.url)))));
   const nodes=new Map(), events={}; let document;
+  let now=0, frame, nextTimer=0;
+  const timers=new Map();
   const confirmation={answer:true,messages:[]};
   class Element {
     constructor(tag='button') { this.tagName=tag.toUpperCase();this.hidden=true;this.style={setProperty(){}};this.dataset={};this.attrs={};this.events={};this.children=[];this.textContent='';this.classes=new Set();this.classList={add:key=>this.classes.add(key),toggle:(key,on)=>{if(on)this.classes.add(key);else this.classes.delete(key);}};this.isConnected=true;this.value=''; }
@@ -34,18 +36,29 @@ async function harness(loopFixture = null) {
   const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const [markup,tag,id] of html.matchAll(/<(\w+)[^>]*?\bid="([^"]+)"[^>]*>/g)){const el=new Element(tag);el.id=id;el.hidden=markup.includes(' hidden');el.textContent=html.slice(html.indexOf(markup)+markup.length).match(/^([^<]*)/)?.[1]??'';nodes.set(id,el);}
   document={getElementById:id=>nodes.get(id),body:{classList:{toggle(){}}},activeElement:null,createElement:tag=>new Element(tag),addEventListener:(k,fn)=>events[k]=fn};
-  const context=vm.createContext({...imports,document,window:{addEventListener(){},confirm(message){confirmation.messages.push(message);return confirmation.answer;}},console,performance,createAudio:()=>({unlock:async()=>{},play(){},muted:false}),loadArtwork(){},createRenderer(){},ResizeObserver:class{},requestAnimationFrame(){}});
+  const context=vm.createContext({
+    ...imports,document,window:{addEventListener(){},confirm(message){confirmation.messages.push(message);return confirmation.answer;}},console,URLSearchParams,
+    performance:{now:()=>now},requestAnimationFrame:callback=>{frame=callback;},
+    setInterval(callback){timers.set(++nextTimer,callback);return nextTimer;},clearInterval:id=>timers.delete(id),
+    createAudio:()=>({unlock:async()=>{},play(){},muted:false}),loadArtwork(){},createTouchControls(){return null;},
+    createRenderer:()=>({reset(){},event(){},draw(){},hitTest(x,y,items){return items.find(t=>Math.hypot(t.x-x,t.y-y)<35)?.id??null;}}),
+    Image:class{},ResizeObserver:class{observe(){}},
+  });
   if(loopFixture)context.createLoopGame=()=>loopFixture;
   let source=fs.readFileSync(new URL('../main.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace('void boot();','');
-  source+='\nrenderer={reset(){},event(){},hitTest(x,y,items){return items.find(t=>Math.hypot(t.x-x,t.y-y)<35)?.id??null}};globalThis.ui={game,get view(){return view},get placement(){return placement},bindControls,updateUI,returnToMenu,activatePoint,showEnd};';
-  vm.runInContext(source,context);const ui=context.ui;ui.bindControls();
+  source+='\nglobalThis.ui={game,get view(){return view},get placement(){return placement},boot,updateUI,returnToMenu,activatePoint,showEnd};';
+  vm.runInContext(source,context);const ui=context.ui;await ui.boot();
   const node=id=>nodes.get(id),click=id=>node(id).click();
   const go=()=>click('start-button');
   const descendants=parent=>parent.children.flatMap(child=>[child,...descendants(child)]);
   const buttons=id=>descendants(node(id)).filter(el=>el.tagName==='BUTTON');
   const panelButton=(id,match)=>{const button=buttons(id).find(match);assert.ok(button,'missing button in '+id);return button;};
   const key=(type,key)=>events[type]({key,preventDefault(){}});
-  return {ui,node,click,go,key,events,buttons,panelButton,descendants,confirmation};
+  const setVisibility=hidden=>{document.hidden=hidden;events.visibilitychange?.();};
+  const advanceTime=ms=>{now+=ms;};
+  const runBackgroundTimers=()=>{for(const callback of timers.values())callback();};
+  const renderFrame=()=>frame(now);
+  return {ui,node,click,go,key,events,buttons,panelButton,descendants,confirmation,setVisibility,advanceTime,runBackgroundTimers,renderFrame};
 }
 
 
@@ -118,7 +131,7 @@ test('card inspection and the equipment shelf survive updates within their panel
  assert.equal(shop.querySelector('.equipment-detail h4').textContent,'连射机括');
 });
 
-test('the help manual uses the loop catalog from the menu and resumes only a running battle',async()=>{
+test('the help manual uses the loop catalog and preserves the pause setting',async()=>{
  const {node,go,click,ui,descendants}=await harness();
  const text=id=>descendants(node(id)).map(child=>child.textContent).join(' ');
  click('help-button');
@@ -138,13 +151,58 @@ test('the help manual uses the loop catalog from the menu and resumes only a run
  assert.equal(node('help-equipment-list').children.length,8);
  click('close-help');
  go();click('more-button');click('game-help-button');
- assert.equal(ui.game.state.paused,true);
+ assert.equal(ui.game.state.paused,false);
  assert.equal(node('help-rules').hidden,false);
  click('help-towers-tab');
  assert.match(text('help-tower-list'),/激光跟踪塔/);
  click('close-help');assert.equal(ui.game.state.paused,false);
  click('pause-button');click('game-help-button');click('close-help');
  assert.equal(ui.game.state.paused,true);
+});
+
+test('switching browser tabs preserves the pause setting',async()=>{
+ const {ui,go,click,setVisibility}=await harness();go();
+ for(const paused of [false,true]){
+  if(paused) click('pause-button');
+  setVisibility(true);
+  assert.equal(ui.game.state.paused,paused);
+  setVisibility(false);
+  assert.equal(ui.game.state.paused,paused);
+ }
+});
+
+test('the battle advances between background frames and counts each interval once',async()=>{
+ const loop=(await import('../loop-session.js')).createLoopGame({draftRandom:()=>0,initialDelay:2});
+ const {go,click,setVisibility,advanceTime,runBackgroundTimers,renderFrame}=await harness(loop);go();
+ const {cardId}=loop.openStarter();
+ assert.ok(loop.deploy(cardId,190,140).ok);
+ click('speed-button');
+
+ setVisibility(true);
+ advanceTime(1250);
+ runBackgroundTimers();
+ assert.equal(loop.state.wave,1,'the first wave starts while no animation frames run');
+ assert.ok(loop.state.enemies.length>0);
+ assert.ok(Math.abs(loop.state.elapsed-2.5)<1e-8);
+ renderFrame();
+ assert.ok(Math.abs(loop.state.elapsed-2.5)<1e-8);
+
+ advanceTime(500);
+ setVisibility(false);
+ renderFrame();
+ runBackgroundTimers();
+ assert.ok(Math.abs(loop.state.elapsed-3.5)<1e-8);
+ advanceTime(50);
+ renderFrame();
+ assert.ok(Math.abs(loop.state.elapsed-3.6)<1e-8);
+
+ click('pause-button');
+ setVisibility(true);
+ advanceTime(4000);
+ runBackgroundTimers();
+ setVisibility(false);
+ renderFrame();
+ assert.ok(Math.abs(loop.state.elapsed-3.6)<1e-8);
 });
 
 test('loop command deck keeps intelligence and deployed towers directly reachable',async()=>{
@@ -258,6 +316,44 @@ test('loop equipment storefront, recipe and six slots remain usable through deta
  assert.equal(tower.equipment.length,0);
 });
 
+test('the tower panel equips duplicate materials and crafts a second copy of an equipped item',async()=>{
+ const loop=(await import('../loop-session.js')).createLoopGame({draftRandom:()=>0,startingGold:1000});
+ const {ui,node,go,click,panelButton,descendants}=await harness(loop);go();
+ const {cardId}=loop.openStarter();
+ const {towerId}=loop.deploy(cardId,190,140);
+ const tower=loop.state.towers[0];
+ const scope=loop.buyEquipment('scope').itemId;
+ assert.ok(loop.equip(towerId,scope).ok);
+ assert.ok(loop.buyEquipment('breaker').ok);
+ ui.activatePoint({x:190,y:140});
+ click('tower-bag-button');
+
+ const slotButton=match=>panelButton('loop-controls',match);
+ for(let i=0;i<2;i++){
+  const {itemId}=loop.buyEquipment('lens');
+  ui.updateUI();
+  slotButton(button=>button.dataset.choice===`inventory:${itemId}`).click();
+  const equip=slotButton(button=>button.textContent==='装配增程阵列');
+  assert.equal(equip.disabled,false);
+  equip.click();
+ }
+ const lenses=tower.equipment.filter(item=>item.code==='lens');
+ assert.equal(lenses.length,2);
+ assert.equal(loop.statsFor(tower).range,loop.catalog.find(entry=>entry.code===tower.code).range*1.08);
+
+ slotButton(button=>button.dataset.choice==='recipe:scope').click();
+ assert.ok(descendants(node('loop-controls')).some(child=>child.textContent==='增程阵列 2/2'));
+ const craft=slotButton(button=>button.textContent==='合成装备 · 90 金');
+ assert.equal(craft.disabled,false);
+ const gold=loop.state.gold;
+ craft.click();
+ assert.equal(loop.state.gold,gold-90);
+ assert.deepEqual(tower.equipment.map(item=>item.code),['scope','scope']);
+ assert.equal(tower.equipment[0].id,scope);
+ assert.notEqual(tower.equipment[1].id,scope);
+ assert.equal(loop.state.inventory.length,0);
+});
+
 test('combat and equipment cooldown ticks update the current tower controls in place',async()=>{
  const loop=(await import('../loop-session.js')).createLoopGame({draftRandom:()=>0,startingGold:800});
  const {ui,go,node,panelButton,descendants}=await harness(loop);
@@ -322,15 +418,32 @@ test('loop tower controls activate a credential and keep targeting after an inva
  const main=loop.deploy(loop.state.cards[0].id,500,300);
  assert.ok(main.ok);
  const tower=loop.state.towers.find(item=>item.id===main.towerId);
- loop.state.cards.push({id:102,code:loop.credentials[tower.code],paid:true,refund:30});
+ const deputyCode=loop.credentials[tower.code];
+ const deputyName=loop.catalog.find(item=>item.code===deputyCode).name;
+ const requirement=()=>node('loop-breakthrough-requirement');
+ const breakthrough=()=>panelButton('loop-breakthrough',button=>button.textContent.startsWith('突破'));
+ ui.activatePoint({x:500,y:300});
+ assert.ok(requirement() && !requirement().hidden && requirement().textContent.includes(deputyName),
+  'the selected level 1 tower displays its required deputy without hovering');
+ assert.match(requirement().textContent,/1\/20 级.*未部署.*需三阶/);
+ assert.equal(breakthrough().disabled,true);
+
+ loop.state.cards.push({id:102,code:deputyCode,paid:true,refund:30});
  const support=loop.deploy(102,190,140);
  assert.ok(support.ok);
+ for(const _ of [0,1]) assert.ok(loop.upgradeDeputy(support.towerId).ok);
  tower.level=20;
- for(const _ of [0,1,2]) assert.ok(loop.upgradeDeputy(support.towerId).ok);
+ ui.updateUI();
+ assert.match(requirement().textContent,/20\/20 级.*2\/3 阶在场/);
+ assert.equal(breakthrough().disabled,true);
+ assert.ok(loop.upgradeDeputy(support.towerId).ok);
  loop.state.inventory.push({id:103,code:'anchor',invested:450,readyAt:0,manual:false});
- ui.activatePoint({x:500,y:300});
- panelButton('loop-breakthrough',button=>button.textContent.startsWith('突破')).click();
+ ui.updateUI();
+ assert.match(requirement().textContent,/3\/3 阶在场/);
+ assert.equal(breakthrough().disabled,false);
+ breakthrough().click();
  assert.equal(tower.awakened,true);
+ assert.equal(requirement().hidden,true);
  assert.equal(loop.state.towers.find(t=>t.id===support.towerId).deputyStage,3);
  click('tower-bag-button');
  slots(button=>button.dataset.choice==='inventory:103').click();
@@ -370,7 +483,7 @@ test('loop encyclopedia lists every tower and enemy family before drawing any ca
  assert.equal(node('loop-encyclopedia').hidden,true);
 });
 
-test('home and menu confirm, pause and preserve the same loop session and structures',async()=>{
+test('home and menu confirm and preserve the same loop session and pause setting',async()=>{
  const {ui,go,click,confirmation}=await harness();
  go();
  const {game}=ui,state=game.state;
@@ -378,22 +491,24 @@ test('home and menu confirm, pause and preserve the same loop session and struct
  game.deploy(state.cards[0].id,190,140);
  const [tower]=state.towers, gold=state.gold, wave=state.wave;
  for(const button of ['menu-button','home-button']){
+  if(button==='home-button') click('pause-button');
+  const paused=state.paused;
   confirmation.answer=false;
   const count=confirmation.messages.length;
   click(button);
   assert.equal(confirmation.messages.length,count+1);
   assert.equal(ui.view,'game');
-  assert.equal(state.paused,false);
+  assert.equal(state.paused,paused);
   confirmation.answer=true;
   click(button);
   assert.equal(ui.view,'menu');
-  assert.equal(state.paused,true);
+  assert.equal(state.paused,paused);
   go();
   assert.equal(ui.game.state,state);
   assert.equal(state.towers[0],tower);
   assert.equal(state.gold,gold);
   assert.equal(state.wave,wave);
-  assert.equal(state.paused,false);
+  assert.equal(state.paused,paused);
  }
 });
 

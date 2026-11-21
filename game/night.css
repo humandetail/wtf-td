@@ -437,7 +437,7 @@
     gap: 3px 7px;
   }
   .battle-stage:has(>.has-loop-3d) .tower-identity>div:last-child { display: contents }
-  .battle-stage:has(>.has-loop-3d) #loop-skill-status { grid-column: 1 / -1; font-size: 11px }
+  .battle-stage:has(>.has-loop-3d) :is(#loop-skill-status,#loop-breakthrough-requirement) { grid-column: 1 / -1; font-size: 11px }
   .battle-stage:has(>.has-loop-3d) .tower-identity img { width: 28px; height: 28px }
 }
 

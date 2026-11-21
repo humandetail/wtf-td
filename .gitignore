@@ -5,5 +5,11 @@ node_modules/
 game/qa/screenshots/
 *.log
 
+# Local model experiments and UI verification artifacts
+/.scratch/2d-loop-td/3d-models/
+/.scratch/2d-loop-td/iphone13pro-ui/
+/.scratch/2d-loop-td/mobile-ui/
+/.scratch/2d-loop-td/quiet-hud/
+
 # Generated GitHub Pages artifact
 _site/
