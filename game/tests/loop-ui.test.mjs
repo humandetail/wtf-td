@@ -360,15 +360,32 @@ test('loop tower controls activate a credential and keep targeting after an inva
  const main=loop.deploy(loop.state.cards[0].id,500,300);
  assert.ok(main.ok);
  const tower=loop.state.towers.find(item=>item.id===main.towerId);
- loop.state.cards.push({id:102,code:loop.credentials[tower.code],paid:true,refund:30});
+ const deputyCode=loop.credentials[tower.code];
+ const deputyName=loop.catalog.find(item=>item.code===deputyCode).name;
+ const requirement=()=>node('loop-breakthrough-requirement');
+ const breakthrough=()=>panelButton('loop-breakthrough',button=>button.textContent.startsWith('突破'));
+ ui.activatePoint({x:500,y:300});
+ assert.ok(requirement() && !requirement().hidden && requirement().textContent.includes(deputyName),
+  'the selected level 1 tower displays its required deputy without hovering');
+ assert.match(requirement().textContent,/1\/20 级.*未部署.*需三阶/);
+ assert.equal(breakthrough().disabled,true);
+
+ loop.state.cards.push({id:102,code:deputyCode,paid:true,refund:30});
  const support=loop.deploy(102,190,140);
  assert.ok(support.ok);
+ for(const _ of [0,1]) assert.ok(loop.upgradeDeputy(support.towerId).ok);
  tower.level=20;
- for(const _ of [0,1,2]) assert.ok(loop.upgradeDeputy(support.towerId).ok);
+ ui.updateUI();
+ assert.match(requirement().textContent,/20\/20 级.*2\/3 阶在场/);
+ assert.equal(breakthrough().disabled,true);
+ assert.ok(loop.upgradeDeputy(support.towerId).ok);
  loop.state.inventory.push({id:103,code:'anchor',invested:450,readyAt:0,manual:false});
- ui.activatePoint({x:500,y:300});
- panelButton('loop-breakthrough',button=>button.textContent.startsWith('突破')).click();
+ ui.updateUI();
+ assert.match(requirement().textContent,/3\/3 阶在场/);
+ assert.equal(breakthrough().disabled,false);
+ breakthrough().click();
  assert.equal(tower.awakened,true);
+ assert.equal(requirement().hidden,true);
  assert.equal(loop.state.towers.find(t=>t.id===support.towerId).deputyStage,3);
  click('tower-bag-button');
  slots(button=>button.dataset.choice==='inventory:103').click();

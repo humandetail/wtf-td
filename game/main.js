@@ -1078,6 +1078,8 @@ function renderTowerEquipment(root,tower,definition) {
 
 function renderBreakthrough(panel,tower) {
   panel.replaceChildren();
+  const requirement=element('loop-breakthrough-requirement');
+  requirement.hidden=true;
   if (tower.deputyStage!==undefined) {
     panel.hidden=false;
     const status=game.canUpgradeDeputy(tower.id);
@@ -1092,10 +1094,14 @@ function renderBreakthrough(panel,tower) {
   panel.hidden = !code || !!tower.awakened;
   if (panel.hidden) return;
   const name=game.catalog.find(item=>item.code===code)?.name??code;
+  const stage=Math.max(-1,...game.state.towers.filter(item=>item.code===code).map(item=>item.deputyStage??-1));
+  const deputyProgress=stage<0?'未部署（需三阶）':`${stage}/3 阶在场`;
+  setText(requirement,`突破 · ${tower.level}/20 级 · 副塔 ${name} ${deputyProgress}`);
+  requirement.hidden=false;
   const status=game.canBreakthrough(tower.id);
   const label = tower.level < 20 ? '突破 · 20 级' : '突破';
   const button = commandButton(label,()=>resultMessage(game.breakthrough(tower.id)),!status.ok,'upgrade');
-  button.title = `指定副塔 · 三阶${name}${status.ok ? '' : `\n${status.message}`}`;
+  if (!status.ok) button.title=status.message;
   panel.append(button);
 }
 

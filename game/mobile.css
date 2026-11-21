@@ -123,7 +123,7 @@
 .ready-tower{display:flex;align-items:center;min-width:0;min-height:44px;gap:4px;padding:4px;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;font-size:12px;text-align:left}
 .ready-tower img,.tower-identity img{width:36px;height:36px;object-fit:contain;flex:none}
 .tower-identity:has(#loop-selected-portrait:not([hidden])){display:flex;align-items:center;gap:7px}
-.tower-identity #loop-skill-status{margin:2px 0;font-size:12px}
+.tower-identity :is(#loop-skill-status,#loop-breakthrough-requirement){margin:2px 0;font-size:12px}
 .game-screen.loop-console .battle-stage:where(:has(>.command-drawer:not([hidden]),>.build-dock:not([hidden]),>#build-status:not([hidden]),>#touch-actions:not([hidden])))>.loop-ready-panel{display:none}
 
 .game-screen.loop-console .battle-stage>.command-drawer,.game-screen.loop-console .battle-stage>.build-dock{
