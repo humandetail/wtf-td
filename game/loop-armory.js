@@ -49,7 +49,6 @@ export function createLoopArmory(state,{editable,newId,changeGold,combat,emit}) 
   if(!parts.every(Boolean))return fail('缺少合成材料');
   if(tower){
    const status=equipStatus(tower,recipe);if(!status.ok)return status;
-   if(tower.equipment.some(item=>item.code===code))return fail('已装同名装备');
    if(tower.equipment.filter(item=>!parts.includes(item)).length>=equippedLimit(tower))return fail('装备槽已满');
   }
   return state.gold<recipe.craftFee?fail('金币不足'):ok;
@@ -58,8 +57,7 @@ export function createLoopArmory(state,{editable,newId,changeGold,combat,emit}) 
   const tower=towerById(towerId),item=inBag(itemId);
   if(!editable()||!tower||!item)return fail('请选择背包装备');
   if(tower.equipment.length>=equippedLimit(tower))return fail('装备槽已满');
-  const status=equipStatus(tower,definition(item.code));if(!status.ok)return status;
-  return tower.equipment.some(i=>i.code===item.code)?fail('已装同名装备'):ok;
+  return equipStatus(tower,definition(item.code));
  }
  function canBreakthrough(towerId,credentialTowerId=undefined) {
   const tower=towerById(towerId);

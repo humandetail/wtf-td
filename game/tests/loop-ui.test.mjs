@@ -258,6 +258,44 @@ test('loop equipment storefront, recipe and six slots remain usable through deta
  assert.equal(tower.equipment.length,0);
 });
 
+test('the tower panel equips duplicate materials and crafts a second copy of an equipped item',async()=>{
+ const loop=(await import('../loop-session.js')).createLoopGame({draftRandom:()=>0,startingGold:1000});
+ const {ui,node,go,click,panelButton,descendants}=await harness(loop);go();
+ const {cardId}=loop.openStarter();
+ const {towerId}=loop.deploy(cardId,190,140);
+ const tower=loop.state.towers[0];
+ const scope=loop.buyEquipment('scope').itemId;
+ assert.ok(loop.equip(towerId,scope).ok);
+ assert.ok(loop.buyEquipment('breaker').ok);
+ ui.activatePoint({x:190,y:140});
+ click('tower-bag-button');
+
+ const slotButton=match=>panelButton('loop-controls',match);
+ for(let i=0;i<2;i++){
+  const {itemId}=loop.buyEquipment('lens');
+  ui.updateUI();
+  slotButton(button=>button.dataset.choice===`inventory:${itemId}`).click();
+  const equip=slotButton(button=>button.textContent==='装配增程阵列');
+  assert.equal(equip.disabled,false);
+  equip.click();
+ }
+ const lenses=tower.equipment.filter(item=>item.code==='lens');
+ assert.equal(lenses.length,2);
+ assert.equal(loop.statsFor(tower).range,loop.catalog.find(entry=>entry.code===tower.code).range*1.08);
+
+ slotButton(button=>button.dataset.choice==='recipe:scope').click();
+ assert.ok(descendants(node('loop-controls')).some(child=>child.textContent==='增程阵列 2/2'));
+ const craft=slotButton(button=>button.textContent==='合成装备 · 90 金');
+ assert.equal(craft.disabled,false);
+ const gold=loop.state.gold;
+ craft.click();
+ assert.equal(loop.state.gold,gold-90);
+ assert.deepEqual(tower.equipment.map(item=>item.code),['scope','scope']);
+ assert.equal(tower.equipment[0].id,scope);
+ assert.notEqual(tower.equipment[1].id,scope);
+ assert.equal(loop.state.inventory.length,0);
+});
+
 test('combat and equipment cooldown ticks update the current tower controls in place',async()=>{
  const loop=(await import('../loop-session.js')).createLoopGame({draftRandom:()=>0,startingGold:800});
  const {ui,go,node,panelButton,descendants}=await harness(loop);
