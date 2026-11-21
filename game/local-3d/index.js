@@ -3,6 +3,8 @@ import { bindBattleCamera } from './input.js';
 import { createScene } from './scene.js';
 import { createBattleOverlay } from './overlay.js';
 import { findLocalYoshino, loadYoshino, createYoshinoRenderer } from './boss.js';
+import { loadSampleModels } from './sample-models.js';
+import { MODEL_ASSIGNMENTS_KEY, MODEL_EFFECTS, createBattleLibrary, readModelCatalog } from './model-library.js';
 
 function loadScript(name) {
   return new Promise((resolve,reject)=>{
@@ -14,13 +16,22 @@ function loadScript(name) {
   });
 }
 
-export async function loadLoop3D() {
+export async function load3DVendors() {
   await Promise.all([loadScript('gl-matrix'),loadScript('war3-model')]);
   const {glMatrix:math,war3model:library} = /** @type {any} */ (window);
   if (!math || !library) throw Error('本地 3D 依赖缺失。');
+  return {math,library};
+}
+
+export async function loadLoop3D() {
+  const {math,library} = await load3DVendors();
   return {
     findLocalModel:findLocalYoshino,
     loadModel:files=>loadYoshino(files,library),
+    loadSamples:()=>loadSampleModels(library),
+    assignmentKey:MODEL_ASSIGNMENTS_KEY,
+    readCatalog:readModelCatalog,
+    battleLibrary:catalog=>createBattleLibrary(catalog,library),
     mount:options=>mount(options,math,library)
   };
 }
@@ -34,7 +45,13 @@ function mount({canvas,cameraPanel,artwork,onTap,onClear,onEdgePan,onPitch,onLos
   const scene = createScene(gl);
   const camera = createBattleCamera(math), overlay = createBattleOverlay(canvas,camera);
   const lifetime = new AbortController();
-  let model = null, deaths = [];
+  const models = new Map();
+  const enemyModelKey = code => models.has(code) ? code : '*';
+  const hasEnemyModel = code => models.has(enemyModelKey(code));
+  const hasTowerModel = code => models.has(code);
+  const pending = new Set(), unavailable = new Set(), lastSeen = new Map(), effects = new Map();
+  let modelLibrary = null, uploads = new AbortController();
+  let deaths = [];
   canvas.style.transform = 'none';
   canvas.before(surface);
   canvas.parentElement.classList.add('has-loop-3d');
@@ -50,6 +67,52 @@ function mount({canvas,cameraPanel,artwork,onTap,onClear,onEdgePan,onPitch,onLos
     return rect;
   }
 
+  function installModel(code,asset) {
+    try { models.set(code,createYoshinoRenderer(gl,library,math,asset)); }
+    catch (error) { unavailable.add(code); onModelError(error); }
+  }
+
+  function updateLibraryModels(state) {
+    const codes = new Set(state.towers.map(tower=>tower.code));
+    for (const enemy of state.enemies) if (enemy.hp>0) codes.add(enemy.code);
+    for (const death of deaths) codes.add(death.code);
+    for (const [code,effect] of effects) {
+      if (state.elapsed-effect.at<.7) codes.add(code);
+      else effects.delete(code);
+    }
+    for (const [code,model] of models) {
+      if (codes.has(code) || state.elapsed-(lastSeen.get(code) ?? 0)<8) continue;
+      model.dispose();
+      models.delete(code);
+      lastSeen.delete(code);
+    }
+    for (const code of codes) {
+      lastSeen.set(code,state.elapsed);
+      if (pending.size>=2 || models.has(code) || pending.has(code) || unavailable.has(code) || !modelLibrary.has(code)) continue;
+      const {signal} = uploads;
+      pending.add(code);
+      void modelLibrary.load(code,signal).then(asset=>{
+        if (asset && !signal.aborted) installModel(code,asset);
+      }).catch(error=>{
+        if (!signal.aborted) { unavailable.add(code); onModelError(error); }
+      }).finally(()=>{
+        if (!signal.aborted) pending.delete(code);
+      });
+    }
+  }
+
+  function drawModel(code,actor,elapsed,deathAge = null) {
+    const model = models.get(code);
+    if (!model) return;
+    try { model.draw(camera,actor,elapsed,deathAge); }
+    catch (error) {
+      models.delete(code);
+      unavailable.add(code);
+      model.dispose();
+      onModelError(error);
+    }
+  }
+
   return {
     camera,
     point(event,state,select = false) {
@@ -63,16 +126,27 @@ function mount({canvas,cameraPanel,artwork,onTap,onClear,onEdgePan,onPitch,onLos
       return {...(ground || {x:hit.x,y:hit.y}),actor:hit};
     },
     setModel(asset) {
-      model?.dispose();
-      model = null;
+      uploads.abort();
+      uploads = new AbortController();
+      pending.clear();
+      unavailable.clear();
+      lastSeen.clear();
+      for (const model of models.values()) model.dispose();
+      models.clear();
+      effects.clear();
       deaths = [];
-      if (!asset) return;
-      try { model = createYoshinoRenderer(gl,library,math,asset); }
-      catch (error) { onModelError(error); }
+      modelLibrary = asset?.load && asset?.has ? asset : null;
+      if (modelLibrary) return;
+      const entries = asset instanceof Map ? asset : asset ? [['*',asset]] : [];
+      for (const [code,modelAsset] of entries) installModel(code,modelAsset);
     },
     event(event,state) {
       overlay.event(event,state.elapsed);
-      if (model && event.type==='kill') {
+      if (modelLibrary && Object.hasOwn(MODEL_EFFECTS,event.type) && Number.isFinite(event.x) && Number.isFinite(event.y)) {
+        const code = 'fx:'+event.type;
+        if (modelLibrary.has(code)) effects.set(code,{...event,at:state.elapsed});
+      }
+      if (event.type==='kill' && hasEnemyModel(event.code)) {
         deaths.push({...event,at:state.elapsed});
         if (deaths.length>8) deaths.shift();
       }
@@ -89,21 +163,28 @@ function mount({canvas,cameraPanel,artwork,onTap,onClear,onEdgePan,onPitch,onLos
       if (surface.style.width!==`${rect.width}px` || surface.style.height!==`${rect.height}px`) {
         surface.style.width = `${rect.width}px`;surface.style.height = `${rect.height}px`;
       }
-      scene.draw(camera,state,artwork.ground,!!model);
-      if (model) {
-        for (const enemy of state.enemies) if (enemy.hp>0) model.draw(camera,enemy,state.elapsed);
-        deaths = deaths.filter(death=>state.elapsed-death.at<.85);
-        for (const death of deaths) model.draw(camera,death,state.elapsed,state.elapsed-death.at);
+      deaths = deaths.filter(death=>state.elapsed-death.at<.85);
+      if (modelLibrary) updateLibraryModels(state);
+      scene.draw(camera,state,artwork.ground,hasEnemyModel,hasTowerModel);
+      if (models.size) {
+        for (const tower of state.towers) drawModel(tower.code,tower,state.elapsed);
+        for (const enemy of state.enemies) if (enemy.hp>0) drawModel(enemyModelKey(enemy.code),enemy,state.elapsed);
+        for (const death of deaths) drawModel(enemyModelKey(death.code),death,state.elapsed,state.elapsed-death.at);
+        for (const [code,effect] of effects) drawModel(code,effect,state.elapsed);
       }
       overlay.draw(state,{width:rect.width,height:rect.height,...ui});
     },
-    reset() { controls.reset();overlay.reset();deaths=[]; },
+    reset() {
+      controls.reset();overlay.reset();effects.clear();deaths=[];
+      if (modelLibrary) this.setModel(modelLibrary);
+    },
     dispose() {
+      uploads.abort();
       lifetime.abort();controls.dispose();
       surface.remove();canvas.parentElement.classList.remove('has-loop-3d');
       cameraPanel.hidden = true;
       if (!gl.isContextLost()) {
-        model?.dispose();
+        for (const model of models.values()) model.dispose();
         scene.dispose();
         gl.getExtension('WEBGL_lose_context')?.loseContext();
       }

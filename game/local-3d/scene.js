@@ -126,7 +126,7 @@ export function createScene(gl) {
   const landscape = new Float32Array(floor), paths = new Float32Array(roads), terrain = new Float32Array(surroundings);
   const stone = [.22,.30,.31], steel = [.40,.54,.55];
   return {
-    draw(camera,state,image,hasEnemyModel) {
+    draw(camera,state,image,hasEnemyModel,hasTowerModel) {
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);
       gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
       gl.depthMask(true);
@@ -159,10 +159,11 @@ export function createScene(gl) {
       const boxes = [], prisms = [], crystals = [];
       for (const tower of state.towers) {
         const {x,y,code,level} = tower, angle = -(tower.angle||0);
+        add(boxes,x,y,0,57,33,11,0,stone);
+        if (hasTowerModel(code)) continue;
         const color = rgb(towerVisual(code).color);
         const {role, damageType} = loopTower(code) ?? {};
         const forwardX = Math.cos(angle), forwardY = -Math.sin(angle);
-        add(boxes,x,y,0,57,33,11,0,stone);
         add(prisms,x,y,11,33,32,18+level*2,angle,steel);
         if (role === 'support') {
           add(prisms,x,y,25,18,18,26,angle,stone);
@@ -178,8 +179,8 @@ export function createScene(gl) {
           add(boxes,x+forwardX*25,y+forwardY*25,37,9,13,13,angle,stone);
         }
       }
-      for (const enemy of hasEnemyModel ? [] : state.enemies) {
-        if (enemy.hp <= 0) continue;
+      for (const enemy of state.enemies) {
+        if (enemy.hp <= 0 || hasEnemyModel(enemy.code)) continue;
         const {x,y} = enemy, angle = -(enemy.angle||0);
         const size = enemy.boss ? 2.1 : enemy.elite ? 1.33 : 1;
         const visual = enemy.hidden ? '#63827b' : enemy.special === 'gold' ? '#ffce60'

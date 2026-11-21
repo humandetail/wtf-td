@@ -13,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-打开 [2D 对局](http://127.0.0.1:4173/game/) 或 [3D 试玩](http://127.0.0.1:4173/game/?view=3d)。同一局域网手机访问可运行 `HOST=0.0.0.0 PORT=4174 npm run dev`，然后打开电脑局域网IP的4174端口。
+打开 [2D 对局](http://127.0.0.1:4173/game/) 或 [3D 试玩](http://127.0.0.1:4173/game/?view=3d)。在 [本地模型库](http://127.0.0.1:4173/game/local-3d/models.html)可以浏览素材并更换 3D 外观。首次导入见[运行说明](game/README.md#循环圈-3d-本地试玩)。同一局域网手机访问可运行 `HOST=0.0.0.0 PORT=4174 npm run dev`，然后打开电脑局域网 IP 的 4174 端口。
 
 ## 自动部署 GitHub Pages
 

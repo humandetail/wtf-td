@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>环界 · 本地模型库</title>
+<style>
+  :root{color-scheme:dark;background:#101423;color:#eef0fa;font:16px system-ui,sans-serif}
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{max-width:1160px;margin:auto;padding:24px 18px}
+  h1{margin:0;font-size:1.6rem}
+  h2{margin:0;font-size:1.1rem}
+  p{margin:6px 0;overflow-wrap:anywhere}
+  a{color:#bfdbfc}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+  main{display:grid;grid-template-columns:minmax(240px, .95fr) minmax(0, 1.7fr);gap:14px}
+  section{min-width:0;display:grid;align-content:start;gap:12px;padding:15px;background:#181f32;border:1px solid #3e4865;border-radius:8px}
+  label{display:grid;gap:5px;min-width:0}
+  input,select,button{font:inherit;width:100%;min-height:36px;border:1px solid #586585;border-radius:5px;padding:4px 7px;color:inherit;background:#11192a}
+  button:not(:disabled){cursor:pointer}
+  button:disabled{opacity:.55}
+  button.primary{background:#aee4d6;color:#101f24;border-color:#aee4d6;font-weight:650}
+  option{padding:5px}
+  #entries{height:460px}
+  small,#source,#counts,#assignment-status{color:#bfc8df}
+  canvas{width:100%;aspect-ratio:16/10;display:block;border-radius:5px;background:#0e1526;cursor:grab;touch-action:pan-y}
+  .row{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+  .row>label{flex:1 1 175px}
+  .row>button{width:auto}
+  #issue{color:#f8d5a0}
+  @media(max-width:660px){main{grid-template-columns:1fr}#entries{height:158px}}
+</style>
+<header><h1>本地模型库</h1><a href="../?view=3d&amp;models=library">进入 3D 对局</a></header>
+<p id="library-status" role="status">正在读取模型库…</p>
+<main id="library" hidden>
+  <section aria-label="筛选模型">
+    <label>搜索模型<input id="search" type="search" placeholder="文件名或目录" autocomplete="off"></label>
+    <label>来源分类<select id="group"><option value="">全部分类</option></select></label>
+    <label>模型 <small id="counts"></small><select id="entries" size="14"></select></label>
+  </section>
+  <section aria-labelledby="model-name">
+    <div><h2 id="model-name">预览模型</h2><p id="source"></p></div>
+    <canvas id="preview" width="880" height="550" aria-label="模型 3D 预览，横向拖动可旋转"></canvas>
+    <p id="issue" role="status" hidden></p>
+    <label>动作<select id="clips" disabled><option>选择模型后可切换动作</option></select></label>
+    <div class="row">
+      <label>应用位置<select id="unit"></select></label>
+      <button id="assign" class="primary" type="button" disabled>应用模型</button>
+      <button id="restore" type="button" disabled>恢复默认</button>
+    </div>
+    <p id="assignment-status" role="status"></p>
+  </section>
+</main>
+<script type="module" src="./models.js"></script>
+</html>

@@ -28,7 +28,7 @@ let renderer;
 let loop3D = null;
 let battle3D = null;
 let wants3D = false;
-let yoshinoAsset = null;
+let battleModelAsset = null;
 let readyTowerSignature = '';
 let selectedTowerId = null;
 let selectedEnemyId = null;
@@ -166,12 +166,12 @@ function applyBattleView() {
         onPitch:pitch=>{ element('loop-camera-pitch').textContent = `${pitch}°`; },
         onLost:fallBackTo2D,
         onModelError:error=>{
-          yoshinoAsset = null;
-          element('loop-3d-status').textContent = '模型无法渲染，当前使用低模怪物。';
+          if (!(battleModelAsset instanceof Map) && !battleModelAsset?.load) battleModelAsset = null;
+          element('loop-3d-status').textContent = '部分模型无法渲染，对应单位使用低模。';
           console.warn(error);
         }
       });
-      battle3D.setModel(yoshinoAsset);
+      battle3D.setModel(battleModelAsset);
     } catch (error) {
       fallBackTo2D(error);
     }
@@ -199,6 +199,7 @@ async function enableLocal3D() {
     });
     const input = /** @type {HTMLInputElement} */ (element('loop-3d-model'));
     const status = element('loop-3d-status');
+    const modelMode = new URLSearchParams(globalThis.location?.search).get('models');
     async function loadEnemyModel(files) {
       input.disabled = true;
       status.textContent = '正在读取本地模型…';
@@ -208,9 +209,9 @@ async function enableLocal3D() {
           status.textContent = '请在这里选择四糸乃模型与两张贴图，当前使用低模怪物。';
           return;
         }
-        yoshinoAsset = await loop3D.loadModel(selected);
+        battleModelAsset = await loop3D.loadModel(selected);
         status.textContent = '四糸乃已加载，暂用于所有怪物。';
-        battle3D?.setModel(yoshinoAsset);
+        battle3D?.setModel(battleModelAsset);
       } catch (error) {
         status.textContent = error.message || '模型加载失败。请重新选择三个文件。';
       } finally {
@@ -222,7 +223,38 @@ async function enableLocal3D() {
       if (input.files.length) void loadEnemyModel(input.files);
     });
     applyBattleView();
-    void loadEnemyModel(loop3D.findLocalModel().catch(()=>null));
+    if (modelMode === 'sample') {
+      input.disabled = true;
+      status.textContent = '正在读取模型样例…';
+      try {
+        const samples = await loop3D.loadSamples();
+        battleModelAsset = samples;
+        const names = [samples.has('T05') && '电弧线圈',samples.has('X13') && '铁砂蠕虫'].filter(Boolean);
+        status.textContent = names.length ? `已载入模型样例（${names.join('、')}）。` : '找不到本机模型样例，当前使用低模。';
+        battle3D?.setModel(samples);
+      } finally {
+        input.disabled = false;
+      }
+      return;
+    }
+    input.disabled = true;
+    status.textContent = '正在读取本地模型库…';
+    const catalog = modelMode === 'yoshino' ? null : await loop3D.readCatalog().catch(()=>null);
+    if (!catalog) {
+      void loadEnemyModel(loop3D.findLocalModel().catch(()=>null));
+      return;
+    }
+    function applyModelLibrary() {
+      battleModelAsset = loop3D.battleLibrary(catalog);
+      const units = [...catalog.defaults.keys()].filter(code=>!code.startsWith('fx:')).length;
+      status.textContent = `本地模型库已载入 · ${units} 个单位有默认模型。`;
+      battle3D?.setModel(battleModelAsset);
+    }
+    applyModelLibrary();
+    input.disabled = false;
+    window.addEventListener('storage',event=>{
+      if (event.key === loop3D.assignmentKey) applyModelLibrary();
+    });
   } catch (error) {
     console.warn('本地 3D 未启动',error);
   }

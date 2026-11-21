@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {resolve, extname, sep} from 'node:path';
 import {homedir} from 'node:os';
 import {YOSHINO_FILES} from '../game/local-3d/boss.js';
+import {SAMPLE_MODEL_FILES} from '../game/local-3d/sample-models.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const port = Number(process.env.PORT || 4173);
@@ -17,9 +18,14 @@ const vendor = new Map([
   ['/game/local-3d/vendor/war3-model.js','node_modules/war3-model/dist/war3-model.browser.js']
 ]);
 const inside = (file, directory) => file === directory || file.startsWith(directory + sep);
-const localModel = new Map(YOSHINO_FILES.map(name=>[`/game/local-3d/local-model/${name}`,name]));
-const modelFolder = resolve(homedir(),'Downloads','四糸乃');
+const localModel = new Map([
+  ...YOSHINO_FILES.map(name=>[`/game/local-3d/local-model/${name}`,['四糸乃',name]]),
+  ...SAMPLE_MODEL_FILES.map(name=>[`/game/local-3d/local-model/${name}`,['环界模型样例',name]])
+]);
 const loopback = new Set(['127.0.0.1','::ffff:127.0.0.1','::1']);
+const libraryFolder = resolve(homedir(),'Downloads','环界模型库');
+const libraryRoute = '/game/local-3d/local-library/';
+const libraryAsset = /^assets\/[a-f0-9]{64}\.(mdx|mdl|blp|png|jpe?g|gif|webp)$/;
 const server = createServer(async (request, response) => {
   const finish = (status, message = '') => {
     response.writeHead(status, {'Content-Type':'text/plain; charset=utf-8'});
@@ -31,18 +37,24 @@ const server = createServer(async (request, response) => {
   }
   try {
     const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-    if (localModel.has(pathname)) {
+    const modelPath = pathname.startsWith(libraryRoute) ? pathname.slice(libraryRoute.length) : null;
+    if (modelPath !== null || localModel.has(pathname)) {
       const fromLocalPage = loopback.has(request.socket.remoteAddress)
         && /^(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/.test(request.headers.host ?? '')
         && request.headers['sec-fetch-site'] === 'same-origin';
       if (!fromLocalPage) return finish(404);
-      const file = await realpath(resolve(modelFolder,localModel.get(pathname))).catch(()=>null);
+      if (modelPath !== null && modelPath !== 'catalog.json' && !libraryAsset.test(modelPath)) return finish(404);
+      const local = localModel.get(pathname);
+      const modelFolder = local ? resolve(homedir(),'Downloads',local[0]) : libraryFolder;
+      const name = local ? local[1] : modelPath;
+      const file = await realpath(resolve(modelFolder,name)).catch(()=>null);
       if (!file || !inside(file,modelFolder)) return finish(204);
       const info = await stat(file);
       if (!info.isFile() || info.size > 16*1024*1024) return finish(204);
       const contents = await readFile(file);
-      response.writeHead(200,{'Content-Type':'application/octet-stream','Content-Length':contents.length,
-        'Cache-Control':'no-store','Cross-Origin-Resource-Policy':'same-origin','X-Content-Type-Options':'nosniff'});
+      response.writeHead(200,{'Content-Type':modelPath==='catalog.json' ? mime['.json'] : 'application/octet-stream',
+        'Content-Length':contents.length,'Cache-Control':libraryAsset.test(name) ? 'private, max-age=86400' : 'no-store',
+        'Cross-Origin-Resource-Policy':'same-origin','X-Content-Type-Options':'nosniff'});
       response.end(request.method === 'HEAD' ? undefined : contents);
       return;
     }
