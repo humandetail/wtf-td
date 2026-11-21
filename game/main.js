@@ -54,7 +54,6 @@ const keyboardPointer = { x: 190, y: 140 };
 let view = 'menu';
 let lastPhase = 'menu';
 let noticeUntil = 0;
-let helpPaused = false;
 let selectedSignature = '';
 /** @type {HTMLElement} */
 let drawerTrigger = canvas;
@@ -1454,8 +1453,7 @@ function updateMenu() {
 }
 
 function returnToMenu() {
-  if (view === 'game' && !window.confirm('返回主菜单？本局将暂停并保留，可点“继续游戏”返回。')) return;
-  if (game.state.phase === 'playing' && !game.state.paused) game.togglePause();
+  if (view === 'game' && !window.confirm('返回主菜单？本局进度会保留，可点“继续布防”回到战场。')) return;
   clearTransient();
   showView('menu');
   element('start-button').focus();
@@ -1473,7 +1471,6 @@ function enterGame(restart = false) {
     game.restart();
     clearTransient();
   } else if (game.state.phase === 'menu') game.start();
-  else if (game.state.paused) game.togglePause();
   if (game.state.starter !== 'deployed') {
     loopCardTab=game.state.starter==='held'?'bag':'shop';
     if(loopCardTab==='bag')loopCardSelection=String(game.state.cards.find(card=>card.starter)?.id??'');
@@ -1544,8 +1541,6 @@ function selectHelpPage(page) {
 
 function openHelp() {
   if (help.open) return;
-  helpPaused = view === 'game' && game.state.phase === 'playing' && !game.state.paused;
-  if (helpPaused) game.togglePause();
   selectHelpPage('rules');
   help.showModal();
 }
@@ -1614,11 +1609,6 @@ function bindControls() {
   element('help-tower-rarity').addEventListener('change',renderHelpTowers);
   element('help-equipment-grade').addEventListener('change',renderHelpEquipment);
   element('close-help').addEventListener('click', () => help.close());
-  help.addEventListener('close', () => {
-    if (helpPaused && view === 'game' && game.state.paused) game.togglePause();
-    helpPaused = false;
-    updateUI();
-  });
   function pointer(event,select = false) {
     if (battle3D) return battle3D.point(event,game.state,select);
     const bounds = canvas.getBoundingClientRect();
@@ -1685,12 +1675,6 @@ function bindControls() {
       if (!hadDrawer) canvas.focus({ preventScroll: true });
     }
   });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) touchControls?.clear();
-    if (document.hidden && game.state.phase === 'playing' && !game.state.paused) {
-      game.togglePause(); notice('离开页面，已自动暂停。'); updateUI();
-    }
-  });
 }
 
 async function boot() {
@@ -1726,10 +1710,39 @@ async function boot() {
       void enableLocal3D();
     }
     let previous = performance.now();
-    let uiIn = 0;
-    const frame = now => {
-      const dt = Math.min(.1, Math.max(0, (now - previous) / 1000));
+    const elapsedSeconds = () => {
+      const now = performance.now();
+      const elapsed = (now - previous) / 1000;
       previous = now;
+      return elapsed;
+    };
+    const advanceBackground = () => {
+      const elapsed = elapsedSeconds();
+      if (view !== 'game') return;
+      game.tick(elapsed);
+      // Avoid replaying past effects and sounds when the tab becomes visible.
+      game.drainEvents();
+    };
+    let backgroundTimer;
+    function updateBackgroundTimer() {
+      if (document.hidden) {
+        touchControls?.clear();
+        if (view === 'game' && backgroundTimer === undefined) backgroundTimer = setInterval(advanceBackground, 1000);
+      } else if (backgroundTimer !== undefined) {
+        clearInterval(backgroundTimer);
+        backgroundTimer = undefined;
+        advanceBackground();
+        updateUI();
+      }
+    }
+    document.addEventListener('visibilitychange', updateBackgroundTimer);
+    updateBackgroundTimer();
+
+    let uiIn = 0;
+    const frame = () => {
+      requestAnimationFrame(frame);
+      if (document.hidden) return;
+      const dt = Math.min(.1, elapsedSeconds());
       if (view === 'game') {
         game.tick(dt);
         syncEvents();
@@ -1743,7 +1756,6 @@ async function boot() {
         if (uiIn <= 0) { updateUI(); uiIn = .1; }
         if (performance.now() > noticeUntil) element('notice').hidden = true;
       }
-      requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
   } catch (error) {
