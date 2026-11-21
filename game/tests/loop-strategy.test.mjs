@@ -15,10 +15,10 @@ function play(g,seconds){
 
 test('implemented card and monster catalogues expose every documented identifier',()=>{
  const g=start();
- assert.equal(g.catalog.length,36);
- assert.deepEqual(['common','rare','epic'].map(r=>g.catalog.filter(c=>c.rarity===r).length),[14,13,9]);
+ assert.equal(g.catalog.length,39);
+ assert.deepEqual(['beginner','common','rare','epic'].map(r=>g.catalog.filter(c=>c.rarity===r).length),[3,14,13,9]);
  assert.ok(g.catalog.every(t=>t.skills.length===(g.credentials[t.code]?4:3)));
- assert.equal(Object.keys(g.enemyCatalog).length,58);
+ assert.equal(Object.keys(g.enemyCatalog).length,62);
  assert.deepEqual(g.forecasts().map(f=>[f.wave,f.count]),[[1,12],[2,14]]);
 });
 test('every independent artwork entry is a real alpha PNG in the runtime asset directory',async()=>{
@@ -32,37 +32,39 @@ test('every independent artwork entry is a real alpha PNG in the runtime asset d
  }
 });
 test('kill experience activates automatic levels, and the milestone Boss opens bonus settlement',()=>{
- const g=start({waveCount:5,initialDelay:0,waveInterval:.68,spawnInterval:.025,waveSize:()=>2,enemyHealthScale:.001,enemySpeedScale:0});
+ const g=start({waveCount:5,difficulty:'hard',initialDelay:0,waveInterval:.68,spawnInterval:.025,waveSize:()=>2,enemyHealthScale:.001,enemySpeedScale:0});
  const {towerId}=g.deploy(g.state.cards[0].id,500,300);
  play(g,30);
  assert.equal(g.state.phase,'victory');
- assert.equal(g.state.capacity,100);
+ assert.equal(g.state.capacity,30);
  assert.equal(g.state.towers.find(t=>t.id===towerId).level,2);
  assert.ok(g.state.towers[0].xp>=15);
  const gold=g.drainEvents().filter(e=>e.type==='gold-rush-end');
- assert.deepEqual(gold.map(e=>e.amount),[120]);
+ assert.deepEqual(gold.map(e=>e.amount),[125]);
  assert.ok(g.continueEndless().ok);
- assert.equal(g.state.capacity,100);
+ assert.equal(g.state.capacity,30);
  assert.equal(g.state.towers[0].level,2);
  assert.equal(g.state.nextWaveIn,.68);
  g.restart();
- assert.equal(g.state.capacity,100);
+ assert.equal(g.state.capacity,30);
  assert.equal(g.state.starter,'unopened');
  assert.deepEqual(g.state.towers,[]);
 });
-test('endless forecasts preserve count, wave multiplier and twelve regular boss slots',()=>{
- const g=start();
+test('endless forecasts use one monster family per wave and the boss pool every ten rounds',()=>{
+ const g=start({difficulty:'hard',endlessRandom:()=>0});
  const s=g.state;s.phase='victory';
  assert.ok(g.continueEndless().ok);
- const codes=[];
- for(let w=55;w<=115;w+=5){
-  s.wave=w-1;
-  const [f]=g.forecasts();
-  assert.equal(f.count,50);
-  codes.push(f.entries.at(-1).code);
-  assert.equal(f.hpMultiplier,5.69*(1+.01*(w-50)));
- }
- assert.deepEqual(codes,['B11','B12','B01','B02','B03','B04','B05','B06','B07','B08','B09','B10','B11']);
+ const [first]=g.forecasts();
+ assert.equal(first.wave,56);
+ assert.equal(first.count,7);
+ assert.deepEqual(first.types,['X26']);
+ s.wave=64;
+ const [tenth,eleventh]=g.forecasts();
+ assert.equal(tenth.count,1);
+ assert.equal(tenth.bossCode,'B06');
+ assert.ok(tenth.hpMultiplier>first.hpMultiplier);
+ assert.equal(eleventh.count,7);
+ assert.deepEqual(g.forecasts()[0].entries,tenth.entries);
 });
 test('60 pressure is the default hard end and a final state cannot keep advancing',()=>{
  const g=start();
@@ -79,7 +81,7 @@ test('a low-rarity composition can clear the campaign with real gold and legal p
  const {playLoopStrategy}=await import('../qa/loop-strategy.mjs');
  const result=playLoopStrategy(1,'physical',{noEpic:true});
  assert.equal(result.outcome,'victory');
- assert.equal(result.wave,50);
+ assert.equal(result.wave,55);
  assert.ok(result.reconciled);
  assert.equal(result.game.state.towers.some(t=>result.game.catalog.find(c=>c.code===t.code).rarity==='epic'),false);
 });

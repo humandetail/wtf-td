@@ -1,6 +1,7 @@
 import { WORLD, LOOP_FOOTPRINT, LOOP_BUILD_AREA, ENTRY, ROAD_SEGMENTS, ROAD_WIDTH } from './geometry.js';
 import { loopStats } from './loop-catalog.js';
 import {effectColor,towerVisual} from './battle-visuals.js';
+import {ABYSS_RADIUS} from './loop-solo-rules.js';
 
 const DIRECTIONS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
 const ORIGINALS = new URL('../outputs/', import.meta.url);
@@ -437,7 +438,8 @@ export function createRenderer(canvas, artwork) {
     ctx.strokeStyle = '#d0c39c'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.ellipse(ENTRY.x, ENTRY.y, 29, 20, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
-    text('出怪核心', ENTRY.x, ENTRY.y + 73, '#ded8b8', 14);
+    if(state.abyss?.selected)ring(ENTRY.x,ENTRY.y,ABYSS_RADIUS,'#a2c6f5',.65,3);
+    else text('出怪核心', ENTRY.x, ENTRY.y + 73, '#ded8b8', 14);
     const selected = state.towers.find(tower => tower.id === selectedTowerId);
     if (selected) ring(selected.x, selected.y, 45, '#ffe39b', 1, 2.5);
     const position = placement || selected;

@@ -36,9 +36,13 @@ function bestPosition(game,card){
 
 export function playLoopStrategy(seed=1,style='physical',options={}){
  const trace=options.trace;
- const game=createLoopGame({random:seeded(Math.imul(seed,0x9e3779b1)),draftRandom:seeded(Math.imul(seed,0x85ebca6b)+1000),enemyHealthScale:options.enemyHealthScale,
+ const game=createLoopGame({random:seeded(Math.imul(seed,0x9e3779b1)),draftRandom:seeded(Math.imul(seed,0x85ebca6b)+1000),
+  combatRandom:seeded(Math.imul(seed,0x27d4eb2d)),endlessRandom:seeded(seed+500),marketRandom:seeded(seed+1200),
+  credentialRandom:seeded(seed+2200),difficulty:options.difficulty??(options.endless?'hard':'normal'),enemyHealthScale:options.enemyHealthScale,
   ...(options.noEpic?{towerFilter:t=>t.rarity!=='epic'}:{})});
  const state=game.state,milestones=[];
+ const openingGold=state.gold;
+ const highDifficulty=['nightmare','hell'].includes(state.difficulty);
  const strategy=options.strategy??'gear';
  const seekEpic=strategy==='epic'&&!options.noEpic;
  const orders=preferred[style]??preferred.physical;
@@ -60,9 +64,20 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
  }
  act('start');act('openStarterPack');
  act('choosePackCard',state.draft.codes[0]);
+ if(highDifficulty){
+  act('chooseTalent','arsenal');
+  const starter=state.cards[0];
+  const position=bestPosition(game,starter);
+  if(position)act('deploy',starter.id,position.x,position.y);
+  for(const code of ['N02','N03']){
+   const choice={id:'basic:'+code,code};
+   const spot=bestPosition(game,choice);
+   if(spot)act('deploy',choice.id,spot.x,spot.y);
+  }
+ }
  function buyPack(tier,desiredCode) {
   if(!act('buyPack',tier).ok)return false;
-  const rarityRank={common:0,rare:1,epic:2};
+  const rarityRank={beginner:-1,common:0,rare:1,epic:2};
   const sorted=[...state.draft.codes].sort((a,b)=>rarityRank[definitions.get(b).rarity]-rarityRank[definitions.get(a).rarity]||score(b)-score(a));
   const purchase=act('choosePackCard',state.draft.codes.includes(desiredCode)?desiredCode:sorted[0]);
   if(!purchase.ok)return false;
@@ -106,7 +121,7 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
     const rivals=state.towers.filter(t=>t!==starter&&definitions.get(t.code).damage>0);
     const epic=state.towers.find(t=>t.id===epicId);
     const main=epic&&definitions.get(epic.code).damage>0?epic:starter;
-    const credentialCode=main&&game.credentials[main.code];
+    const credentialCode=game.qualificationFor(main);
     const credential=state.towers.find(tower=>tower.code===credentialCode);
     const pending=()=>state.cards.find(card=>card.code===credentialCode);
     if(main&&!credential&&!main.awakened&&state.wave>=game.exchangeWave&&!pending()){
@@ -123,10 +138,12 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
     const room=()=>state.capacity-state.populationUsed;
     const pursuingEpic=seekEpic&&!epic&&state.wave>=11;
     const seekingCredential=main&&!credential&&!pending()&&!main.awakened&&(!pursuingEpic||state.wave>=32)&&state.wave>=(strategy==='credential'?7:15);
+    const collectForExchange=highDifficulty&&seekingCredential&&state.wave>=game.exchangeWave&&pressure<48;
     const playable=state.cards.some(card=>game.canDeploy(card.id).ok);
     const desiredR=options.onlyR?Infinity:state.wave<10?3:state.wave<17?5:state.wave<25?7:Infinity;
     const commons=state.towers.filter(t=>definitions.get(t.code).rarity==='common').length;
-    if(starter&&room()>=rPopulation){
+    if(collectForExchange&&state.gold>=120)buyPack('R',credentialCode);
+    else if(starter&&room()>=rPopulation){
      if(pursuingEpic&&room()>=heroPopulation&&state.gold>=game.shopPacks.find(pack=>pack.tier==='SSR').price&&
         !state.cards.some(card=>definitions.get(card.code).rarity==='epic'))buyPack('SSR');
      else if(seekingCredential&&(!playable||strategy==='credential')&&state.gold>=(strategy==='credential'?120:360))buyPack('R',credentialCode);
@@ -141,6 +158,7 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
       Number(definitions.get(b.code).rarity==='epic')-Number(definitions.get(a.code).rarity==='epic')||
       Number(b.code===credentialCode)-Number(a.code===credentialCode)||score(b.code)-score(a.code))){
      const kind=definitions.get(card.code);
+     if(collectForExchange&&card.code!==credentialCode&&!card.starter&&kind.rarity==='common')continue;
      if(options.onlyR&&!card.starter&&kind.rarity!=='common')continue;
      if(!game.canDeploy(card.id).ok&&pursuingEpic&&kind.rarity==='epic'){
       for(const extra of [...rivals].filter(t=>t!==credential&&definitions.get(t.code).rarity==='common')
@@ -201,7 +219,7 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
   const inPlay=state.enemies.filter(e=>e.special!=='gold').length;
   peak=Math.max(peak,inPlay);
   if(state.wave>=20)postTwentyPeak=Math.max(postTwentyPeak,inPlay);
-  for(const e of game.drainEvents())if(e.type==='wave'&&[5,10,15,20,25,30,35,40,45,50].includes(e.amount))milestones.push({wave:e.amount,gold:state.gold,population:state.populationUsed,levels:state.towers.map(t=>t.code+':'+t.level),peak});
+  for(const e of game.drainEvents())if(e.type==='wave'&&e.amount%5===0)milestones.push({wave:e.amount,gold:state.gold,population:state.populationUsed,levels:state.towers.map(t=>t.code+':'+t.level),peak});
   if(options.stopAtWave&&state.wave>=options.stopAtWave)break;
   if(options.endless&&state.phase==='victory'){game.continueEndless();endlessWave=state.wave;}
   if(state.endless)endlessWave=state.wave;
@@ -212,7 +230,7 @@ export function playLoopStrategy(seed=1,style='physical',options={}){
  return {seed,style,strategy,outcome:state.phase,wave:state.wave,elapsed:Math.round(state.elapsed),peak,postTwentyPeak,endlessWave,gold:state.gold,
   towers:state.towers.length,milestones,first,epicFoughtLate,mainRarity,mainCode:mainTower?.code,mainLevel:mainTower?.level,mainLastCombat:mainTower?.combatUntil,
   challenges:state.completedChallenges.length,
-  goldRush:state.ledger.filter(entry=>entry.reason==='gold-rush').reduce((n,entry)=>n+entry.amount,0),reconciled:80+state.ledger.reduce((sum,e)=>sum+e.amount,0)===state.gold,game};
+  goldRush:state.ledger.filter(entry=>entry.reason==='gold-rush').reduce((n,entry)=>n+entry.amount,0),reconciled:openingGold+state.ledger.reduce((sum,e)=>sum+e.amount,0)===state.gold,game};
 }
 if(import.meta.url===`file://${process.argv[1]}`){
  const seeds=process.argv.includes('--quick')?[1]:Array.from({length:10},(_,i)=>i+1);

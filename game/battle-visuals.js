@@ -1,11 +1,11 @@
 const families = {
-  projectile: ['#f6cf8b', 'T01 T14 T18 T27 T35'],
+  projectile: ['#f6cf8b', 'N01 T01 T14 T18 T27 T35'],
   burst: ['#ffc080', 'T03 T17 T20 T33'],
   beam: ['#ed9fff', 'T04 T23 T25'],
   arc: ['#c4b4ff', 'T05'],
   water: ['#79e4ff', 'T06 T26'],
-  frost: ['#b7f1ff', 'T08'],
-  fire: ['#ffaf6f', 'T13 T15 T16 T34'],
+  frost: ['#b7f1ff', 'N03 T08'],
+  fire: ['#ffaf6f', 'N02 T13 T15 T16 T34'],
   net: ['#c8f2aa', 'T07 T19'],
   shock: ['#f3d18d', 'T12 T32'],
   radar: ['#9becbc', 'T09 T22 T30 T36'],
@@ -52,6 +52,7 @@ export const ICON_ATLAS = {
 };
 
 export function towerSkillCell(code, index) {
+  code = {N01:'T01',N02:'T13',N03:'T08'}[code] ?? code;
   const tower = Number(code.slice(1));
   if (!/^T\d{2}$/.test(code) || tower < 1 || tower > ICON_ATLAS.towerCount ||
       !Number.isInteger(index) || index < 0 || index >= ICON_ATLAS.skillsPerTower) return;

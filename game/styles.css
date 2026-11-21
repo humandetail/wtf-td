@@ -263,3 +263,18 @@ button[data-icon]::before{content:"";display:inline-block;vertical-align:-.2em}
 .equipment-affix{display:block;color:var(--text)}
 .equipment-affix[data-inactive="true"]{color:var(--muted);opacity:.7}
 .tower-skill-choice[data-ultimate="true"]{border-color:#b6804f}
+.solo-difficulty {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-block: .75rem;
+}
+
+.solo-difficulty select {
+  min-height: 44px;
+  padding: .4rem .7rem;
+  color: inherit;
+  background: #182136;
+  border: 1px solid #536078;
+  border-radius: .4rem;
+}

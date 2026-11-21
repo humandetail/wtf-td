@@ -50,7 +50,7 @@ export function createBattleLibrary(catalog,library) {
       const {min,max} = asset.bounds;
       const width = Math.max(1,max[0]-min[0],max[1]-min[1]);
       const height = Math.max(1,max[2]-min[2]);
-      const tower = code.startsWith('T');
+      const tower = /^[NT]/.test(code);
       const effect = isEffectTarget(code);
       const size = effect ? 68 : tower ? 50 : code.startsWith('B') ? 67 : code.startsWith('E') || code.startsWith('C') ? 45 : 31;
       const scale = profile.scale ?? Math.min(size/width,(tower ? 62 : size*1.25)/height);

@@ -1,5 +1,6 @@
 import {CARD_ROWS, ULTIMATES, ENEMY_ROWS, WAVE_ROWS} from './loop-roster.js';
 import {LOOP_EQUIPMENT, LOOP_CAMPAIGN_WAVES} from './loop-equipment.js';
+import {talentRank} from './loop-solo-rules.js';
 export {LOOP_EQUIPMENT} from './loop-equipment.js';
 
 const baseStats = {
@@ -13,7 +14,7 @@ const baseStats = {
 };
 const strengthTowers = new Set(['T02','T03','T06','T11','T12','T15','T17','T21','T32','T33','T34']);
 const agilityTowers = new Set(['T01','T07','T14','T16','T18','T19','T20','T22','T25','T27','T29','T35']);
-const controlTowers = new Set(['T06','T07','T08','T17','T18','T19','T21','T24','T26','T27']);
+const controlTowers = new Set(['N03','T06','T07','T08','T17','T18','T19','T21','T24','T26','T27']);
 export const LOOP_TOWERS=Object.entries(CARD_ROWS).map(([code,[name,rarity,...data]])=>{
  const base=baseStats[code];
  const [assetCode,role,damageType,damage,interval,range,...skills]=base ? [...base.slice(0,6),...data] : data;
@@ -21,7 +22,7 @@ export const LOOP_TOWERS=Object.entries(CARD_ROWS).map(([code,[name,rarity,...da
  const duty=role==='support'?'support':controlTowers.has(code)?'control':'damage';
  if(ULTIMATES[code])skills.push(ULTIMATES[code].join(' · '));
  return {code,name,rarity,assetCode,role,attribute,duty,damageType,damage,interval,range,skills,
-  population:rarity==='common'?5:20,description:skills[0],
+  population:rarity==='common'||rarity==='beginner'?5:20,description:skills[0],
   kind:base?.[6]??(role==='support'?'aura':'direct'),color:base?.[7]??(damageType==='physical'?'#ffe494':'#9bc9ff')};
 });
 export const LOOP_PRIORITIES={default:'默认职责',strongest:'最强目标',weakest:'最低生命',fastest:'最快目标',shield:'护盾优先',support:'支援优先',gold:'金币优先'};
@@ -49,7 +50,10 @@ const growth=[1,1.55,2.4,3.7,5.75], rates=[1,1.04,1.08,1.12,1.16];
 export function loopStats(tower,state={towers:[],elapsed:0,endless:false,dust:[]}){
  const base=loopTower(tower.code),level=tower.level||1,r=level>=3?FIXED_ROUTES[tower.code]:null;
  const rank=Math.min(level,5),extra=level-rank;
- const damageScale=growth[rank-1]*(1+.012*extra);
+ const main=base.rarity==='rare'||base.rarity==='epic';
+ const workerBonus=main&&!state.endless
+  ? state.talent==='arsenal' ? .04*talentRank(state.wave) : state.talent==='growth' ? .004*(level-1) : 0 : 0;
+ const damageScale=growth[rank-1]*(1+.012*extra)*(1+workerBonus);
  const s={...base,level,route:r,advanced:false,master:level>=30,damage:base.damage*damageScale,interval:base.interval/(rates[rank-1]+.004*extra),
   range:(base.range+(base.role==='support'?0:6*(rank-1)+.5*extra))*(1+gearBonus(tower,'range')),targetCount:1,
   sellValue:tower.refund??0,burnDps:12*damageScale,burnDuration:3,boost:.1+.02*rank+.002*extra,aura:.1+.02*rank+.002*extra,
@@ -113,31 +117,35 @@ export const LOOP_ENEMIES=Object.fromEntries(Object.entries(ENEMY_ROWS).map(([co
   color:enemyColors[assetCode]??'#f5d79b'}
 ]));
 export const CHALLENGES=[
- ['C01',3,0,'blade'],['C02',8,1,'gear'],['C03',13,2,'coil'],['C04',18,3,'lens'],
+ ['C01',11,0,'blade'],['C02',11,1,'gear'],['C03',13,2,'coil'],['C04',18,3,'lens'],
  ['C05',25,0,'crystal'],['C06',32,1,'gear'],['C07',39,2,'coil'],['C08',46,3,'lens'],
-].map(([code,wave,direction,item])=>({code:String(code),wave:Number(wave),direction:Number(direction),item:String(item),name:LOOP_ENEMIES[code].name,
+].map(([code,wave,direction,item],index)=>({code:String(code),wave:Number(wave),direction:Number(direction),item:String(item),
+ cost:20+index*10,seconds:28,name:LOOP_ENEMIES[code].name,
  description:LOOP_ENEMIES[code].description,reward:LOOP_EQUIPMENT[item].name}));
-export const GOLD_RUSHES=[
- {wave:5,code:'G01',direction:[0],reward:120,bountyReduction:15},{wave:15,code:'G02',direction:[1,1],reward:180,bountyReduction:24},
- {wave:25,code:'G03',direction:[0,1,2],reward:225,bountyReduction:30},{wave:35,code:'G04',direction:[3],reward:240,bountyReduction:30},
- {wave:45,code:'G01',direction:[0],reward:250,bountyReduction:30},
-];
+export const GOLD_RUSHES=[5,10,15,20,25,30,35,40,45,50,54].map((wave,index)=>({
+ wave,code:['G01','G02','G03','G04'][index%4],
+ direction:[index%4,index%4],reward:Math.min(260,110+wave*3),bountyReduction:wave===54?0:Math.min(30,12+wave),
+}));
 const bossEscorts={
  25:['X16','X10','E06'],30:['X15','X04','E08'],35:['X20','X13','E07'],
  40:['X02','X09','E09'],45:['X18','X07','E03'],50:['X05','X06','E04'],
 };
-const lateHealth=[.80,1.00,1.35];
-const lateWaves=[11,12,13,14,15,16,17,18,19,20,13,17,19,14,16,18,14,15,19,20,11,18,16,17,19,12,14,17,18,20];
+const lateHealth=[.80,.88,1.02];
 export const waveMultiplier=(wave,endless)=>endless
- ? 5.69*(1+.01*Math.max(0,wave-LOOP_CAMPAIGN_WAVES))
+ ? 5.965*(1+.035*Math.max(0,wave-LOOP_CAMPAIGN_WAVES))
  : wave<=20 ? 1+.16*(wave-1) : 4.04+.055*(wave-20);
-export function loopWave(wave,endless=wave>LOOP_CAMPAIGN_WAVES,countOverride=null){
- const template=endless?11+Math.max(0,wave-51)%10:wave<=20?wave:lateWaves[wave-21];
- const pool=[...WAVE_ROWS['w'+template]];
- const bossOrder=[11,12,1,2,3,4,5,6,7,8,9,10];
- const bossIndex=endless?bossOrder[((wave/5-11)%12+12)%12]:wave/5;
- const bossCode=wave%5===0?'B'+String(bossIndex).padStart(2,'0'):null;
- const total=wave>20||endless?50-Number(!!bossCode):10+2*wave;
+export const ENDLESS_POOLS={regular:['X26','X27','X28','X29'],boss:['B06','B04','B10','B11','B09','B07','B08']};
+export function loopWave(wave,endless=wave>LOOP_CAMPAIGN_WAVES,countOverride=null,endlessCode=undefined,endlessRound=wave-LOOP_CAMPAIGN_WAVES){
+ if(endless){
+  const boss=endlessRound%10===0;
+  const options=boss?ENDLESS_POOLS.boss:ENDLESS_POOLS.regular;
+  const code=endlessCode??options[(Math.max(1,boss?endlessRound/10:endlessRound)-1)%options.length];
+  return Array.from({length:boss?1:countOverride??7},()=>({code,wave,endless,boss,cohort:false}));
+ }
+ if(wave===LOOP_CAMPAIGN_WAVES)return [{code:'B11',wave,endless:false,boss:true,cohort:false}];
+ const pool=[...WAVE_ROWS['w'+wave]];
+ const bossCode=wave%5===0?'B'+String(wave/5).padStart(2,'0'):null;
+ const total=wave<=20?10+2*wave:(wave<=30?50:wave<=40?40:34)-Number(!!bossCode);
  const count=Math.max(0,countOverride??total);
  const escorts=!endless&&bossEscorts[wave];
  const reserved=escorts&&countOverride===null?12:0;
@@ -165,16 +173,18 @@ export function loopWave(wave,endless=wave>LOOP_CAMPAIGN_WAVES,countOverride=nul
 export function loopEnemy(entry,id,position,options={}){
  const base=LOOP_ENEMIES[entry.code],scale=entry.special==='gold'?1:waveMultiplier(entry.scaleWave??entry.wave,entry.endless);
  const growth=entry.special?1:entry.endless||entry.boss||entry.wave<=20?.60:lateHealth[Math.min(2,Math.floor((entry.wave-21)/10))];
- const maxHp=base.hp*scale*(options.enemyHealthScale??growth);
+ const maxHp=base.hp*scale*(options.enemyHealthScale??growth*(entry.special?1:(options.difficultyScale??1.2)/1.2));
  const shield=({X05:80}[entry.code]??0)*scale+({B02:maxHp*.12,G04:350}[entry.code]??0);
  const elite=entry.code.startsWith('E'),reward=entry.special||entry.summoned?0:entry.endless?1:Math.round((entry.bounty??base.reward)*(options.rewardScale??1));
  return {...base,...entry,...position,id,hp:maxHp,maxHp,shield,maxShield:shield,elite,reward,scale,
+  evasion:entry.code==='X26'?.45:0,deflection:entry.code==='X28'?.25:0,
+  controlScale:entry.code==='X29'?.5:1,magicResist:entry.code==='X27'?.55:0,
   shieldHits:entry.shieldHits??({X06:3,E04:4,B10:8,C04:7}[entry.code]??0),
   support:['X03','X11','X16','X18','X21','E02','E05','E06','E08','C05','B09'].includes(entry.code),
   healer:['X03','X11','E06'].includes(entry.code),speed:base.speed*(options.enemySpeedScale??1),
   progress:position.progress??0,statuses:[],burns:[],rootUntil:0,immuneUntil:0,skillAt:{},thresholds:0};
 }
-export function loopWaveInterval(wave,endless=false){return endless||wave>40?26:wave>25?28:wave>10?32:36;}
+export function loopWaveInterval(wave,endless=false){return endless?26:wave>40?26:wave>25?28:wave>10?32:36;}
 
 export function assignWaveBounties(entries, wave) {
  const reduction=GOLD_RUSHES.find(rush=>wave>rush.wave&&wave<=rush.wave+5)?.bountyReduction??0;

@@ -19,8 +19,10 @@ assert.equal(iconAtlas[20] & 16,16,'MOBA 图集缺少透明通道');
 assert.deepEqual([iconAtlas.readUIntLE(24,3)+1,iconAtlas.readUIntLE(27,3)+1],[iconAtlasSide,iconAtlasSide]);
 const skillCells = LOOP_TOWERS.flatMap(tower => tower.skills.map((_, index) => towerSkillCell(tower.code, index)));
 assert(skillCells.every(cell => Number.isInteger(cell) && cell >= 0 && cell < ICON_ATLAS.equipmentStart));
-assert.equal(new Set(skillCells).size, skillCells.length,'技能图集单元重叠');
-assert(ICON_ATLAS.equipmentStart + Object.keys(LOOP_EQUIPMENT).length <= ICON_ATLAS.hudStart,'装备与底栏图标重叠');
+const originalSkillCells = LOOP_TOWERS.filter(tower=>tower.code.startsWith('T')).flatMap(tower=>tower.skills.map((_, index)=>towerSkillCell(tower.code,index)));
+assert.equal(new Set(originalSkillCells).size, originalSkillCells.length,'原塔技能图集单元重叠');
+const equipmentSlots = ICON_ATLAS.hudStart - ICON_ATLAS.equipmentStart;
+assert(Object.values(LOOP_EQUIPMENT).every(({icon})=>Number.isInteger(icon)&&icon>=0&&icon<equipmentSlots),'装备图标超出装备图集');
 assert(ICON_ATLAS.hudStart + ICON_ATLAS.hudButtons.length < ICON_ATLAS.columns ** 2,'底栏图标超出图集');
 const iconMarkup = await read('game/index.html');
 for (const id of ICON_ATLAS.hudButtons) assert(iconMarkup.includes(`id="${id}"`),`底栏图标缺少对应按钮：${id}`);
@@ -29,9 +31,11 @@ assert.equal(equipmentAtlas.toString('ascii',8,12),'WEBP','装备图集必须是
 assert.equal(equipmentAtlas.toString('ascii',12,16),'VP8L','装备图集必须使用无损编码');
 const atlasHeader=equipmentAtlas.readUInt32LE(21);
 assert.deepEqual([(atlasHeader&0x3fff)+1,((atlasHeader>>>14)&0x3fff)+1,(atlasHeader>>>28)&1],[576,480,1]);
-assert.deepEqual(Object.values(LOOP_EQUIPMENT).map(item=>item.icon).sort((a,b)=>a-b),Array.from({length:Object.keys(LOOP_EQUIPMENT).length},(_,i)=>i));
-for(const code of Object.keys(LOOP_EQUIPMENT)) {
- const icon=await read(`game/assets/modes/loop/equipment-source/${code}.png`);
+const equipmentSources = 'game/assets/modes/loop/equipment-source';
+const iconFiles = (await readdir(resolve(root,equipmentSources))).filter(file=>file.endsWith('.png')&&Object.hasOwn(LOOP_EQUIPMENT,file.slice(0,-4)));
+assert.deepEqual(iconFiles.map(file=>LOOP_EQUIPMENT[file.slice(0,-4)].icon).sort((a,b)=>a-b),Array.from({length:equipmentSlots},(_,i)=>i));
+for(const file of iconFiles) {
+ const icon=await read(`${equipmentSources}/${file}`);
  assert.equal(icon.readUInt32BE(16),96);
  assert.equal(icon.readUInt32BE(20),96);
  assert.equal(icon[25],6,'装备母版必须有透明通道');

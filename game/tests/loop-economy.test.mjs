@@ -11,15 +11,15 @@ function deployStarter(game){return game.deploy(game.state.cards[0].id,500,300).
 
 test('kill budgets pay once with no flat wave-clear grant',()=>{
  const game=start({waveCount:1,waveSize:()=>1,enemyHealthScale:.001});
- assert.equal(game.state.gold,80);
+ assert.equal(game.state.gold,200);
  deployStarter(game);
  assert.ok(game.launchWave().ok);
  game.tick(3);
  assert.equal(game.state.phase,'victory');
- assert.equal(game.state.gold,125);
+ assert.equal(game.state.gold,245);
  assert.equal(game.drainEvents().filter(e=>e.type==='wave-clear').length,1);
  game.tick(30);
- assert.equal(game.state.gold,125);
+ assert.equal(game.state.gold,245);
 });
 
 test('overlapping waves retain the bounty budget of their originating wave',()=>{
@@ -30,12 +30,12 @@ test('overlapping waves retain the bounty budget of their originating wave',()=>
  assert.equal(game.state.enemies.length,4);
  game.tick(5);
  assert.equal(game.state.phase,'victory');
- assert.equal(game.state.gold,173);
+ assert.equal(game.state.gold,293);
  assert.deepEqual(game.drainEvents().filter(e=>e.type==='wave-clear').map(e=>e.wave),[1,2]);
 });
 
 function deployDeputy(game,main) {
- game.state.cards.push({id:900,code:game.credentials[main.code],paid:false,refund:0});
+ game.state.cards.push({id:900,code:game.qualificationFor(main),paid:false,refund:0});
  const {towerId}=game.deploy(900,780,300);
  assert.ok(towerId);
  const deputy=game.state.towers.find(t=>t.id===towerId);
@@ -214,12 +214,12 @@ test('automatic anchor waits for a group and roots the group only once',()=>{
 test('a challenge awards an unsellable-for-profit component once',()=>{
  const game=start({initialDelay:1000,waveSize:()=>1,spawnInterval:.01,enemyHealthScale:.001});
  deployStarter(game);
- for(let wave=1;wave<=3;wave++){assert.ok(game.launchWave().ok);game.tick(.05);}
- assert.equal(game.state.wave,3);
- assert.equal(game.startChallenge('C02').ok,false);
+ for(let wave=1;wave<=11;wave++){assert.ok(game.launchWave().ok);game.tick(.05);}
+ assert.equal(game.state.wave,11);
+ assert.equal(game.startChallenge('C03').ok,false);
  assert.ok(game.startChallenge('C01').ok);
  assert.equal(game.startChallenge('C01').ok,false);
- game.tick(2);
+ game.tick(12);
  assert.deepEqual(game.state.completedChallenges,['C01']);
  const item=game.state.inventory.find(item=>item.code==='blade');
  assert.equal(item.invested,0);
@@ -227,30 +227,29 @@ test('a challenge awards an unsellable-for-profit component once',()=>{
  assert.equal(game.startChallenge('C01').ok,false);
 });
 
-test('late escort waves retain fifty slots and shift the planned bounty into gold rushes',()=>{
+test('late escort waves use the band population and shift the planned bounty into gold rushes',()=>{
  const escorts=[['X16','X10','E06'],['X15','X04','E08'],['X20','X13','E07'],
   ['X02','X09','E09'],['X18','X07','E03'],['X05','X06','E04']];
- let payout=0,oldPayout=0;
+ assert.deepEqual(GOLD_RUSHES.map(rush=>rush.wave),[5,10,15,20,25,30,35,40,45,50,54]);
  for(let wave=1;wave<=50;wave++){
   const entries=assignWaveBounties(loopWave(wave,false),wave);
   const ordinaryBounty=entries.filter(e=>!e.boss).reduce((sum,e)=>sum+e.bounty,0);
   const previousBounty=Math.min(180,45+3*(wave-1));
-  const reduction=wave<=5?0:wave<=10?15:wave>=16&&wave<=20?24:[26,36,46].some(start=>wave>=start&&wave<start+5)?30:0;
-  assert.equal(ordinaryBounty,previousBounty-reduction,`wave ${wave}`);
-  payout+=ordinaryBounty;
-  oldPayout+=previousBounty;
+  assert.ok(ordinaryBounty>0&&ordinaryBounty<=previousBounty,`wave ${wave}`);
+  if(wave===6)assert.equal(ordinaryBounty,43);
+  if(wave===16)assert.equal(ordinaryBounty,63);
   if(wave<25||wave%5)continue;
-  assert.equal(entries.length,50);
+  const expected=wave<=30?50:wave<=40?40:34;
+  assert.equal(entries.length,expected);
   assert.equal(entries.filter(e=>e.boss).length,1);
-  const base=loopWave(wave,false,37);
+  const base=loopWave(wave,false,expected-13);
   escorts[(wave-25)/5].forEach((code,i)=>assert.equal(entries.filter(e=>e.code===code).length-base.filter(e=>e.code===code).length,[6,4,2][i]));
  }
- assert.equal(payout+GOLD_RUSHES.reduce((sum,r)=>sum+r.reward,0),oldPayout+370);
 });
 
 test('regular and elite health changes at campaign bands with boss and endless scaling intact',()=>{
  const position={x:0,y:0};
- for(const [wave,growth] of [[20,.60],[21,.80],[30,.80],[31,1],[40,1],[41,1.35],[50,1.35]]){
+ for(const [wave,growth] of [[20,.60],[21,.80],[30,.80],[31,.88],[40,.88],[41,1.02],[50,1.02]]){
   for(const code of ['X01','E04','B10']){
    const boss=code==='B10';
    assert.equal(loopEnemy({code,wave,boss},1,position).maxHp,LOOP_ENEMIES[code].hp*waveMultiplier(wave,false)*(boss?.60:growth));

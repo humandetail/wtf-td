@@ -35,6 +35,23 @@ export const LOOP_EQUIPMENT = {
  blockade:recipe('封锁矩阵','orange',27,['reveal','disruptor','coil','coil'],'主动封锁指定区域 3 秒，揭露敌人并封住它们对外治疗与套盾。',{}, {kind:'blockade',cooldown:30,targeted:true}),
  capacitor:recipe('回路电容','orange',28,['prism','relay','gear'],'满蓄重击后，附近两座友塔下一次命中附带 30% 法伤。',{prism:true,capacitor:true}),
  sluice:recipe('截流闸','orange',29,['field','flywheel','lens'],'在场超过 20 秒的敌人进入射程时，自动在其脚下展开 3 秒减速区，冷却 30 秒。',{sluice:true}),
+ font:white('回流瓶',1,55,'每秒额外恢复 5 点法力。',{manaRegen:5}),
+ striker:recipe('脉冲锋刃','blue',5,['repeater','blade'],'物理伤害 +12%，每第四次攻击造成 160% 普攻伤害。',{physical:.12,critical:1.6}),
+ trueLens:recipe('穿雾罗盘','blue',24,['reveal','lens'],'普攻无视闪避，每 4 秒揭露射程内敌人 2 秒。',{trueStrike:true,reveal:true}),
+ starforged:recipe('星弦投射器','orange',7,['striker','scope','lens'],'远程塔每第五次攻击向目标附近至多 4 只敌人追加神圣伤害。伤害随主塔伤害和射程提升。',{starburst:true}),
+ condenser:recipe('静流导管','green',8,['font','crystal'],'法术伤害 +12%，每秒额外恢复 8 点法力。',{magic:.12,manaRegen:8}),
+ arcFocus:recipe('震荡聚能器','blue',20,['condenser','crystal'],'每秒额外恢复 8 点法力。主动消耗 30 法力，对选定目标造成 220% 法术伤害。',{manaRegen:8},{kind:'arcFocus',cooldown:12,targeted:true,mana:30}),
+ winterSeal:recipe('寒潮封印','orange',16,['arcFocus','field','crystal'],'主动消耗 45 法力，吟唱 2 秒后冻结区域并造成 160% 法术伤害。',{manaRegen:8},{kind:'winter',cooldown:24,targeted:true,mana:45}),
+ echoSigil:recipe('裂音印','orange',27,['striker','disruptor','font'],'主动沉默一名敌人 4 秒，结束时追加期间生命损失的 20% 神圣伤害，消耗 30 法力。',{manaRegen:5},{kind:'echo',cooldown:25,targeted:true,mana:30}),
+ surgeCell:recipe('引能蓄电器','blue',28,['font','beacon'],'每秒额外恢复 8 点法力，主动回复 60 点法力。',{manaRegen:8},{kind:'recharge',cooldown:22,targeted:false,mana:0}),
+ fieldManual:white('战训笔记',20,140,'对一座主塔使用，增加 140 点经验。',{experience:140}),
+ fieldPrimer:white('进阶手册',22,180,'对一座主塔使用，补足当前等级升级所需的经验。',{nextLevel:true}),
+ untemperedEdge:white('未淬震刃',26,120,'放入能量圈淬炼 120 秒。',{tempered:'thunderEdge',seconds:120}),
+ untemperedCore:white('未淬焰芯',10,120,'放入能量圈淬炼 120 秒。',{tempered:'solarCore',seconds:120}),
+ untemperedCoil:white('未淬锁环',15,120,'放入能量圈淬炼 120 秒。',{tempered:'frostBand',seconds:120}),
+ thunderEdge:{...white('震刃',26,120,'物理伤害 +18%，每第四次攻击造成 170% 普攻伤害。',{physical:.18,critical:1.7}),grade:'blue',forged:true},
+ solarCore:{...white('焰芯',10,120,'法术伤害 +20%，每秒额外恢复 8 点法力。',{magic:.20,manaRegen:8}),grade:'blue',forged:true},
+ frostBand:{...white('锁环',15,120,'控制时长 +23%，同一敌人受此塔减速三次后定身。',{control:.23,stall:true}),grade:'blue',forged:true},
 };
 
 export function equipmentCraftCost(code) {
@@ -51,19 +68,21 @@ const credentials = {
  T15:['T23','T25'], T21:['T02','T24','T28','T30'], T06:['T08','T26'], T22:['T09','T10','T29','T36'],
 };
 export const LOOP_CREDENTIALS = Object.fromEntries(Object.entries(credentials).flatMap(([credential,towers])=>towers.map(code=>[code,credential])));
-export const LOOP_DEPUTIES = new Set(Object.keys(credentials));
+export const LOOP_DEPUTIES = new Set([...Object.keys(credentials),'T01','T07','T16','T17','T19']);
+export const loopCredential = tower => tower?.credential??LOOP_CREDENTIALS[tower?.code];
 export const LOOP_DEPUTY_COSTS = [30,60,90];
 export const LOOP_DEPUTY_LEVELS = [1,2,3,5];
 export const LOOP_XP = [0,15,55,160,360,390,425,460,495,535,575,615,655,695,735,775,815,855,900,950,
  1090,1230,1390,1560,1750,1940,2170,2450,2770,3180];
 export const loopLevelCap = tower => LOOP_CREDENTIALS[tower.code] ? (tower.awakened ? 30 : 20) : 5;
 export const LOOP_PACKS = [
+ {tier:'N',price:100,odds:{N:90,R:10,SR:0,SSR:0}},
  {tier:'R',price:120,odds:{R:100,SR:0,SSR:0}},
  {tier:'SR',price:300,odds:{R:55,SR:45,SSR:0}},
  {tier:'SSR',price:750,odds:{R:15,SR:50,SSR:35}},
 ];
-export const LOOP_RARITY={common:'R',rare:'SR',epic:'SSR'};
-export const LOOP_CAMPAIGN_WAVES=50;
+export const LOOP_RARITY={beginner:'N',common:'R',rare:'SR',epic:'SSR'};
+export const LOOP_CAMPAIGN_WAVES=55;
 export const LOOP_POPULATION = 100;
 export const LOOP_SSR_GUARANTEE = 3;
-export const LOOP_EXCHANGE_WAVE = 15;
+export const LOOP_EXCHANGE_WAVE = 20;

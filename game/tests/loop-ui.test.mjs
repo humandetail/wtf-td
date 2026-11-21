@@ -69,7 +69,7 @@ test('loop shop previews tiers, opens guaranteed starter and confirms a deployme
  const choose=()=>{ cardButton(button=>button.dataset.group==='draft').click();cardButton(button=>button.textContent==='领取这张卡').click(); };
  assert.equal(node('build-dock').hidden,false);
  assert.match(node('wave-label').textContent,/开启起手 SR/);
- assert.match(node('wave-value').textContent,/0 \/ 50/);
+ assert.match(node('wave-value').textContent,/0 \/ 55/);
  assert.equal(node('equipment-button').textContent,'装备');
  cardButton(button=>button.dataset.choice==='SSR').click();
  const preview=()=>descendants(node('loop-cards')).find(child=>child.id==='loop-card-preview');
@@ -139,16 +139,16 @@ test('the help manual uses the loop catalog and preserves the pause setting',asy
  assert.equal(node('help-rules').hidden,false);
  click('help-towers-tab');
  assert.equal(node('help-rules').hidden,true);
- assert.equal(node('help-tower-list').children.length,36);
+ assert.equal(node('help-tower-list').children.length,39);
  assert.match(text('help-tower-list'),/电弧线圈.*20 人口.*30 级/);
  node('help-tower-rarity').value='epic';node('help-tower-rarity').events.change();
  assert.equal(node('help-tower-list').children.length,9);
  click('help-equipment-tab');
  assert.equal(node('help-towers').hidden,true);
- assert.equal(node('help-equipment-list').children.length,30);
+ assert.equal(node('help-equipment-list').children.length,47);
  assert.match(text('help-equipment-list'),/裂焰炉.*直购.*余烬阵列 ＋ 滞行力场 ＋ 导能晶 ＋ 导能晶/);
  node('help-equipment-grade').value='orange';node('help-equipment-grade').events.change();
- assert.equal(node('help-equipment-list').children.length,8);
+ assert.equal(node('help-equipment-list').children.length,11);
  click('close-help');
  go();click('more-button');click('game-help-button');
  assert.equal(ui.game.state.paused,false);
@@ -213,7 +213,7 @@ test('loop command deck keeps intelligence and deployed towers directly reachabl
  loop.openStarter();
  const {towerId}=loop.deploy(loop.state.cards[0].id,190,140);
  ui.updateUI();
- assert.match(node('tower-capacity').textContent,/人口 20 \/ 100/);
+ assert.match(node('tower-capacity').textContent,/人口 20 \/ 30/);
  click('loop-intel-button');
  assert.equal(node('mission-panel').hidden,false);
  click('loop-encyclopedia-button');
@@ -284,7 +284,7 @@ test('loop equipment storefront, recipe and six slots remain usable through deta
  assert.equal(node('loop-equipment-shop').hidden,false);
  for(const code of ['crystal','lens']){
   shopButton(button=>button.dataset.choice===code).click();
-  shopButton(button=>button.textContent.startsWith('购买')).click();
+  shopButton(button=>button.textContent.startsWith('购买 · ')).click();
  }
  shopButton(button=>button.dataset.tab==='recipes').click();
  shopButton(button=>button.dataset.choice==='focus').click();
@@ -399,7 +399,7 @@ test('loop SSR opening and R exchange remain visible through their tabs',async()
  choose();
  assert.equal(loop.state.ssrMisses,0);
  assert.equal(loop.catalog.find(tower=>tower.code===loop.state.cards[0].code).rarity,'epic');
- loop.state.wave=15;
+ loop.state.wave=20;
  for(let id=100;id<105;id++)loop.state.cards.push({id,code:'T01',paid:true,refund:30});
  ui.updateUI();cardButton(button=>button.dataset.tab==='exchange').click();
  for(let id=100;id<105;id++)cardButton(button=>button.dataset.choice===String(id)).click();
@@ -418,7 +418,7 @@ test('loop tower controls activate a credential and keep targeting after an inva
  const main=loop.deploy(loop.state.cards[0].id,500,300);
  assert.ok(main.ok);
  const tower=loop.state.towers.find(item=>item.id===main.towerId);
- const deputyCode=loop.credentials[tower.code];
+ const deputyCode=loop.qualificationFor(tower);
  const deputyName=loop.catalog.find(item=>item.code===deputyCode).name;
  const requirement=()=>node('loop-breakthrough-requirement');
  const breakthrough=()=>panelButton('loop-breakthrough',button=>button.textContent.startsWith('突破'));
@@ -473,8 +473,8 @@ test('loop encyclopedia lists every tower and enemy family before drawing any ca
  const {node,go,click}=await harness();go();
  click('loop-intel-button');click('loop-encyclopedia-button');
  const items=node('loop-encyclopedia-list'),filter=node('loop-encyclopedia-filter');
- assert.equal(items.children.length,36);
- for(const [key,count] of [['X',24],['E',10],['B',12],['C',8],['G',4]]){
+ assert.equal(items.children.length,39);
+ for(const [key,count] of [['X',28],['E',10],['B',12],['C',8],['G',4]]){
   filter.value=key;filter.events.change();assert.equal(items.children.length,count);
   assert.ok(items.children[0].children.some(el=>el.textContent.includes('应对')));
  }
@@ -513,10 +513,11 @@ test('home and menu confirm and preserve the same loop session and pause setting
 });
 
 test('loop intelligence shows challenge eligibility and gold scoring without counting gold targets as pressure',async()=>{
- const {ui,go,click,node,buttons}=await harness();go();const g=ui.game;
+ const {ui,go,click,node,buttons}=await harness();node('solo-difficulty').value='hard';go();const g=ui.game;
  g.state.starter='deployed';g.state.wave=3;click('loop-intel-button');
  assert.match(node('loop-forecast').textContent,/第4波.*18只/);
  assert.match(node('loop-forecast').textContent,/破阵山魈/);
+ g.state.wave=11;ui.updateUI();
  const challenge=buttons('loop-challenges').find(button=>button.textContent==='开启硬壳犀');
  assert.ok(challenge && !challenge.disabled);
  challenge.click();

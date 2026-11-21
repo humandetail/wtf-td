@@ -6,7 +6,7 @@ test('the free SR opens once and the timer starts after successful deployment', 
  const game=createLoopGame({draftRandom:()=>0});
  game.start();game.tick(5);
  assert.equal(game.state.elapsed,0);
- assert.equal(game.state.gold,80);
+ assert.equal(game.state.gold,200);
  const {cardId}=game.openStarter();
  assert.equal(game.state.cards[0].code,'T05');
  assert.equal(game.state.starter,'held');
@@ -70,7 +70,7 @@ test('adjacent towers use real placement rules and five distinct R cards redeem 
  assert.equal(game.state.populationUsed,30);
  const ids=Array.from({length:5},()=>game.draw('R').cardId);
  assert.equal(game.exchangeR('T13',ids).ok,false);
- game.state.wave=15;
+ game.state.wave=20;
  assert.equal(game.exchangeR('T13',[ids[0],ids[0],...ids.slice(2)]).ok,false);
  const {cardId}=game.exchangeR('T13',ids);
  assert.deepEqual(game.state.cards.map(card=>[card.id,card.code,card.refund]),[[cardId,'T13',0]]);
@@ -79,7 +79,7 @@ test('adjacent towers use real placement rules and five distinct R cards redeem 
 });
 
 test('SR and SSR use the same population and the 100 cap persists through endless',()=>{
- const game=createLoopGame({startingGold:5000,draftRandom:()=>0});
+ const game=createLoopGame({startingGold:5000,startingCapacity:100,difficulty:'hard',draftRandom:()=>0});
  game.start();game.openStarter();
  for(const [i,code] of ['T05','T04','T25','T03','T26'].entries()){
   if(i)game.state.cards.push({id:100+i,code,paid:false,refund:0});

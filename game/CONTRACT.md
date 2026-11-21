@@ -2,13 +2,13 @@
 
 ## 对局
 
-`loop-session.js` 的 `createLoopGame(options)` 创建唯一的战斗会话。会话持有金币、卡牌、背包、塔、敌人与事件队列。生命周期命令包含 `start()`、`restart()`、`tick(seconds)`、`togglePause()`、`setSpeed(speed)`、`continueEndless()` 和 `drainEvents()`。
+`loop-session.js` 的 `createLoopGame(options)` 创建唯一的单人战斗会话。会话持有金币、木材、卡牌、背包、塔、敌人与事件队列。生命周期命令包含 `start()`、`restart()`、`tick(seconds)`、`togglePause()`、`setSpeed(speed)`、`continueEndless()`、`continueAbyss()` 和 `drainEvents()`。
 
 - `openStarter()` 开启免费起手 SR。成功部署后启动备战时钟。
 - `draw(tier)` 购买卡包，`canDeploy(id, x, y)` 验证位置，`deploy(id, x, y)` 成功后消费卡并返回塔 ID。
 - `statsFor(tower)` 和 `forecasts()` 提供界面所需的战斗属性和未来波次。抽卡与路网移动使用两路可独立注入的随机数。
 - 装备购买、合成、装配、卸下和施放由 `loop-armory.js` 验证与结算。2D、3D 和触控共用这些命令。
-- 常规 50 波。场上积怪达到 60 即失败，金币怪单独计数。无尽继承塔、卡牌、装备、人口及金币。详细规则见[循环圈塔卡与怪物设计](../docs/loop-towers-and-enemies.md)。
+- 常规 55 波。场上积怪达到 60 即失败，金币怪单独计数。无尽继承塔、卡牌、装备、人口及金币。深渊通过 `selectAbyssTower(towerId)` 选本关出战塔。 [单人规则](README.md#循环圈对局规则)
 
 ## 界面
 

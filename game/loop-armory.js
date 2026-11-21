@@ -1,37 +1,52 @@
-import {LOOP_EQUIPMENT, LOOP_CREDENTIALS, equipmentPurchasePrice} from './loop-equipment.js';
+import {LOOP_EQUIPMENT, LOOP_CREDENTIALS, equipmentPurchasePrice, loopCredential} from './loop-equipment.js';
 import {loopTower} from './loop-catalog.js';
 
 const ok = {ok:true};
 const fail = message=>({ok:false,message});
 const done = (message,extra={})=>({ok:true,message,...extra});
 
-export function createLoopArmory(state,{editable,newId,changeGold,combat,emit}) {
+export function createLoopArmory(state,{editable,newId,changeGold,advanceTraining,combat,emit}) {
  const towerById=id=>state.towers.find(tower=>tower.id===id);
  const inBag=id=>state.inventory.find(item=>item.id===id);
  const definition=code=>Object.hasOwn(LOOP_EQUIPMENT,code)?LOOP_EQUIPMENT[code]:null;
  const itemInstance=(code,invested)=>({id:newId(),code,invested,readyAt:0,manual:!!definition(code).active});
- const equippedLimit=tower=>loopTower(tower.code).rarity==='common'?3:6;
+ const equippedLimit=tower=>tower.population===5?3:6;
  function attach(tower,item){
   if(definition(item.code).prism)tower.prismEquippedAt=state.elapsed;
   tower.equipment.push(item);
  }
 
  function qualification(tower){
-  const code=LOOP_CREDENTIALS[tower.code];
+  const code=loopCredential(tower);
   return code?state.towers.find(t=>t.code===code&&t.deputyStage===3):undefined;
  }
  function equipStatus(tower,item){
   if(!item)return fail('未知装备');
+  if(item.experience||item.nextLevel)return fail('训练道具从背包对主塔使用');
+  if(item.tempered)return fail('请先在能量圈淬炼');
+  if(item.forged&&(tower.population!==20||tower.equipment.some(gear=>definition(gear.code).forged)))return fail('每座主塔限带一件淬炼武器');
   if(item.grade!=='orange')return ok;
+  if(state.abyss&&tower.population===20)return ok;
   if(!tower.awakened)return fail('主塔突破后可穿戴橙装');
-  const code=LOOP_CREDENTIALS[tower.code];
+  const code=loopCredential(tower);
   const name=loopTower(code)?.name??'指定副塔';
   return qualification(tower)?ok:fail('穿戴橙装需要三阶'+name+'在场');
  }
- function canBuyEquipment(code) {
+ function equipmentOffer(code,source='fixed'){
+  const def=definition(code);
+  if(!def)return null;
+  if(source==='fixed')return def.mysteryOnly||def.forged?null:{cost:equipmentPurchasePrice(code),wood:0,stock:null};
+  if(source==='abyss'&&state.abyss&&['font','reveal','siege'].includes(code))return {cost:equipmentPurchasePrice(code),wood:0,stock:null};
+  if(source!=='mystery')return null;
+  const stock=state.mystery?.stock.find(entry=>entry.code===code&&entry.count>0);
+  return stock?{cost:Math.round(equipmentPurchasePrice(code)*.9),wood:def.grade==='orange'?1:0,stock}:null;
+ }
+ function canBuyEquipment(code,source='fixed') {
   if(!editable())return fail('当前不可购买');
-  if(!definition(code))return fail('未知装备');
-  return state.gold<equipmentPurchasePrice(code)?fail('金币不足'):ok;
+  const offer=equipmentOffer(code,source);
+  if(!offer)return fail('此装备当前未上架');
+  if(state.lumber<offer.wood)return fail('木材不足');
+  return state.gold<offer.cost?fail('金币不足'):ok;
  }
  function craftParts(code,towerId) {
   const tower=towerId==null?null:towerById(towerId);
@@ -64,7 +79,7 @@ export function createLoopArmory(state,{editable,newId,changeGold,combat,emit}) 
   if(!editable()||!tower||!LOOP_CREDENTIALS[tower.code]||tower.awakened)return fail('当前不能突破');
   if(tower.level<20)return fail('主塔须达到 20 级');
   const credential=credentialTowerId===undefined?qualification(tower):towerById(credentialTowerId);
-  if(credential?.code!==LOOP_CREDENTIALS[tower.code]||credential.deputyStage!==3)return fail('需要指定的三阶副塔在场');
+  if(credential?.code!==loopCredential(tower)||credential.deputyStage!==3)return fail('需要指定的三阶副塔在场');
   return ok;
  }
  function canCastEquipment(towerId,itemId,x=undefined,y=undefined) {
@@ -72,15 +87,45 @@ export function createLoopArmory(state,{editable,newId,changeGold,combat,emit}) 
   if(!editable()||state.starter!=='deployed'||!item||!item.manual||!definition(item.code)?.active)return fail('请选择手动装备技能');
   if(tower.silenceUntil>state.elapsed)return fail('工事当前无法施放');
   if(item.readyAt>state.elapsed)return fail('装备技能冷却中');
+  if((tower.mana??100)<(definition(item.code).active.mana??0))return fail('法力不足');
   if(definition(item.code).active.targeted&&x===undefined&&y===undefined)return ok;
   return combat.equipmentTarget(tower,item,x,y)?ok:fail('没有合法施放目标');
  }
  return {
-  canBuyEquipment,
-  buyEquipment(code) {
-   const status=canBuyEquipment(code);if(!status.ok)return status;
-   const {name}=definition(code),cost=equipmentPurchasePrice(code),item=itemInstance(code,cost);
+  canBuyEquipment,equipmentOffer,
+  buyLumber(){
+   if(!editable()||state.gold<100)return fail('购买木材需要 100 金币');
+   changeGold(-100,'lumber');
+   state.lumber++;
+   return done('已购入 1 木材');
+  },
+  buyEquipment(code,source='fixed') {
+   const status=canBuyEquipment(code,source);if(!status.ok)return status;
+   const {name}=definition(code),{cost,wood,stock}=equipmentOffer(code,source),item=itemInstance(code,cost);
+   if(stock)stock.count--;
+   state.lumber-=wood;
    state.inventory.push(item);changeGold(-cost,'equipment');return done('已购买'+name,{itemId:item.id});
+  },
+  startTempering(id){
+   const item=inBag(id),def=item&&definition(item.code);
+   if(!editable()||state.endless||state.abyss||!def?.tempered||state.tempering.length)return fail('请选择未淬炼的武器，且能量圈须空闲');
+   state.inventory=state.inventory.filter(gear=>gear!==item);
+   state.tempering=[{code:def.tempered,until:state.elapsed+def.seconds,invested:item.invested}];
+   return done('武器已放入能量圈');
+  },
+  claimTempered(){
+   const forge=state.tempering[0];
+   if(!editable()||!forge||forge.until>state.elapsed)return fail('武器仍在淬炼');
+   state.inventory.push(itemInstance(forge.code,forge.invested));
+   state.tempering=[];
+   return done('已取回'+definition(forge.code).name);
+  },
+  useTrainingItem(id,towerId){
+   const item=inBag(id),def=item&&definition(item.code);
+   if(!editable()||!def||!(def.experience||def.nextLevel))return fail('请选择背包中的训练道具');
+   if(!advanceTraining(towerId,def))return fail('该主塔当前无法增加经验');
+   state.inventory=state.inventory.filter(gear=>gear!==item);
+   return done('主塔已获得训练经验');
   },
   canCraft, craftParts,
   craftEquipment(code,towerId=undefined) {

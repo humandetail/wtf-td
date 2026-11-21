@@ -122,7 +122,7 @@ export function createEnemyEffects(state,{alive,effect,strength,heal,summon,emit
    const armor=e.armor+Number(e.physicalUntil>now)*.4;
    return Math.max(0,Math.max(armor,strength(e,'guard'))-strength(e,'armor'));
   }
-  return Math.max(0,Math.max(strength(e,'magicArmor'),e.magicUntil>now?.4:0)-strength(e,'magicBreak'));
+  return Math.max(0,Math.max(e.magicResist??0,strength(e,'magicArmor'),e.magicUntil>now?.4:0)-strength(e,'magicBreak'));
  }
  function check(e){
   const now=state.elapsed;
@@ -160,7 +160,7 @@ export function createEnemyEffects(state,{alive,effect,strength,heal,summon,emit
    const multiplier=allies.length?supportOutput(e):0;
    for(const a of allies)heal(a,a.maxHp*(a.boss?.01:.03)*multiplier,out);
   }
-  if(e.channel||e.rootUntil>now)return;
+  if(e.channel||e.rootUntil>now||e.echo?.until>now)return;
   if(e.code==='E06'&&every(e,'heal',8)&&damaged(160)[0])cast(e,'aid',1,damaged(160)[0]);
   if(e.code==='B01'&&!e.skillAt.charge&&state.towers.some(t=>t.attack&&distance(e,t)<=t.revealRange)){e.skillAt.charge=true;cast(e,'charge',1);}
   if(e.code==='B03'&&e.hp<e.maxHp*.7&&!(e.skillAt.heal>now)){e.skillAt.heal=now+12;cast(e,'heal',1.6);}

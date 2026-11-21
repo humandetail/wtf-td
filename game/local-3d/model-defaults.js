@@ -1,5 +1,8 @@
 // Archive paths are suffixes so the original top-level folder can be renamed.
 export const LIBRARY_DEFAULTS = {
+  N01:["catapultedited/catapultedited.mdx"],
+  N02:["mhbrazier1/mhbrazier1.mdx"],
+  N03:["icetower/icetower.mdx"],
   T01:["合集/模型合集/虎式坦克/Tiger.mdx"],
   T02:["orb/orb.mdx"],
   T03:["合集/模型合集/kv2/KV-2.mdx"],
