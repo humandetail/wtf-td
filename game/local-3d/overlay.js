@@ -1,5 +1,6 @@
 import { ENTRY, LOOP_BUILD_AREA, LOOP_FOOTPRINT } from '../geometry.js';
 import { loopStats } from '../loop-catalog.js';
+import { ABYSS_RADIUS } from '../loop-solo-rules.js';
 import { actorSize } from './camera.js';
 
 const lifetimes = {
@@ -107,7 +108,7 @@ export function createBattleOverlay(canvas,camera) {
         ctx.fillStyle = '#10252076';ctx.fill();
       }
       for (const region of state.regions ?? []) ring(region.x,region.y,region.radius,'#a6cde288','#51a0bc25');
-      ring(ENTRY.x,ENTRY.y,27,'#f2ce8388');
+      ring(ENTRY.x,ENTRY.y,state.abyss?.selected?ABYSS_RADIUS:27,state.abyss?.selected?'#a2c6f5':'#f2ce8388');
 
       const selected = state.towers.find(unit=>unit.id===selectedTowerId);
       const target = placement?.code ? {...placement,level:1} : selected;

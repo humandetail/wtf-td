@@ -1,4 +1,4 @@
-import {LOOP_EQUIPMENT, LOOP_CREDENTIALS, equipmentPurchasePrice, loopCredential} from './loop-equipment.js';
+import {LOOP_EQUIPMENT, equipmentPurchasePrice, isMainTower, loopCredential} from './loop-equipment.js';
 import {loopTower} from './loop-catalog.js';
 
 const ok = {ok:true};
@@ -10,7 +10,7 @@ export function createLoopArmory(state,{editable,newId,changeGold,advanceTrainin
  const inBag=id=>state.inventory.find(item=>item.id===id);
  const definition=code=>Object.hasOwn(LOOP_EQUIPMENT,code)?LOOP_EQUIPMENT[code]:null;
  const itemInstance=(code,invested)=>({id:newId(),code,invested,readyAt:0,manual:!!definition(code).active});
- const equippedLimit=tower=>tower.population===5?3:6;
+ const equippedLimit=tower=>isMainTower(tower)?6:3;
  function attach(tower,item){
   if(definition(item.code).prism)tower.prismEquippedAt=state.elapsed;
   tower.equipment.push(item);
@@ -24,9 +24,9 @@ export function createLoopArmory(state,{editable,newId,changeGold,advanceTrainin
   if(!item)return fail('未知装备');
   if(item.experience||item.nextLevel)return fail('训练道具从背包对主塔使用');
   if(item.tempered)return fail('请先在能量圈淬炼');
-  if(item.forged&&(tower.population!==20||tower.equipment.some(gear=>definition(gear.code).forged)))return fail('每座主塔限带一件淬炼武器');
+  if(item.forged&&(!isMainTower(tower)||tower.equipment.some(gear=>definition(gear.code).forged)))return fail('每座主塔限带一件淬炼武器');
   if(item.grade!=='orange')return ok;
-  if(state.abyss&&tower.population===20)return ok;
+  if(state.abyss&&isMainTower(tower))return ok;
   if(!tower.awakened)return fail('主塔突破后可穿戴橙装');
   const code=loopCredential(tower);
   const name=loopTower(code)?.name??'指定副塔';
@@ -76,7 +76,7 @@ export function createLoopArmory(state,{editable,newId,changeGold,advanceTrainin
  }
  function canBreakthrough(towerId,credentialTowerId=undefined) {
   const tower=towerById(towerId);
-  if(!editable()||!tower||!LOOP_CREDENTIALS[tower.code]||tower.awakened)return fail('当前不能突破');
+  if(!editable()||!isMainTower(tower)||tower.awakened)return fail('当前不能突破');
   if(tower.level<20)return fail('主塔须达到 20 级');
   const credential=credentialTowerId===undefined?qualification(tower):towerById(credentialTowerId);
   if(credential?.code!==loopCredential(tower)||credential.deputyStage!==3)return fail('需要指定的三阶副塔在场');
@@ -84,7 +84,7 @@ export function createLoopArmory(state,{editable,newId,changeGold,advanceTrainin
  }
  function canCastEquipment(towerId,itemId,x=undefined,y=undefined) {
   const tower=towerById(towerId),item=tower?.equipment.find(gear=>gear.id===itemId);
-  if(!editable()||state.starter!=='deployed'||!item||!item.manual||!definition(item.code)?.active)return fail('请选择手动装备技能');
+  if(!editable()||!item||!item.manual||!definition(item.code)?.active)return fail('请选择手动装备技能');
   if(tower.silenceUntil>state.elapsed)return fail('工事当前无法施放');
   if(item.readyAt>state.elapsed)return fail('装备技能冷却中');
   if((tower.mana??100)<(definition(item.code).active.mana??0))return fail('法力不足');

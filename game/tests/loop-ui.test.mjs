@@ -93,7 +93,7 @@ test('loop shop previews tiers, opens guaranteed starter and confirms a deployme
  assert.equal(loop.state.cards.length,0);
  assert.equal(loop.state.towers.length,1);
  assert.match(node('wave-label').textContent,/备战 30s/);
- assert.match(node('notice').textContent,/起手塔已部署.*30 秒后开始首波/);
+ assert.match(node('notice').textContent,/防线已部署.*30 秒后开始首波/);
  ui.activatePoint({x:190,y:140});
  assert.equal(node('tower-properties').hidden,false);
  assert.equal(node('tower-management').hidden,false);
@@ -536,6 +536,26 @@ test('loop intelligence shows challenge eligibility and gold scoring without cou
  g.state.phase='victory';ui.updateUI();assert.equal(ui.view,'end');
  assert.equal(node('endless-button').hidden,false);
  click('endless-button');assert.equal(ui.view,'game');assert.equal(g.state.endless,true);
+});
+
+test('the merchant tab appears on wave 21 and its discounted purchase unlocks immediately',async()=>{
+ const game=(await import('../loop-session.js')).createLoopGame({initialDelay:1000,draftRandom:()=>0,marketRandom:()=>0});
+ const {ui,go,click,buttons,panelButton}=await harness(game);go();
+ game.openStarter();game.deploy(game.state.cards[0].id,500,300);
+ click('equipment-button');
+ const root='loop-equipment-shop';
+ panelButton(root,button=>button.dataset.tab==='recipes').click();
+ assert.ok(!buttons(root).some(button=>button.dataset.tab==='mystery'));
+ game.state.wave=20;
+ game.launchWave();ui.updateUI();
+ panelButton(root,button=>button.dataset.tab==='mystery').click();
+ const purchase=()=>panelButton(root,button=>button.textContent.includes('远距瞄具'));
+ game.state.gold=427;ui.updateUI();
+ assert.equal(purchase().disabled,true);
+ game.state.gold=428;ui.updateUI();
+ assert.equal(purchase().disabled,false);
+ purchase().click();
+ assert.equal(game.state.gold,0);
 });
 
 test('loop support details show actual aura percentages and reduced endless income',async()=>{

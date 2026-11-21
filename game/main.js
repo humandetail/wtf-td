@@ -290,7 +290,7 @@ function refreshPlacement() {
   const card = game.deploymentChoice(armedCardId);
   const pending = game.catalog.find(item => item.code === card?.code);
   const eligibility = card ? game.canDeploy(card.id) : null;
-  buildArea = eligibility?.ok ? { code: card.code } : null;
+  buildArea = eligibility?.ok ? { code: card.code, excludeTowerId:card.relocate?.id } : null;
   placement = card && pointerPosition
     ? { ...pointerPosition, code: card.code, ...game.canDeploy(card.id, pointerPosition.x, pointerPosition.y) }
     : null;
@@ -325,7 +325,7 @@ function cancelBuild() {
 function activatePoint(point) {
   pointerPosition = point;
   if (armedCardId !== null) {
-    const waitingForStarter = game.state.starter !== 'deployed';
+    const waitingForDefense = !game.battleStarted();
     const result = game.deploy(armedCardId, point.x, point.y);
     if (result.ok && 'towerId' in result) {
       armedCardId = null;
@@ -333,8 +333,8 @@ function activatePoint(point) {
       touchControls?.clear();
       if (battle3D) setDrawer('tower');
     }
-    resultMessage(result.ok && waitingForStarter && game.state.starter === 'deployed'
-      ? { ...result, message: `起手塔已部署 · ${Math.ceil(game.state.nextWaveIn)} 秒后开始首波` }
+    resultMessage(result.ok && waitingForDefense && game.battleStarted()
+      ? { ...result, message: `防线已部署 · ${Math.ceil(game.state.nextWaveIn)} 秒后开始首波` }
       : result);
     return;
   }
@@ -498,6 +498,9 @@ function choiceStrip(label) {
 }
 
 function keepEquipmentShelf(current, content) {
+  const tabs=Array.from(current?.children[0]?.children??[],node=>node.getAttribute('data-tab'));
+  const nextTabs=Array.from(content.children[0]?.children??[],node=>node.getAttribute('data-tab'));
+  if(tabs.length!==nextTabs.length||tabs.some((tab,i)=>tab!==nextTabs[i]))return false;
   const shelf=current?.children[1], nextShelf=content.children[1];
   if (shelf?.className!=='card-choice-strip' || nextShelf?.className!=='card-choice-strip') return false;
   const options=/** @type {HTMLElement[]} */ ([...shelf.children]);
@@ -663,8 +666,8 @@ function renderLoopCards() {
       },!open.ok,'cards');
       starterAction.classList.add('primary');
       contents.append(starterAction);
-    } else if (starter === 'held') {
-      paragraph(contents,'先部署起手 SR，首波才会倒计时。');
+    } else if (starter === 'held'&&!game.battleStarted()) {
+      paragraph(contents,'部署起手 SR 或其他塔后开始备战。');
     }
     const choices = choiceStrip('卡包价位');
     for (const pack of packs) {
@@ -1001,7 +1004,8 @@ function renderLoopEquipmentShop() {
   const canPayCraftFee=gold>=(game.equipment[equipmentSelection]?.craftFee??0);
   const forge=tempering[0];
   const remaining=forge?Math.max(0,Math.ceil(forge.until-elapsed)):0;
-  const signature = JSON.stringify([equipmentTab,equipmentSelection,inventory,materials,entries.map(([code])=>gold>=equipmentPurchasePrice(code)),canPayCraftFee,phase,paused,mystery,mysteryRefreshes,remaining,forge?.code,lumber,wave>=21,!!abyss,gold>=100]);
+  const affordableMystery=mystery?.stock.map(entry=>game.canBuyEquipment(entry.code,'mystery').ok);
+  const signature = JSON.stringify([equipmentTab,equipmentSelection,inventory,materials,entries.map(([code])=>gold>=equipmentPurchasePrice(code)),canPayCraftFee,phase,paused,mystery,affordableMystery,mysteryRefreshes,remaining,forge?.code,lumber,wave>=21,!!abyss,gold>=100]);
   if (signature===loopEquipmentSignature) return;
   loopEquipmentSignature=signature;
   const panel=document.createElement('div');
@@ -1059,7 +1063,7 @@ function renderLoopEquipmentShop() {
       const refund=Math.floor((selected.invested??0)/4);
       recipeMaterials(copy,selected.code,undefined,code=>{equipmentTab='recipes';equipmentSelection=code;renderLoopEquipmentShop();});
       if(item.experience||item.nextLevel){
-        for(const tower of game.state.towers.filter(t=>t.population===20)){
+        for(const tower of game.state.towers.filter(game.isMainTower)){
           const target=game.catalog.find(t=>t.code===tower.code);
           actions.append(commandButton('训练 '+target.name,()=>resultMessage(game.useTrainingItem(selected.id,tower.id)),!editable()||tower.level>=game.levelCap(tower),'upgrade'));
         }
@@ -1104,7 +1108,7 @@ function selectTowerEquipment(key) {
 
 function renderTowerEquipment(root,tower,definition) {
   const occupied=tower.equipment??[];
-  const slotCount=definition?.population===5?3:6;
+  const slotCount=game.isMainTower(tower)?6:3;
   const panel=document.createElement('div');
   panel.className='equipment-panel';
   const select=selectTowerEquipment;
@@ -1435,7 +1439,7 @@ function updateLoopEvents(activeCount) {
       paragraph(abyssPanel,round+' · '+abyss.config.name+' · 剩余 '+abyss.attempts+' 次机会');
       if(!abyss.selected&&phase==='playing'){
         setDrawer('mission');
-        for(const tower of game.state.towers.filter(t=>t.population===20)){
+        for(const tower of game.state.towers.filter(game.isMainTower)){
           const item=game.catalog.find(t=>t.code===tower.code);
           abyssPanel.append(commandButton(`${item.name} Lv.${tower.level} 出战`,()=>resultMessage(game.selectAbyssTower(tower.id)),!editable(),'towers'));
         }
@@ -1479,7 +1483,7 @@ function updateUI() {
   element('gold-value').textContent = String(Math.floor(state.gold));
   setText(element('solo-lumber'),`木材 ${state.lumber}`);
   const waveCap = state.waveCount;
-  const waitingForCard = state.starter !== 'deployed';
+  const waitingForCard = !game.battleStarted();
   const counting = Number.isFinite(state.nextWaveIn) && (state.endless || state.wave < waveCap);
   element('wave-label').textContent = waitingForCard ? (state.starter==='held'?'部署起手 SR':state.draft?.starter?'选择起手 SR':'开启起手 SR') : counting ? `${state.wave?'下波':'备战'} ${Math.max(0,Math.ceil(state.nextWaveIn))}s` : '波次';
   element('wave-value').textContent = state.abyss?`深渊 ${state.abyss.stage}`:state.endless ? `∞ ${state.wave-waveCap}` : `${state.wave} / ${waveCap}`;
@@ -1490,7 +1494,7 @@ function updateUI() {
   element('enemy-value').textContent = String(activeCount);
   element('enemy-limit').textContent = String(state.limit);
   element('kill-value').textContent = String(state.kills);
-  element('next-wave-value').textContent = waitingForCard ? '部署起手 SR 后倒计时'
+  element('next-wave-value').textContent = waitingForCard ? '部署首座塔后倒计时'
     : state.wave >= waveCap && !state.endless
       ? state.goldRush || state.goldRushQueued ? '金币奖励结算中' : '清理剩余敌人'
       : `${Math.max(0, Math.ceil(state.nextWaveIn))} 秒`;
@@ -1534,6 +1538,8 @@ function showEnd() {
   ].map(([label, value]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join('');
   element('endless-button').hidden = !modes.includes('endless');
   element('abyss-button').hidden = !modes.includes('abyss');
+  const selector = /** @type {HTMLSelectElement} */ (element('solo-restart-difficulty'));
+  selector.value=state.difficulty;
   showView('end');
   element(modes.includes('endless')?'endless-button':modes.includes('abyss')?'abyss-button':'restart-button').focus();
 }
@@ -1582,7 +1588,7 @@ function enterGame(restart = false) {
   }
   const freshSession = restart || game.state.phase === 'menu';
   if (restart) {
-    game.restart();
+    game.restart((/** @type {HTMLSelectElement} */ (element('solo-restart-difficulty'))).value);
     clearTransient();
   } else if (game.state.phase === 'menu') {
     game.selectDifficulty((/** @type {HTMLSelectElement} */ (element('solo-difficulty'))).value);
@@ -1694,6 +1700,12 @@ function bindControls() {
   element('loop-encyclopedia-filter').addEventListener('change',renderLoopEncyclopedia);
   element('focus-button').addEventListener('click', event => openLoopTab('cards', event.currentTarget));
   element('start-button').addEventListener('click', () => enterGame());
+  const selector=element('solo-restart-difficulty');
+  for(const difficulty of game.difficulties){
+    const option=document.createElement('option');
+    option.value=difficulty.id;option.textContent=difficulty.name;
+    selector.append(option);
+  }
   element('restart-button').addEventListener('click', () => enterGame(true));
   element('endless-button').addEventListener('click', () => {
     void audio.unlock();

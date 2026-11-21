@@ -2,7 +2,7 @@ import {CHALLENGES, GOLD_RUSHES, ENDLESS_POOLS, LOOP_TOWERS, LOOP_EQUIPMENT, LOO
  loopTower, loopStats, loopWave, loopEnemy, loopWaveInterval, waveMultiplier, assignWaveBounties} from './loop-catalog.js';
 import {createLoopCombat} from './loop-combat.js';
 import {createLoopArmory} from './loop-armory.js';
-import { LOOP_CAMPAIGN_WAVES, LOOP_CREDENTIALS, LOOP_DEPUTIES, LOOP_DEPUTY_COSTS, LOOP_DEPUTY_LEVELS, LOOP_PACKS, LOOP_RARITY, LOOP_XP, LOOP_SSR_GUARANTEE, LOOP_EXCHANGE_WAVE, loopLevelCap, loopCredential } from './loop-equipment.js';
+import { LOOP_CAMPAIGN_WAVES, LOOP_CREDENTIALS, LOOP_DEPUTIES, LOOP_DEPUTY_COSTS, LOOP_DEPUTY_LEVELS, LOOP_PACKS, LOOP_RARITY, LOOP_XP, LOOP_SSR_GUARANTEE, LOOP_EXCHANGE_WAVE, isMainTower, loopLevelCap, loopCredential } from './loop-equipment.js';
 import {loopPlacementStatus, createRoadPosition, advanceOnRoad, ROAD_NODES, ENTRY} from './geometry.js';
 import {ABYSS_RADIUS, ABYSS_STAGES, BASIC_TOWERS, CAPACITY_BY_WAVE, DIFFICULTIES, INITIAL_CAPACITY, INITIAL_GOLD, MYSTERY_ITEMS, MYSTERY_STOCK_WAVES, WORKER_TALENTS, talentRank} from './loop-solo-rules.js';
 
@@ -16,11 +16,11 @@ export function createLoopGame(options={}){
  let difficulty=DIFFICULTIES.find(rule=>rule.id===options.difficulty)??DIFFICULTIES[1];
  const initial=()=>({phase:'menu',paused:false,speed:1,gold:options.startingGold??INITIAL_GOLD,lumber:0,elapsed:0,
   difficulty:difficulty.id,talent:null,talentReadyAt:0,
-  finalUntil:null,defeatReason:null,lastGoldRushWave:null,abyss:null,
+  finalUntil:null,defeatReason:null,finalGoldSettled:false,abyss:null,
   mystery:null,mysteryRefreshes:1,tempering:[],treasures:0,
   wave:0,nextWaveIn:options.initialDelay??30,limit:options.limit??60,endless:false,kills:0,
   towers:[],enemies:[],regions:[],dust:[],pendingSpawns:0,capacity:options.startingCapacity??INITIAL_CAPACITY,populationUsed:0,
-  waveCount,starter:'unopened',ssrMisses:0,draft:null,cards:[],inventory:[],challenge:null,completedChallenges:[],usedChallenges:[],goldRush:null,goldRushQueued:0,
+  waveCount,starter:'unopened',deployedOnce:false,ssrMisses:0,draft:null,cards:[],inventory:[],challenge:null,completedChallenges:[],usedChallenges:[],goldRush:null,goldRushQueued:0,
   regularKillGold:0,regularSupply:0,endlessKills:0,endlessSupply:0,supplyCursor:0,gearBounty:{},ledger:[]});
  const state=initial(),random=options.random??Math.random,draftRandom=options.draftRandom??Math.random;
  const endlessRandom=options.endlessRandom??Math.random;
@@ -35,6 +35,7 @@ export function createLoopGame(options={}){
   state.gold+=amount;state.ledger.push({time:state.elapsed,amount,reason});
  };
  const playing=()=>state.phase==='playing';
+ const battleStarted=()=>state.deployedOnce||state.starter==='deployed';
  const editable=()=>playing()&&!state.paused;
  const waveXp=wave=>wave<=10?1:wave<=20?2:wave<=35?3:4;
  function refreshMystery(final=false){
@@ -112,7 +113,7 @@ export function createLoopGame(options={}){
  }
  function advanceTraining(id,definition){
   const tower=state.towers.find(candidate=>candidate.id===id);
-  if(!tower||tower.population!==20||tower.level>=loopLevelCap(tower))return false;
+  if(!isMainTower(tower)||tower.level>=loopLevelCap(tower))return false;
   const gain=definition.nextLevel?LOOP_XP[tower.level]-tower.xp:definition.experience;
   pendingExperience.set(id,(pendingExperience.get(id)??0)+gain);
   flushExperience();
@@ -208,7 +209,7 @@ export function createLoopGame(options={}){
   state.pendingSpawns=queue.length;
   if(!queue.length){
    spawnIn=0;
-   if(!options.noGoldRush&&!state.endless&&state.wave===54&&state.lastGoldRushWave!==54&&
+   if(!options.noGoldRush&&!state.endless&&state.wave===54&&!state.finalGoldSettled&&
       state.goldRush?.wave!==54&&!rushQueue.some(rush=>rush.config.wave===54)){
     rushQueue.push({config:GOLD_RUSHES.at(-1),at:state.elapsed+10});state.goldRushQueued=rushQueue.length;
    }
@@ -216,7 +217,7 @@ export function createLoopGame(options={}){
  }
  function canAdvanceWave(){
   return (!state.endless||!queue.length)&&
-   (state.endless||state.wave!==54||options.noGoldRush||!queue.length&&state.lastGoldRushWave===54);
+   (state.endless||state.wave!==54||options.noGoldRush||!queue.length&&state.finalGoldSettled);
  }
  function updateSpecial(){
   const challenge=state.challenge;
@@ -251,8 +252,8 @@ export function createLoopGame(options={}){
   }
   if(rush.remaining<=1e-9||!rush.directions.length&&!state.enemies.some(e=>e.special==='gold'&&e.hp>0)){
    changeGold(rush.reward,'gold-rush');state.enemies=state.enemies.filter(e=>e.special!=='gold');state.goldRush=null;
-   state.lastGoldRushWave=rush.wave;
-   emit({type:'gold-rush-end',amount:rush.reward,message:'金币怪奖励 '+rush.reward+' 金币'});
+   if(rush.wave===54)state.finalGoldSettled=true;
+   emit({type:'gold-rush-end',wave:rush.wave,amount:rush.reward,message:'金币怪奖励 '+rush.reward+' 金币'});
   }
  }
  function move(e,dt){
@@ -312,18 +313,18 @@ export function createLoopGame(options={}){
   }
  }
  function stepAbyss(dt){
-  state.elapsed+=dt;
   combat.step(dt);
   for(const enemy of state.enemies)move(enemy,dt);
   const cleared=state.enemies.every(enemy=>enemy.hp<=0);
   if(cleared||state.elapsed>=state.abyss.until)finishAbyssRound(cleared);
  }
  function step(dt){
-  if(state.abyss){stepAbyss(dt);return;}
-  state.elapsed+=dt;advanceQueue(dt);
+  state.elapsed+=dt;
   if(state.mystery?.closesAt!=null&&state.mystery.closesAt<=state.elapsed){
    state.mystery=null;emit({type:'shop',message:'神秘商店已关闭'});
   }
+  if(state.abyss){stepAbyss(dt);return;}
+  advanceQueue(dt);
   if(!playing())return;
   updateSpecial();
   if(!playing())return;
@@ -341,8 +342,9 @@ export function createLoopGame(options={}){
  }
  const game={state,catalog:LOOP_TOWERS,enemyCatalog:LOOP_ENEMIES,priorities:LOOP_PRIORITIES,equipment:LOOP_EQUIPMENT,challenges:CHALLENGES,
   difficulties:DIFFICULTIES,workerTalents:WORKER_TALENTS,basicTowers:BASIC_TOWERS,deploymentChoice,
+  battleStarted,
   ...armory,shopPacks:LOOP_PACKS,ssrGuarantee:LOOP_SSR_GUARANTEE,exchangeWave:LOOP_EXCHANGE_WAVE,credentials:LOOP_CREDENTIALS,xpThresholds:LOOP_XP,
-  deputies:[...LOOP_DEPUTIES],qualificationFor:loopCredential,
+  deputies:[...LOOP_DEPUTIES],qualificationFor:loopCredential,isMainTower,
   levelCap:loopLevelCap,
   canUpgradeDeputy(towerId){
    const tower=state.towers.find(t=>t.id===towerId);
@@ -413,17 +415,19 @@ export function createLoopGame(options={}){
    state.mysteryRefreshes--;refreshMystery(state.wave>=54);return success('已更换神秘商店货物');
   },
   start(){if(state.phase==='menu')state.phase='playing';return success('开启免费起手 SR');},
-  restart(){Object.assign(state,initial());events=[];queue=[];rushQueue=[];spawnIn=0;nextId=1;nextEnemy=1;priorDirection=null;
+  restart(id=undefined){
+   difficulty=DIFFICULTIES.find(rule=>rule.id===id)??difficulty;
+   Object.assign(state,initial());events=[];queue=[];rushQueue=[];spawnIn=0;nextId=1;nextEnemy=1;priorDirection=null;
    remainingByWave.clear();pendingExperience.clear();challengesUsed.clear();endlessChoices.clear();return game.start();},
   tick(seconds){
-   if(!playing()||state.paused||state.starter!=='deployed'||!Number.isFinite(seconds)||seconds<=0)return;
+   if(!playing()||state.paused||!battleStarted()||!Number.isFinite(seconds)||seconds<=0)return;
    for(let remaining=seconds*state.speed;remaining>1e-9&&playing();){
     if(state.abyss&&!state.abyss.selected)break;
     const dt=Math.min(.05,remaining);step(dt);remaining-=dt;
    }
   },
   launchWave(){
-   if(!playing()||state.paused||state.abyss||state.starter!=='deployed'||queue.length||!canAdvanceWave()||!state.endless&&state.wave>=waveCount)return failure('当前不能提前出怪');
+   if(!playing()||state.paused||state.abyss||!battleStarted()||queue.length||!canAdvanceWave()||!state.endless&&state.wave>=waveCount)return failure('当前不能提前出怪');
    beginWave();return success('下一波开始');
   },
   canOpenStarter(){return editable()&&!state.draft&&state.starter==='unopened'?{ok:true}:failure('起手 SR 已开启或当前不可开启');},
@@ -510,6 +514,7 @@ export function createLoopGame(options={}){
    return x===undefined&&y===undefined?success('可部署'):loopPlacementStatus(x,y,state.towers);
   },
   deploy(id,x,y){
+   if(!Number.isFinite(x)||!Number.isFinite(y))return failure('请选择合法建造位置');
    const status=game.canDeploy(id,x,y);if(!status.ok)return status;
    const card=deploymentChoice(id),def=loopTower(card.code);
    if(card.relocate){
@@ -522,9 +527,10 @@ export function createLoopGame(options={}){
    if(card.basic)changeGold(-card.cost,'basic-tower');
    else state.cards=state.cards.filter(c=>c.id!==id);
    state.populationUsed+=def.population;
+   state.deployedOnce=true;
    if(card.starter)state.starter='deployed';
    state.towers.push({id:towerId,code:def.code,assetCode:def.assetCode,x,y,paid:card.paid,refund:card.refund??0,awakened:false,
-    credential:LOOP_CREDENTIALS[def.code] ? game.deputies[Math.min(game.deputies.length-1,Math.floor(credentialRandom()*game.deputies.length))]:undefined,
+    credential:isMainTower(def) ? game.deputies[Math.min(game.deputies.length-1,Math.floor(credentialRandom()*game.deputies.length))]:undefined,
     deputyStage:LOOP_DEPUTIES.has(def.code)?0:undefined,xp:0,level:1,
     population:def.population,priority:'default',equipment:[],combatUntil:0,angle:0,cooldown:0,cycles:0,route:null});
    emit({type:'build',x,y,code:def.code});return {ok:true,message:'部署完成',towerId};
@@ -573,7 +579,7 @@ export function createLoopGame(options={}){
   },
   continueAbyss(){
    if(!game.availableModes().includes('abyss'))return failure('当前难度尚未解锁深渊');
-   if(!state.towers.some(tower=>tower.population===20))return failure('需要一座已部署的主塔');
+   if(!state.towers.some(isMainTower))return failure('需要一座已部署的主塔');
    state.phase='playing';state.paused=false;
    state.abyss={stage:1,best:0,attempts:5,selected:null,until:null,config:ABYSS_STAGES[0],roster:state.towers,damage:0,maxHp:0,home:null};
    return success('深渊试炼 · 请选择出战塔');
@@ -581,7 +587,7 @@ export function createLoopGame(options={}){
   selectAbyssTower(id){
    const abyss=state.abyss;
    const tower=state.towers.find(candidate=>candidate.id===id);
-   if(!editable()||!abyss||abyss.selected||tower?.population!==20)return failure('请选择一座主塔出战');
+   if(!editable()||!abyss||abyss.selected||!isMainTower(tower))return failure('请选择一座主塔出战');
    abyss.selected=id;abyss.damage=0;abyss.until=state.elapsed+abyss.config.seconds;
    abyss.home={x:tower.x,y:tower.y,angle:tower.angle};
    Object.assign(tower,{x:ENTRY.x,y:ENTRY.y,lockId:null,streak:0});

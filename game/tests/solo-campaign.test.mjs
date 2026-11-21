@@ -11,11 +11,14 @@ test('a solo player chooses a difficulty and worker talent and builds a basic de
  assert.equal(game.chooseTalent('arsenal').ok,true);
  assert.equal(game.chooseTalent('commerce').ok,false);
  const startingGold=game.state.gold;
+ assert.equal(game.buildBasic('N01').ok,false);
  assert.equal(game.buildBasic('N01',640,400).ok,false);
  assert.equal(game.state.gold,startingGold);
  assert.equal(game.buildBasic('N01',500,300).ok,true);
  assert.ok(game.state.gold<startingGold);
  assert.equal(game.state.populationUsed,5);
+ game.tick(.05);
+ assert.equal(game.state.wave,1);
  game.openStarter();
  assert.equal(game.deploy(game.state.cards[0].id,570,300).ok,true);
  game.tick(.1);
@@ -33,13 +36,35 @@ test('the 55-wave campaign expands population and runs the last gold rush before
   game.tick(.05);
   for(const event of game.drainEvents()){
    if(event.type==='population')capacities.push(game.state.capacity);
-   if(event.type==='wave'&&event.amount===55)assert.equal(game.state.lastGoldRushWave,54);
+   if(event.type==='wave'&&event.amount===55)assert.equal(game.state.finalGoldSettled,true);
   }
  }
  assert.deepEqual(capacities,[50,70,90,100]);
  assert.equal(game.state.wave,55);
  assert.equal(game.state.phase,'victory');
  assert.deepEqual(game.availableModes(),['endless','abyss']);
+});
+
+test('a delayed wave 50 reward cannot reopen the settled wave 54 gold rush',()=>{
+ const game=createLoopGame({initialDelay:1000,waveInterval:1000,spawnInterval:.05,waveSize:()=>1,
+  enemyHealthScale:.001,enemySpeedScale:0,random:()=>0,draftRandom:()=>0});
+ game.start();game.openStarter();
+ assert.ok(game.deploy(game.state.cards[0].id,190,140).ok);
+ game.state.wave=49;
+ for(let wave=50;wave<=54;wave++){
+  assert.ok(game.launchWave().ok);
+  game.tick(.05);
+ }
+ game.tick(31);
+ assert.equal(game.state.finalGoldSettled,true);
+ assert.ok(game.state.enemies.some(enemy=>enemy.boss&&enemy.wave===50));
+ assert.ok(game.buildBasic('N01',500,300).ok);
+ game.tick(75);
+ const paid=game.drainEvents().filter(event=>event.type==='gold-rush-end').map(event=>event.wave);
+ assert.deepEqual(paid,[54,50]);
+ assert.equal(game.state.finalGoldSettled,true);
+ assert.ok(game.launchWave().ok);
+ assert.equal(game.state.wave,55);
 });
 
 test('a nightmare victory leads through the abyss trials into floor progression with one selected main tower',()=>{

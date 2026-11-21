@@ -206,6 +206,7 @@
         <h1 id="end-title">战斗结束</h1>
         <p id="end-description"></p>
         <div id="end-stats" class="end-stats"></div>
+        <label class="solo-difficulty">下局难度 <select id="solo-restart-difficulty"></select></label>
         <div class="end-actions"><button id="restart-button" data-icon="refresh" class="button primary large" type="button">重新开始</button><button id="endless-button" data-icon="loop" class="button large" type="button" hidden>进入无尽模式</button><button id="abyss-button" data-icon="loop" class="button large" type="button" hidden>进入深渊</button><button id="return-menu-button" data-icon="home" class="button large quiet" type="button">主菜单</button></div>
       </div>
     </section>
@@ -221,7 +222,7 @@
       <section id="help-rules" aria-labelledby="help-rules-tab">
         <h3>循环圈</h3>
         <ol class="help-steps">
-          <li><strong>开局与胜负</strong><p>选择难度开始单人对局，开局 200 金。在卡牌的工人页选择天赋与建造基础塔。部署免费起手 SR 后开始 30 秒备战。积怪达到 60 只即失败，主线共 55 波。</p></li>
+          <li><strong>开局与胜负</strong><p>选择难度开始单人对局，开局 200 金。在工人页选择天赋并建基础塔，或在卡铺领取免费起手 SR。部署第一座塔后开始 30 秒备战。积怪达到 60 只即失败，主线共 55 波。</p></li>
           <li><strong>抽卡与人口</strong><p>N／R／SR／SSR 包分别为 100／120／300／750 金，开包后选一张。基础塔和 R 塔占 5 人口，主塔占 20。人口上限从 30 起步，第 11、21、31、41 波依次提升至 50、70、90、100。</p></li>
           <li><strong>升级与突破</strong><p>主塔靠附近击杀升到 20 级。建成时分配一项突破资格，指定副塔升到三阶且在场后可突破并升至 30 级。第 20 波开放五换一 R 卡兑换。</p></li>
           <li><strong>首领、打金与挑战</strong><p>每五波出现首领，第 5 至 50 波每隔五波安排打金，第 54 波另有一次。在 20 秒的打金窗口内按实际扣血得奖金。挑战从第 11 波开放，第 54 波关闭。</p></li>

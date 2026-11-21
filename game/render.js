@@ -422,6 +422,7 @@ export function createRenderer(canvas, artwork) {
       const {width, height, gap} = LOOP_FOOTPRINT;
       const halfX = width + gap, halfY = height + gap;
       for (const tower of state.towers) {
+        if(tower.id===buildArea.excludeTowerId)continue;
         free.clearRect(tower.x-halfX,tower.y-halfY,halfX*2,halfY*2);
       }
       // Keep the terrain color where the building's center can go.

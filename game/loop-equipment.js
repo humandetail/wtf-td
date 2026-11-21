@@ -69,12 +69,13 @@ const credentials = {
 };
 export const LOOP_CREDENTIALS = Object.fromEntries(Object.entries(credentials).flatMap(([credential,towers])=>towers.map(code=>[code,credential])));
 export const LOOP_DEPUTIES = new Set([...Object.keys(credentials),'T01','T07','T16','T17','T19']);
+export const isMainTower = tower => !!tower&&Object.hasOwn(LOOP_CREDENTIALS,tower.code);
 export const loopCredential = tower => tower?.credential??LOOP_CREDENTIALS[tower?.code];
 export const LOOP_DEPUTY_COSTS = [30,60,90];
 export const LOOP_DEPUTY_LEVELS = [1,2,3,5];
 export const LOOP_XP = [0,15,55,160,360,390,425,460,495,535,575,615,655,695,735,775,815,855,900,950,
  1090,1230,1390,1560,1750,1940,2170,2450,2770,3180];
-export const loopLevelCap = tower => LOOP_CREDENTIALS[tower.code] ? (tower.awakened ? 30 : 20) : 5;
+export const loopLevelCap = tower => isMainTower(tower) ? (tower.awakened ? 30 : 20) : 5;
 export const LOOP_PACKS = [
  {tier:'N',price:100,odds:{N:90,R:10,SR:0,SSR:0}},
  {tier:'R',price:120,odds:{R:100,SR:0,SSR:0}},
